@@ -12,23 +12,28 @@
     <meta name="keywords"
         content="Paces, admin dashboard, ThemeForest, Bootstrap 5 admin, responsive admin, CRM dashboard, CMS admin, web app UI, admin theme, premium admin template" />
     <meta name="author" content="Coderthemes" />
+    <meta name="csrf-token" content="{{ csrf_token() }}" />
 
     <!-- App favicon -->
-    <link rel="shortcut icon" href="assets/images/favicon.ico" />
+    <link rel="shortcut icon" href="{{ asset('assets/images/favicon.ico') }}" />
 
 
     <!-- Vector Maps css -->
-    <link href="assets/plugins/jsvectormap/jsvectormap.min.css" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('assets/plugins/jsvectormap/jsvectormap.min.css') }}" rel="stylesheet" type="text/css" />
 
     <!-- Theme Config Js -->
-    <script src="assets/js/config.js"></script>
-    <script src="demo.js"></script>
+    <script src="{{ asset('assets/js/config.js') }}"></script>
+    <script src="{{ asset('assets/js/demo.js') }}"></script>
 
     <!-- Vendor css -->
-    <link href="assets/css/vendors.min.css" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('assets/css/vendors.min.css') }}" rel="stylesheet" type="text/css" />
+        <link href="{{ asset('assets/plugins/datatables/responsive.bootstrap5.min.css')}}" rel="stylesheet" type="text/css" />
 
     <!-- App css -->
-    <link id="app-style" href="assets/css/app.min.css" rel="stylesheet" type="text/css" />
+    <link id="app-style" href="{{ asset('assets/css/app.min.css') }}" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="{{ asset('assets/vendor/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css') }}">
+    @stack('styles')
 
 </head>
 
@@ -41,13 +46,13 @@
             <!-- Brand Logo -->
             <a href="index.html" class="logo">
                 <span class="logo logo-light">
-                    <span class="logo-lg"><img src="assets/images/logo.png" alt="logo" /></span>
-                    <span class="logo-sm"><img src="assets/images/logo-sm.png" alt="small logo" /></span>
+                    <span class="logo-lg"><img src="{{ asset('assets/images/logo.png') }}" alt="logo" /></span>
+                    <span class="logo-sm"><img src="{{ asset('assets/images/logo-sm.png') }}" alt="small logo" /></span>
                 </span>
 
                 <span class="logo logo-dark">
-                    <span class="logo-lg"><img src="assets/images/logo-black.png" alt="dark logo" /></span>
-                    <span class="logo-sm"><img src="assets/images/logo-sm.png" alt="small logo" /></span>
+                    <span class="logo-lg"><img src="{{ asset('assets/images/logo-black.png') }}" alt="dark logo" /></span>
+                    <span class="logo-sm"><img src="{{ asset('assets/images/logo-sm.png') }}" alt="small logo" /></span>
                 </span>
             </a>
 
@@ -67,7 +72,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <a href="#!" class="link-reset">
-                                <img src="assets/images/users/user-1.jpg" alt="user-image"
+                                <img src="{{ asset('assets/images/users/user-1.jpg') }}" alt="user-image"
                                     class="rounded-circle mb-2 avatar-md" />
                                 <span class="sidenav-user-name fw-bold">David Dev</span>
                                 <span class="fs-12 fw-semibold" data-lang="user-role">Art Director</span>
@@ -168,7 +173,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-default"
                                 value="default" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-default">
-                                <img src="assets/images/layouts/skin-default.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-default.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Default</h5>
@@ -179,7 +184,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-minimal"
                                 value="minimal" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-minimal">
-                                <img src="assets/images/layouts/skin-minimal.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-minimal.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Minimal</h5>
@@ -190,7 +195,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-modern"
                                 value="modern" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-modern">
-                                <img src="assets/images/layouts/skin-modern.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-modern.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Modern</h5>
@@ -201,7 +206,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-material"
                                 value="material" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-material">
-                                <img src="assets/images/layouts/skin-material.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-material.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Material</h5>
@@ -212,7 +217,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-saas"
                                 value="saas" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-saas">
-                                <img src="assets/images/layouts/skin-saas.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-saas.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">SaaS</h5>
@@ -223,7 +228,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-flat"
                                 value="flat" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-flat">
-                                <img src="assets/images/layouts/skin-flat.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-flat.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Flat</h5>
@@ -234,7 +239,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-galaxy"
                                 value="galaxy" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-galaxy">
-                                <img src="assets/images/layouts/skin-galaxy.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-galaxy.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Galaxy</h5>
@@ -245,7 +250,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-luxe"
                                 value="luxe" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-luxe">
-                                <img src="assets/images/layouts/skin-luxe.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-luxe.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Luxe</h5>
@@ -256,7 +261,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-retro"
                                 value="retro" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-retro">
-                                <img src="assets/images/layouts/skin-retro.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-retro.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Retro</h5>
@@ -267,7 +272,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-neon"
                                 value="neon" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-neon">
-                                <img src="assets/images/layouts/skin-neon.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-neon.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Neon</h5>
@@ -278,7 +283,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-pixel"
                                 value="pixel" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-pixel">
-                                <img src="assets/images/layouts/skin-pixel.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-pixel.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Pixel</h5>
@@ -289,7 +294,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-soft"
                                 value="soft" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-soft">
-                                <img src="assets/images/layouts/skin-soft.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-soft.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Soft</h5>
@@ -300,7 +305,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-mono"
                                 value="mono" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-mono">
-                                <img src="assets/images/layouts/skin-mono.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-mono.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Mono</h5>
@@ -311,7 +316,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-prism"
                                 value="prism" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-prism">
-                                <img src="assets/images/layouts/skin-prism.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-prism.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Prism</h5>
@@ -322,7 +327,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-nova"
                                 value="nova" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-nova">
-                                <img src="assets/images/layouts/skin-nova.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-nova.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Nova</h5>
@@ -333,7 +338,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-zen"
                                 value="zen" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-zen">
-                                <img src="assets/images/layouts/skin-zen.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-zen.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Zen</h5>
@@ -344,7 +349,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-elegant"
                                 value="elegant" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-elegant">
-                                <img src="assets/images/layouts/skin-elegant.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-elegant.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Elegant</h5>
@@ -355,7 +360,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-vivid"
                                 value="vivid" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-vivid">
-                                <img src="assets/images/layouts/skin-vivid.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-vivid.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Vivid</h5>
@@ -366,7 +371,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-aurora"
                                 value="aurora" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-aurora">
-                                <img src="assets/images/layouts/skin-aurora.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-aurora.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Aurora</h5>
@@ -377,7 +382,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-crystal"
                                 value="crystal" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-crystal">
-                                <img src="assets/images/layouts/skin-crystal.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-crystal.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Crystal</h5>
@@ -388,7 +393,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-matrix"
                                 value="matrix" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-matrix">
-                                <img src="assets/images/layouts/skin-matrix.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-matrix.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Matrix</h5>
@@ -399,7 +404,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-orbit"
                                 value="orbit" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-orbit">
-                                <img src="assets/images/layouts/skin-orbit.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-orbit.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Orbit</h5>
@@ -410,7 +415,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-neo"
                                 value="neo" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-neo">
-                                <img src="assets/images/layouts/skin-neo.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-neo.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Neo</h5>
@@ -421,7 +426,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-silver"
                                 value="silver" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-silver">
-                                <img src="assets/images/layouts/skin-silver.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-silver.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Silver</h5>
@@ -432,7 +437,7 @@
                             <input class="form-check-input" type="radio" name="data-skin" id="demo-skin-xenon"
                                 value="xenon" />
                             <label class="form-check-label p-0 w-100" for="demo-skin-xenon">
-                                <img src="assets/images/layouts/skin-xenon.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/skin-xenon.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Xenon</h5>
@@ -448,7 +453,7 @@
                             <input class="form-check-input" type="radio" name="data-bs-theme" id="layout-color-light"
                                 value="light" />
                             <label class="form-check-label p-0 w-100" for="layout-color-light">
-                                <img src="assets/images/layouts/theme-light.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/theme-light.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Light</h5>
@@ -459,7 +464,7 @@
                             <input class="form-check-input" type="radio" name="data-bs-theme" id="layout-color-dark"
                                 value="dark" />
                             <label class="form-check-label p-0 w-100" for="layout-color-dark">
-                                <img src="assets/images/layouts/theme-dark.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/theme-dark.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">Dark</h5>
@@ -470,7 +475,7 @@
                             <input class="form-check-input" type="radio" name="data-bs-theme" id="layout-color-system"
                                 value="system" />
                             <label class="form-check-label p-0 w-100" for="layout-color-system">
-                                <img src="assets/images/layouts/theme-system.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/theme-system.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="text-center text-muted mt-2 mb-0">System</h5>
@@ -487,7 +492,7 @@
                             <input class="form-check-input" type="radio" name="data-topbar-color"
                                 id="layout-topbar-color-light" value="light" />
                             <label class="form-check-label p-0 w-100" for="layout-topbar-color-light">
-                                <img src="assets/images/layouts/topbar-color-light.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/topbar-color-light.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -499,7 +504,7 @@
                             <input class="form-check-input" type="radio" name="data-topbar-color"
                                 id="layout-topbar-color-dark" value="dark" />
                             <label class="form-check-label p-0 w-100" for="layout-topbar-color-dark">
-                                <img src="assets/images/layouts/topbar-color-dark.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/topbar-color-dark.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -511,7 +516,7 @@
                             <input class="form-check-input" type="radio" name="data-topbar-color"
                                 id="layout-topbar-color-gray" value="gray" />
                             <label class="form-check-label p-0 w-100" for="layout-topbar-color-gray">
-                                <img src="assets/images/layouts/topbar-color-gray.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/topbar-color-gray.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -523,7 +528,7 @@
                             <input class="form-check-input" type="radio" name="data-topbar-color"
                                 id="layout-topbar-color-gradient" value="gradient" />
                             <label class="form-check-label p-0 w-100" for="layout-topbar-color-gradient">
-                                <img src="assets/images/layouts/topbar-color-gradient.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/topbar-color-gradient.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -541,7 +546,7 @@
                             <input class="form-check-input" type="radio" name="data-menu-color"
                                 id="layout-sidenav-color-light" value="light" />
                             <label class="form-check-label p-0 w-100" for="layout-sidenav-color-light">
-                                <img src="assets/images/layouts/sidenav-color-light.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/sidenav-color-light.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -553,7 +558,7 @@
                             <input class="form-check-input" type="radio" name="data-menu-color"
                                 id="layout-sidenav-color-dark" value="dark" />
                             <label class="form-check-label p-0 w-100" for="layout-sidenav-color-dark">
-                                <img src="assets/images/layouts/sidenav-color-dark.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/sidenav-color-dark.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -565,7 +570,7 @@
                             <input class="form-check-input" type="radio" name="data-menu-color"
                                 id="layout-sidenav-color-gray" value="gray" />
                             <label class="form-check-label p-0 w-100" for="layout-sidenav-color-gray">
-                                <img src="assets/images/layouts/sidenav-color-gray.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/sidenav-color-gray.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -577,7 +582,7 @@
                             <input class="form-check-input" type="radio" name="data-menu-color"
                                 id="layout-sidenav-color-gradient" value="gradient" />
                             <label class="form-check-label p-0 w-100" for="layout-sidenav-color-gradient">
-                                <img src="assets/images/layouts/sidenav-color-gradient.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/sidenav-color-gradient.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -588,7 +593,7 @@
                             <input class="form-check-input" type="radio" name="data-menu-color"
                                 id="layout-sidenav-color-image" value="image" />
                             <label class="form-check-label p-0 w-100" for="layout-sidenav-color-image">
-                                <img src="assets/images/layouts/sidenav-color-image.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/sidenav-color-image.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -606,7 +611,7 @@
                             <input class="form-check-input" type="radio" name="data-sidenav-size"
                                 id="layout-sidenav-size-default" value="default" />
                             <label class="form-check-label p-0 w-100" for="layout-sidenav-size-default">
-                                <img src="assets/images/layouts/sidenav-size-default.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/sidenav-size-default.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -618,7 +623,7 @@
                             <input class="form-check-input" type="radio" name="data-sidenav-size"
                                 id="layout-sidenav-size-compact" value="compact" />
                             <label class="form-check-label p-0 w-100" for="layout-sidenav-size-compact">
-                                <img src="assets/images/layouts/sidenav-size-compact.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/sidenav-size-compact.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -630,7 +635,7 @@
                             <input class="form-check-input" type="radio" name="data-sidenav-size"
                                 id="layout-sidenav-size-condensed" value="condensed" />
                             <label class="form-check-label p-0 w-100" for="layout-sidenav-size-condensed">
-                                <img src="assets/images/layouts/sidenav-size-condensed.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/sidenav-size-condensed.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -642,7 +647,7 @@
                             <input class="form-check-input" type="radio" name="data-sidenav-size"
                                 id="layout-sidenav-size-small-hover" value="on-hover" />
                             <label class="form-check-label p-0 w-100" for="layout-sidenav-size-small-hover">
-                                <img src="assets/images/layouts/sidenav-size-on-hover.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/sidenav-size-on-hover.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -654,7 +659,7 @@
                             <input class="form-check-input" type="radio" name="data-sidenav-size"
                                 id="layout-sidenav-size-small-hover-active" value="on-hover-active" />
                             <label class="form-check-label p-0 w-100" for="layout-sidenav-size-small-hover-active">
-                                <img src="assets/images/layouts/sidenav-size-on-hover-active.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/sidenav-size-on-hover-active.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -666,7 +671,7 @@
                             <input class="form-check-input" type="radio" name="data-sidenav-size"
                                 id="layout-sidenav-size-offcanvas" value="offcanvas" />
                             <label class="form-check-label p-0 w-100" for="layout-sidenav-size-offcanvas">
-                                <img src="assets/images/layouts/sidenav-size-offcanvas.png" alt="layout-img"
+                                <img src="{{ asset('assets/images/layouts/sidenav-size-offcanvas.png') }}" alt="layout-img"
                                     class="img-fluid" />
                             </label>
                         </div>
@@ -684,7 +689,7 @@
                             <input class="form-check-input" type="radio" name="data-layout-width"
                                 id="layout-width-fluid" value="fluid" />
                             <label class="form-check-label p-0 w-100" for="layout-width-fluid">
-                                <img src="assets/images/layouts/width-fluid.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/width-fluid.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="mb-0 text-center text-muted mt-2">Fluid</h5>
@@ -695,7 +700,7 @@
                             <input class="form-check-input" type="radio" name="data-layout-width"
                                 id="layout-width-boxed" value="boxed" />
                             <label class="form-check-label p-0 w-100" for="layout-width-boxed">
-                                <img src="assets/images/layouts/width-boxed.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/width-boxed.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="mb-0 text-center text-muted mt-2">Boxed</h5>
@@ -711,7 +716,7 @@
                         <div class="form-check sidebar-setting card-radio">
                             <input class="form-check-input" type="radio" name="dir" id="layout-dir-ltr" value="ltr" />
                             <label class="form-check-label p-0 w-100" for="layout-dir-ltr">
-                                <img src="assets/images/layouts/dir-ltr.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/dir-ltr.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="mb-0 text-center text-muted mt-2">LTR</h5>
@@ -721,7 +726,7 @@
                         <div class="form-check sidebar-setting card-radio">
                             <input class="form-check-input" type="radio" name="dir" id="layout-dir-rtl" value="rtl" />
                             <label class="form-check-label p-0 w-100" for="layout-dir-rtl">
-                                <img src="assets/images/layouts/dir-rtl.png" alt="layout-img" class="img-fluid" />
+                                <img src="{{ asset('assets/images/layouts/dir-rtl.png') }}" alt="layout-img" class="img-fluid" />
                             </label>
                         </div>
                         <h5 class="mb-0 text-center text-muted mt-2">RTL</h5>
@@ -776,25 +781,33 @@
     </div>
     <!-- end offcanvas-->
     <!-- Vendor js -->
-    <script src="assets/js/vendors.min.js"></script>
+    <script src="{{ asset('assets/js/vendors.min.js') }}"></script>
 
     <!-- App js -->
-    <script src="assets/js/app.js"></script>
+    <script src="{{ asset('assets/js/app.js') }}"></script>
 
 
     <!-- Apex Chart js -->
-    <script src="assets/plugins/apexcharts/apexcharts.min.js"></script>
+    <script src="{{ asset('assets/plugins/apexcharts/apexcharts.min.js') }}"></script>
 
     <!-- Vector Map Js -->
-    <script src="assets/plugins/jsvectormap/jsvectormap.min.js"></script>
-    <script src="assets/js/maps/world-merc.js"></script>
-    <script src="assets/js/maps/world.js"></script>
+    <script src="{{ asset('assets/plugins/jsvectormap/jsvectormap.min.js') }}"></script>
+    <script src="{{ asset('assets/js/maps/world-merc.js') }}"></script>
+    <script src="{{ asset('assets/js/maps/world.js') }}"></script>
 
     <!-- Custom table -->
-    <script src="assets/js/pages/custom-table.js"></script>
+    <script src="{{ asset('assets/js/pages/custom-table.js') }}"></script>
 
     <!-- Dashboard js -->
-    <script src="assets/js/pages/dashboard-ecommerce.js"></script>
+    <script src="{{ asset('assets/js/pages/dashboard-ecommerce.js') }}"></script>
+    <script src="{{ asset('assets/plugins/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('assets/plugins/datatables/dataTables.min.js')}}"></script>
+    <script src="{{ asset('assets/plugins/datatables/dataTables.bootstrap5.min.js')}}"></script>
+    <script src="{{ asset('assets/plugins/datatables/dataTables.responsive.min.js')}}"></script>
+    <script src="{{ asset('assets/plugins/datatables/responsive.bootstrap5.min.js')}}"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.min.js"></script>
+    @stack('scripts')
 </body>
 
 <!-- Mirrored from coderthemes.com/paces/bootstrap/index.html by HTTrack Website Copier/3.x [XR&CO'2014], Mon, 11 May 2026 07:18:05 GMT -->
