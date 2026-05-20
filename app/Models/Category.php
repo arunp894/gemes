@@ -157,6 +157,11 @@ class Category extends Model implements HasMedia
         return $this->hasMany(self::class, 'parent_id');
     }
 
+    public function products(): HasMany
+    {
+        return $this->hasMany(\App\Models\Product::class, 'category_id');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class, 'created_by');
