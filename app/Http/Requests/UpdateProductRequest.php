@@ -137,13 +137,8 @@ class UpdateProductRequest extends FormRequest
         }
 
         $top = $category->parent ?? $category;
-        $isGemstone = in_array(
-            strtoupper((string) $top->code),
-            Product::GEMSTONE_PARENT_CODES,
-            true
-        );
 
-        if (! $isGemstone) {
+        if (! (bool) $top->is_gemstone) {
             return;
         }
 

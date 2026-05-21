@@ -18,6 +18,12 @@ class UpdateCategoryRequest extends FormRequest
         if ($this->has('parent_id') && $this->input('parent_id') === '') {
             $this->merge(['parent_id' => null]);
         }
+
+        // Coerce the gemstone checkbox to a boolean so the rule accepts it
+        // whether the form sends '1', 'true', or omits it entirely.
+        $this->merge([
+            'is_gemstone' => $this->boolean('is_gemstone'),
+        ]);
     }
 
     public function rules(): array
@@ -70,6 +76,7 @@ class UpdateCategoryRequest extends FormRequest
             'description'   => ['nullable', 'string', 'max:1000'],
             'display_order' => ['nullable', 'integer', 'min:0', 'max:99999'],
             'status'        => ['required', 'boolean'],
+            'is_gemstone'   => ['nullable', 'boolean'],
             'image'         => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
             'remove_image'  => ['nullable', 'boolean'],
         ];
@@ -94,6 +101,7 @@ class UpdateCategoryRequest extends FormRequest
             'code'          => 'Category Code',
             'parent_id'     => 'Parent Category',
             'display_order' => 'Display Order',
+            'is_gemstone'   => 'Gemstone Category',
             'image'         => 'Category Image',
         ];
     }

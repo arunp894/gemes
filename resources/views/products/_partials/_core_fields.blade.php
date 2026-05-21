@@ -33,7 +33,9 @@
                     v-model="form.top_category_id" @change="onTopCategoryChange">
                     <option :value="null">— Select Category —</option>
                     @foreach ($topCategories as $cat)
-                        <option value="{{ $cat->id }}" data-code="{{ $cat->code }}">{{ $cat->name }}</option>
+                        <option value="{{ $cat->id }}"
+                            data-code="{{ $cat->code }}"
+                            data-gemstone="{{ $cat->is_gemstone ? '1' : '0' }}">{{ $cat->name }}</option>
                     @endforeach
                 </select>
             </div>

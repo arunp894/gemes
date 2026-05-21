@@ -129,7 +129,7 @@ class StoreProductRequest extends FormRequest
 
     /**
      * Conditional gemstone field requirements.
-     * If the chosen subcategory's parent code is in the gemstone group,
+     * If the chosen subcategory's top-level parent has `is_gemstone = true`,
      * carat_weight / stone_type / treatment become required.
      */
     protected function validateGemstoneFields(Validator $v): void
@@ -145,13 +145,8 @@ class StoreProductRequest extends FormRequest
         }
 
         $top = $category->parent ?? $category;
-        $isGemstone = in_array(
-            strtoupper((string) $top->code),
-            Product::GEMSTONE_PARENT_CODES,
-            true
-        );
 
-        if (! $isGemstone) {
+        if (! (bool) $top->is_gemstone) {
             return;
         }
 

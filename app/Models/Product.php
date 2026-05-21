@@ -67,10 +67,17 @@ class Product extends Model implements HasMedia
     ];
 
     /**
-     * Top-level category codes that flag a product as a "gemstone" product.
-     * Used by isGemstone() to decide whether gemstone fields are required.
-     * Adjust seeder accordingly if codes differ.
+     * Legacy hard-coded list — DEPRECATED.
      *
+     * Previously used by isGemstone() to decide whether gemstone fields
+     * are required. As of the `is_gemstone` column on the categories table
+     * (migration 2026_05_20_100001_add_is_gemstone_to_categories_table)
+     * the flag is now stored per-category and managed in the admin UI.
+     *
+     * Kept here only so any external code still importing this constant
+     * doesn't break; not consulted anywhere in this codebase anymore.
+     *
+     * @deprecated Use Category::is_gemstone instead.
      * @var array<int, string>
      */
     public const GEMSTONE_PARENT_CODES = ['GEM', 'CERT'];
@@ -296,14 +303,17 @@ class Product extends Model implements HasMedia
     }
 
     /**
-     * Scope: products whose category's TOP-LEVEL parent code is in the
-     * gemstone group. Uses a whereHas through the self-referential
-     * categories relationship.
+     * Scope: products whose category (or its top-level parent) is flagged
+     * as a gemstone category. Uses the `is_gemstone` boolean stored on
+     * the categories table.
      */
     public function scopeGemstones($query)
     {
-        return $query->whereHas('category.parent', function ($q) {
-            $q->whereIn('code', self::GEMSTONE_PARENT_CODES);
+        return $query->whereHas('category', function ($q) {
+            $q->where('is_gemstone', true)
+              ->orWhereHas('parent', function ($qq) {
+                  $qq->where('is_gemstone', true);
+              });
         });
     }
 
@@ -377,8 +387,9 @@ class Product extends Model implements HasMedia
 
     /**
      * Returns true if this product belongs to a gemstone-family category.
-     * Walks up the category hierarchy: if the category itself is top-level
-     * use its own code, otherwise use the parent's code.
+     * Walks up the category hierarchy: a leaf subcategory inherits its
+     * top-level parent's `is_gemstone` flag; a top-level category checks
+     * its own flag.
      */
     public function isGemstone(): bool
     {
@@ -391,7 +402,7 @@ class Product extends Model implements HasMedia
 
         $top = $category->parent ?? $category;
 
-        return in_array(strtoupper((string) $top->code), self::GEMSTONE_PARENT_CODES, true);
+        return (bool) $top->is_gemstone;
     }
 
     /**

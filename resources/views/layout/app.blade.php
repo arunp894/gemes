@@ -74,8 +74,8 @@
                             <a href="#!" class="link-reset">
                                 <img src="{{ asset('assets/images/users/user-1.jpg') }}" alt="user-image"
                                     class="rounded-circle mb-2 avatar-md" />
-                                <span class="sidenav-user-name fw-bold">David Dev</span>
-                                <span class="fs-12 fw-semibold" data-lang="user-role">Art Director</span>
+                                <span class="sidenav-user-name fw-bold">{{ auth()->user()?->name ?? 'Guest' }}</span>
+                                <span class="fs-12 fw-semibold" data-lang="user-role">{{ auth()->user()?->roles->first()?->name ?? '—' }}</span>
                             </a>
                         </div>
                         <div>
@@ -110,10 +110,14 @@
                                 </a>
 
                                 <!-- Logout -->
-                                <a href="javascript:void(0);" class="dropdown-item text-danger fw-semibold">
+                                <a href="#!" class="dropdown-item text-danger fw-semibold"
+                                   onclick="event.preventDefault(); document.getElementById('paces-logout-form').submit();">
                                     <i class="ti ti-logout me-1 fs-lg align-middle"></i>
                                     <span class="align-middle">Log Out</span>
                                 </a>
+                                <form id="paces-logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                                    @csrf
+                                </form>
                             </div>
                         </div>
                     </div>

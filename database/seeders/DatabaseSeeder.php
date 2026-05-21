@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -12,17 +11,19 @@ class DatabaseSeeder extends Seeder
 
     /**
      * Seed the application's database.
+     *
+     * Order matters:
+     *   1. Permissions -- the catalogue must exist before roles can attach.
+     *   2. Roles       -- creates roles and attaches permissions.
+     *   3. AdminUser   -- creates the default admin and attaches the admin role.
+     *   4. Channels    -- catalogue lookup data (unrelated to auth).
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
-
         $this->call([
+            PermissionSeeder::class,
+            RoleSeeder::class,
+            AdminUserSeeder::class,
             ChannelSeeder::class,
         ]);
     }

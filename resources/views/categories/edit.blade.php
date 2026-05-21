@@ -153,6 +153,22 @@
                             </div>
                         </div>
 
+                        {{-- Gemstone-Type flag (top-level only) --}}
+                        <div class="mb-3" v-show="!form.parent_id">
+                            <label class="form-label d-block">Gemstone Category</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_gemstone"
+                                    v-model="form.is_gemstone">
+                                <label class="form-check-label" for="is_gemstone">
+                                    Products under this category use gemstone fields (carat, treatment, certificate…)
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                When ticked, products under this category and its subcategories show the Gemstone
+                                Details panel on the product form and require carat / stone type / treatment.
+                            </small>
+                        </div>
+
                         {{-- Status --}}
                         <div class="mb-3">
                             <label class="form-label d-block">Status <span class="text-danger">*</span></label>
@@ -216,6 +232,7 @@
                 description:   @json($category->description),
                 display_order: @json($category->display_order),
                 status:        @json((bool) $category->status),
+                is_gemstone:   @json((bool) $category->is_gemstone),
             },
             currentImage: @json($category->thumb_url ?? $category->image_url),
             imageFile: null,
@@ -273,6 +290,11 @@
                 // parent_id is only sent if the field isn't disabled (no children)
                 if (!this.hasChildren) {
                     fd.append('parent_id', this.form.parent_id || '');
+                }
+                // is_gemstone is only meaningful for top-level categories.
+                // Send it whenever the category IS top-level (no parent selected).
+                if (!this.form.parent_id) {
+                    fd.append('is_gemstone', this.form.is_gemstone ? 1 : 0);
                 }
                 if (this.imageFile)   fd.append('image', this.imageFile);
                 if (this.removeImage) fd.append('remove_image', 1);

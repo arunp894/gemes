@@ -176,7 +176,7 @@ class ProductController extends Controller
     public function create(): View
     {
         return view('products.create', [
-            'topCategories' => Category::active()->topLevel()->ordered()->get(['id', 'name', 'code']),
+            'topCategories' => Category::active()->topLevel()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
             'channels'      => Channel::active()->ordered()->get(['id', 'name', 'code']),
             'product'       => null,
         ]);
@@ -247,7 +247,7 @@ class ProductController extends Controller
 
         return view('products.edit', [
             'product'         => $product,
-            'topCategories'   => Category::active()->topLevel()->ordered()->get(['id', 'name', 'code']),
+            'topCategories'   => Category::active()->topLevel()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
             'channels'        => Channel::active()->ordered()->get(['id', 'name', 'code']),
             'topCategoryId'   => $topCategoryId,
             'subcategories'   => $subcategories,

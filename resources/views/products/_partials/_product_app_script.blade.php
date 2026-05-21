@@ -54,7 +54,6 @@
                 },
                 subcategories: [],
                 loadingSubcategories: false,
-                gemstoneParentCodes: @json(\App\Models\Product::GEMSTONE_PARENT_CODES),
                 isGemstone: false,
 
                 primaryImageFile: null,
@@ -115,8 +114,9 @@
                     const sel = document.getElementById('top_category_id');
                     if (!sel) { this.isGemstone = false; return; }
                     const opt = sel.options[sel.selectedIndex];
-                    const code = opt ? (opt.dataset.code || '').toUpperCase() : '';
-                    this.isGemstone = !!code && this.gemstoneParentCodes.indexOf(code) !== -1;
+                    // Read the is_gemstone flag stamped onto the <option> by
+                    // the Blade partial. '1' = gemstone category.
+                    this.isGemstone = !!opt && opt.dataset.gemstone === '1';
                 },
 
                 /* -------------------- File handlers -------------------- */

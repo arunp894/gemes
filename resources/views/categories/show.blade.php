@@ -37,6 +37,11 @@
                                 @else
                                     <span class="badge badge-soft-primary ms-1">Top-Level</span>
                                 @endif
+                                @if ($category->is_gemstone && ! $category->parent)
+                                    <span class="badge badge-soft-warning ms-1" title="Products in this category show gemstone fields">
+                                        <i class="ti ti-diamond me-1"></i>Gemstone
+                                    </span>
+                                @endif
                             </h4>
                             <p class="text-muted mb-0">
                                 <code>{{ $category->code }}</code>

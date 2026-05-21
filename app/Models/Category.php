@@ -41,6 +41,7 @@ class Category extends Model implements HasMedia
         'parent_id',
         'display_order',
         'status',
+        'is_gemstone',
         'created_by',
         'updated_by',
     ];
@@ -54,6 +55,7 @@ class Category extends Model implements HasMedia
         'status'        => 'boolean',
         'display_order' => 'integer',
         'parent_id'     => 'integer',
+        'is_gemstone'   => 'boolean',
     ];
 
     /* -----------------------------------------------------------------

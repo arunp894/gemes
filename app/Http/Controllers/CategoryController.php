@@ -135,6 +135,10 @@ class CategoryController extends Controller
                 'parent_id'     => $data['parent_id'] ?? null,
                 'display_order' => $data['display_order'] ?? 0,
                 'status'        => (bool) $data['status'],
+                // is_gemstone is only meaningful for top-level categories,
+                // but storing it uniformly keeps the column predictable and
+                // lets the UI hide/show the checkbox without server gymnastics.
+                'is_gemstone'   => empty($data['parent_id']) ? (bool) ($data['is_gemstone'] ?? false) : false,
             ]);
 
             if ($request->hasFile('image')) {
@@ -206,6 +210,17 @@ class CategoryController extends Controller
             if (array_key_exists('parent_id', $data)) {
                 $payload['parent_id'] = $data['parent_id'] ?: null;
             }
+
+            // is_gemstone only applies to top-level categories. If this
+            // category currently has a parent OR is being moved under a
+            // parent, force the flag false. Otherwise persist the form value.
+            $effectiveParentId = array_key_exists('parent_id', $payload)
+                ? $payload['parent_id']
+                : $category->parent_id;
+
+            $payload['is_gemstone'] = empty($effectiveParentId)
+                ? (bool) ($data['is_gemstone'] ?? false)
+                : false;
 
             $category->fill($payload)->save();
 

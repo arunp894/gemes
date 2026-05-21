@@ -103,6 +103,22 @@
                             </div>
                         </div>
 
+                        {{-- Gemstone-Type flag (top-level only) --}}
+                        <div class="mb-3" v-show="!form.parent_id">
+                            <label class="form-label d-block">Gemstone Category</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_gemstone"
+                                    v-model="form.is_gemstone">
+                                <label class="form-check-label" for="is_gemstone">
+                                    Products under this category use gemstone fields (carat, treatment, certificate…)
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                Tick this if products in this category are gemstones or certified stones. The product
+                                form will then show the Gemstone Details panel.
+                            </small>
+                        </div>
+
                         {{-- Status --}}
                         <div class="mb-3">
                             <label class="form-label d-block">Status <span class="text-danger">*</span></label>
@@ -166,6 +182,7 @@
                 description: '',
                 display_order: 0,
                 status: true,
+                is_gemstone: false,
             },
             imageFile: null,
             imagePreview: null,
@@ -226,6 +243,11 @@
                 fd.append('description', this.form.description || '');
                 fd.append('display_order', this.form.display_order || 0);
                 fd.append('status', this.form.status ? 1 : 0);
+                // Only send is_gemstone when creating a top-level category;
+                // for subcategories the controller forces it false anyway.
+                if (!this.form.parent_id) {
+                    fd.append('is_gemstone', this.form.is_gemstone ? 1 : 0);
+                }
                 if (this.imageFile) fd.append('image', this.imageFile);
 
                 try {
