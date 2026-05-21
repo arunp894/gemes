@@ -118,5 +118,73 @@
                 </ul>
             </div>
         </li>
+
+        {{-- =========================
+    ADMINISTRATION MENU
+========================= --}}
+
+        @if (auth()->check() && (auth()->user()->hasAnyPermission(['users.view', 'roles.view']) || auth()->user()->hasRole('admin') || auth()->user()->isSuperAdmin()))
+            <li class="side-nav-title mt-2">Administration</li>
+
+            <li
+                class="side-nav-item {{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'menuitem-active' : '' }}">
+
+                <a data-bs-toggle="collapse" href="#adminMenu"
+                    aria-expanded="{{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'true' : 'false' }}"
+                    aria-controls="adminMenu" class="side-nav-link">
+
+                    <span class="menu-icon">
+                        <i class="ti ti-shield-lock"></i>
+                    </span>
+
+                    <span class="menu-text">
+                        Administration
+                    </span>
+
+                    <span class="menu-arrow"></span>
+                </a>
+
+                <div class="collapse {{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'show' : '' }}"
+                    id="adminMenu">
+
+                    <ul class="sub-menu">
+
+                        {{-- Users --}}
+                        @permission('users.view')
+                            <li class="side-nav-item {{ request()->routeIs('users.*') ? 'active' : '' }}">
+                                <a href="{{ route('users.index') }}" class="side-nav-link">
+                                    <span class="menu-text">
+                                        Users
+                                    </span>
+                                </a>
+                            </li>
+                        @endpermission
+
+                        {{-- Roles --}}
+                        @permission('roles.view')
+                            <li class="side-nav-item {{ request()->routeIs('roles.*') ? 'active' : '' }}">
+                                <a href="{{ route('roles.index') }}" class="side-nav-link">
+                                    <span class="menu-text">
+                                        Roles
+                                    </span>
+                                </a>
+                            </li>
+                        @endpermission
+
+                        {{-- Permissions --}}
+                        @role('admin')
+                            <li class="side-nav-item {{ request()->routeIs('permissions.*') ? 'active' : '' }}">
+                                <a href="{{ route('permissions.index') }}" class="side-nav-link">
+                                    <span class="menu-text">
+                                        Permissions
+                                    </span>
+                                </a>
+                            </li>
+                        @endrole
+
+                    </ul>
+                </div>
+            </li>
+        @endif
     </ul>
 </div>

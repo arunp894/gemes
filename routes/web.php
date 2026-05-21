@@ -2,7 +2,10 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -126,14 +129,71 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Roles & Permissions admin (role-gated)
+    | Users admin (RBAC)
     |--------------------------------------------------------------------------
-    | Reserved here so a future RoleController slots in without rewiring auth.
-    | Until controllers exist these routes will 404 — that's intentional.
-    |
-    | Route::resource('roles', RoleController::class)
-    |     ->middleware('role:admin');
-    | Route::resource('users', UserController::class)
-    |     ->middleware('role:admin');
+    | DataTables endpoint + toggle-status registered BEFORE the resource so
+    | they win route matching. Resource is constrained to numeric {user}.
     */
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/data', [UserController::class, 'data'])
+            ->middleware('permission:users.view')
+            ->name('data');
+
+        Route::patch('/{user}/toggle-status', [UserController::class, 'toggleStatus'])
+            ->whereNumber('user')
+            ->middleware('permission:users.edit')
+            ->name('toggle-status');
+    });
+
+    Route::resource('users', UserController::class)
+        ->whereNumber('user')
+        ->middleware([
+            'index'   => 'permission:users.view',
+            'show'    => 'permission:users.view',
+            'create'  => 'permission:users.create',
+            'store'   => 'permission:users.create',
+            'edit'    => 'permission:users.edit',
+            'update'  => 'permission:users.edit',
+            'destroy' => 'permission:users.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Roles admin (RBAC)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('roles')->name('roles.')->group(function () {
+        Route::get('/data', [RoleController::class, 'data'])
+            ->middleware('permission:roles.view')
+            ->name('data');
+    });
+
+    Route::resource('roles', RoleController::class)
+        ->whereNumber('role')
+        ->middleware([
+            'index'   => 'permission:roles.view',
+            'show'    => 'permission:roles.view',
+            'create'  => 'permission:roles.create',
+            'store'   => 'permission:roles.create',
+            'edit'    => 'permission:roles.edit',
+            'update'  => 'permission:roles.edit',
+            'destroy' => 'permission:roles.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Permissions admin (RBAC) — admin-only by default
+    |--------------------------------------------------------------------------
+    | Permission management is power-user territory; gated to the admin role
+    | rather than a granular permission so it's never accidentally granted.
+    */
+    Route::prefix('permissions')->name('permissions.')->group(function () {
+        Route::get('/data', [PermissionController::class, 'data'])
+            ->middleware('role:admin')
+            ->name('data');
+    });
+
+    Route::resource('permissions', PermissionController::class)
+        ->whereNumber('permission')
+        ->middleware('role:admin');
 });
