@@ -31,6 +31,7 @@
 
     <!-- App css -->
     <link id="app-style" href="{{ asset('assets/css/app.min.css') }}" rel="stylesheet" type="text/css" />
+    <link id="app-style" href="{{ asset('assets/plugins/select2/select2.min.css') }}" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="{{ asset('assets/vendor/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/vendor/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css') }}">
     @stack('styles')
@@ -805,12 +806,13 @@
     <!-- Dashboard js -->
     <script src="{{ asset('assets/js/pages/dashboard-ecommerce.js') }}"></script>
     <script src="{{ asset('assets/plugins/jquery/jquery.min.js') }}"></script>
+    <script src="{{ asset('assets/plugins/select2/select2.min.js') }}"></script>
     <script src="{{ asset('assets/plugins/datatables/dataTables.min.js')}}"></script>
     <script src="{{ asset('assets/plugins/datatables/dataTables.bootstrap5.min.js')}}"></script>
     <script src="{{ asset('assets/plugins/datatables/dataTables.responsive.min.js')}}"></script>
-    <script src="{{ asset('assets/plugins/datatables/responsive.bootstrap5.min.js')}}"></script>
-    
+    <script src="{{ asset('assets/plugins/datatables/responsive.bootstrap5.min.js')}}"></script>    
     <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.min.js"></script>
+    
     @stack('scripts')
 </body>
 

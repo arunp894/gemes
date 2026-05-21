@@ -38,14 +38,7 @@
                 </ul>
             </div>
         </li>
-        {{-- =========================
-    CATALOGUE MENU
-========================= --}}
-
-        <li class="side-nav-title mt-2">Catalogue</li>
-
-        <li
-            class="side-nav-item {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') ? 'menuitem-active' : '' }}">
+        <li class="side-nav-item {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') ? 'menuitem-active' : '' }}">
 
             <a data-bs-toggle="collapse" href="#catalogueMenu"
                 aria-expanded="{{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') ? 'true' : 'false' }}"
@@ -56,11 +49,8 @@
                 </span>
 
                 <span class="menu-text">
-                    Catalogue
+                    Models
                 </span>
-
-                <span class="badge bg-success text-white">4</span>
-
                 <span class="menu-arrow"></span>
             </a>
 
@@ -69,29 +59,14 @@
 
                 <ul class="sub-menu">
 
-                    {{-- Categories --}}
                     <li class="side-nav-item {{ request()->routeIs('categories.*') ? 'active' : '' }}">
                         <a href="{{ route('categories.index') }}" class="side-nav-link">
 
-                            <span class="menu-text">
-                                Categories
-                            </span>
+                            <span class="menu-text"> Categories</span>
+                            <span class="badge bg-success text-white">4</span>
                         </a>
                     </li>
 
-                    {{-- Subcategories --}}
-                    <li class="side-nav-item {{ request()->routeIs('subcategories.*') ? 'active' : '' }}">
-                        <a href="{{ \Illuminate\Support\Facades\Route::has('subcategories.index')
-                    ? route('subcategories.index')
-                    : url('/subcategories') }}" class="side-nav-link">
-
-                            <span class="menu-text">
-                                Subcategories
-                            </span>
-                        </a>
-                    </li>
-
-                    {{-- Products --}}
                     <li class="side-nav-item {{ request()->routeIs('products.*') ? 'active' : '' }}">
                         <a href="{{ \Illuminate\Support\Facades\Route::has('products.index')
                     ? route('products.index')
@@ -99,18 +74,6 @@
 
                             <span class="menu-text">
                                 Products
-                            </span>
-                        </a>
-                    </li>
-
-                    {{-- Website Visibility --}}
-                    <li class="side-nav-item {{ request()->routeIs('website-visibility.*') ? 'active' : '' }}">
-                        <a href="{{ \Illuminate\Support\Facades\Route::has('website-visibility.index')
-                    ? route('website-visibility.index')
-                    : url('/website-visibility') }}" class="side-nav-link">
-
-                            <span class="menu-text">
-                                Website Visibility
                             </span>
                         </a>
                     </li>
@@ -123,68 +86,69 @@
     ADMINISTRATION MENU
 ========================= --}}
 
-        @if (auth()->check() && (auth()->user()->hasAnyPermission(['users.view', 'roles.view']) || auth()->user()->hasRole('admin') || auth()->user()->isSuperAdmin()))
-            <li class="side-nav-title mt-2">Administration</li>
+        @if (auth()->check() && (auth()->user()->hasAnyPermission(['users.view', 'roles.view']) ||
+        auth()->user()->hasRole('admin') || auth()->user()->isSuperAdmin()))
+        <li class="side-nav-title mt-2">Administration</li>
 
-            <li
-                class="side-nav-item {{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'menuitem-active' : '' }}">
+        <li
+            class="side-nav-item {{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'menuitem-active' : '' }}">
 
-                <a data-bs-toggle="collapse" href="#adminMenu"
-                    aria-expanded="{{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'true' : 'false' }}"
-                    aria-controls="adminMenu" class="side-nav-link">
+            <a data-bs-toggle="collapse" href="#adminMenu"
+                aria-expanded="{{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'true' : 'false' }}"
+                aria-controls="adminMenu" class="side-nav-link">
 
-                    <span class="menu-icon">
-                        <i class="ti ti-shield-lock"></i>
-                    </span>
+                <span class="menu-icon">
+                    <i class="ti ti-shield-lock"></i>
+                </span>
 
-                    <span class="menu-text">
-                        Administration
-                    </span>
+                <span class="menu-text">
+                    Administration
+                </span>
 
-                    <span class="menu-arrow"></span>
-                </a>
+                <span class="menu-arrow"></span>
+            </a>
 
-                <div class="collapse {{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'show' : '' }}"
-                    id="adminMenu">
+            <div class="collapse {{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'show' : '' }}"
+                id="adminMenu">
 
-                    <ul class="sub-menu">
+                <ul class="sub-menu">
 
-                        {{-- Users --}}
-                        @permission('users.view')
-                            <li class="side-nav-item {{ request()->routeIs('users.*') ? 'active' : '' }}">
-                                <a href="{{ route('users.index') }}" class="side-nav-link">
-                                    <span class="menu-text">
-                                        Users
-                                    </span>
-                                </a>
-                            </li>
-                        @endpermission
+                    {{-- Users --}}
+                    @permission('users.view')
+                    <li class="side-nav-item {{ request()->routeIs('users.*') ? 'active' : '' }}">
+                        <a href="{{ route('users.index') }}" class="side-nav-link">
+                            <span class="menu-text">
+                                Users
+                            </span>
+                        </a>
+                    </li>
+                    @endpermission
 
-                        {{-- Roles --}}
-                        @permission('roles.view')
-                            <li class="side-nav-item {{ request()->routeIs('roles.*') ? 'active' : '' }}">
-                                <a href="{{ route('roles.index') }}" class="side-nav-link">
-                                    <span class="menu-text">
-                                        Roles
-                                    </span>
-                                </a>
-                            </li>
-                        @endpermission
+                    {{-- Roles --}}
+                    @permission('roles.view')
+                    <li class="side-nav-item {{ request()->routeIs('roles.*') ? 'active' : '' }}">
+                        <a href="{{ route('roles.index') }}" class="side-nav-link">
+                            <span class="menu-text">
+                                Roles
+                            </span>
+                        </a>
+                    </li>
+                    @endpermission
 
-                        {{-- Permissions --}}
-                        @role('admin')
-                            <li class="side-nav-item {{ request()->routeIs('permissions.*') ? 'active' : '' }}">
-                                <a href="{{ route('permissions.index') }}" class="side-nav-link">
-                                    <span class="menu-text">
-                                        Permissions
-                                    </span>
-                                </a>
-                            </li>
-                        @endrole
+                    {{-- Permissions --}}
+                    @role('admin')
+                    <li class="side-nav-item {{ request()->routeIs('permissions.*') ? 'active' : '' }}">
+                        <a href="{{ route('permissions.index') }}" class="side-nav-link">
+                            <span class="menu-text">
+                                Permissions
+                            </span>
+                        </a>
+                    </li>
+                    @endrole
 
-                    </ul>
-                </div>
-            </li>
+                </ul>
+            </div>
+        </li>
         @endif
     </ul>
 </div>
