@@ -13,7 +13,7 @@
 
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
-                <li class="breadcrumb-item"><a href="{{ url('/') }}">Paces</a></li>
+                <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('categories.index') }}">Categories</a></li>
                 <li class="breadcrumb-item active">Add New</li>
             </ol>
@@ -123,7 +123,7 @@
                         <div class="mb-3">
                             <label class="form-label d-block">Status <span class="text-danger">*</span></label>
                             <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="status"
+                                <input class="form-check-input" type="checkbox" role="switch" 
                                     v-model="form.status">
                                 <label class="form-check-label" for="status">
                                     @{{ form.status ? 'Active' : 'Inactive' }}

@@ -12,7 +12,7 @@
         </div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
-                <li class="breadcrumb-item"><a href="{{ url('/') }}">Paces</a></li>
+                <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('categories.index') }}">Categories</a></li>
                 <li class="breadcrumb-item active">Edit</li>
             </ol>
@@ -23,7 +23,7 @@
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-body">
-                    <h4 class="header-title mb-3">Edit "{{ $category->name }}"</h4>
+                    {{-- <h4 class="header-title mb-3">Edit "{{ $category->name }}"</h4> --}}
 
                     <form id="categoryEditForm" class="needs-validation" novalidate @submit.prevent="submitForm" enctype="multipart/form-data">
                         @csrf
@@ -173,7 +173,7 @@
                         <div class="mb-3">
                             <label class="form-label d-block">Status <span class="text-danger">*</span></label>
                             <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" role="switch" id="status" v-model="form.status">
+                                <input class="form-check-input" type="checkbox" role="switch" v-model="form.status">
                                 <label class="form-check-label" for="status">@{{ form.status ? 'Active' : 'Inactive' }}</label>
                             </div>
                         </div>

@@ -9,7 +9,7 @@
         <div class="flex-grow-1"><h4 class="page-main-title m-0">Add Rack</h4></div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
-                <li class="breadcrumb-item"><a href="{{ url('/') }}">Paces</a></li>
+                <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('racks.index') }}">Racks</a></li>
                 <li class="breadcrumb-item active">Add</li>
             </ol>

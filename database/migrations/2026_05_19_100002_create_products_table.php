@@ -26,7 +26,7 @@ return new class extends Migration
             /* ----------------------------- Core ----------------------------- */
             $table->string('title', 200);
             $table->string('sku', 80)->unique();
-            $table->unsignedBigInteger('category_id')->index();
+            $table->unsignedBigInteger('category_id')->nullable()->default(null)->index();
             $table->string('short_description', 500)->nullable();
             $table->longText('full_description')->nullable();
             $table->string('country_of_origin', 100)->nullable();

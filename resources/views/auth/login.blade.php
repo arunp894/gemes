@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Sign In | Paces</title>
+    <title>Sign In</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
 
@@ -34,12 +34,12 @@
                     <div class="card p-4">
                         <div class="auth-brand text-center mb-2">
                             <a href="{{ url('/') }}" class="logo-dark">
-                                <img src="{{ asset('assets/images/logo-black.png') }}" alt="dark logo" />
+                                <img style="display: none" src="{{ asset('assets/images/logo-black.png') }}" alt="dark logo" />
                             </a>
                             <a href="{{ url('/') }}" class="logo-light">
-                                <img src="{{ asset('assets/images/logo.png') }}" alt="logo" />
+                                <img style="display: none" src="{{ asset('assets/images/logo.png') }}" alt="logo" />
                             </a>
-                            <h4 class="fw-bold text-dark mt-3">Welcome back 👋</h4>
+                            <h3 class="fw-bold text-dark mt-3">Sukina Gems</h3>
                             <p class="text-muted w-lg-75 mx-auto">
                                 Sign in with your email and password to continue.
                             </p>
@@ -123,7 +123,7 @@
                     <p class="text-center text-muted mt-4 mb-0">
                         ©
                         <script>document.write(new Date().getFullYear())</script>
-                        Paces — by <span class="fw-semibold">Coderthemes</span>
+                        Sukina Gems — by <span class="fw-semibold">macromend.com</span>
                     </p>
                 </div>
             </div>

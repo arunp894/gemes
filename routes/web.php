@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Route;
 | Login form + form submit. The `guest` middleware bounces an already
 | authenticated user back to the dashboard instead of re-showing the form.
 */
+
 Route::middleware('guest')->group(function () {
     Route::get('/login',  [LoginController::class, 'showLogin'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
@@ -30,7 +31,7 @@ Route::middleware('guest')->group(function () {
 |--------------------------------------------------------------------------
 | POST only (no GET) so CSRF is enforced and crawlers can't trigger it.
 */
-Route::post('/logout', [LoginController::class, 'logout'])
+Route::get('/logout', [LoginController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
@@ -44,8 +45,8 @@ Route::post('/logout', [LoginController::class, 'logout'])
 Route::middleware('auth')->group(function () {
 
     // Root + dashboard. `/` and `/dashboard` both land on the same view.
-    Route::get('/', fn () => redirect()->route('dashboard'));
-    Route::get('/dashboard', fn () => view('welcome'))->name('dashboard');
+    Route::get('/', fn() => redirect()->route('dashboard'));
+    Route::get('/dashboard', fn() => view('welcome'))->name('dashboard');
 
     /*
     |--------------------------------------------------------------------------

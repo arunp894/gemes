@@ -340,9 +340,9 @@
                     } else if (!/^[A-Za-z0-9_\-]+$/.test(this.form.sku)) {
                         this.$set(this.errors, 'sku', 'Only letters, numbers, hyphens, underscores.');
                     }
-                    if (!this.form.category_id) {
-                        this.$set(this.errors, 'category_id', 'Please pick a subcategory.');
-                    }
+                    // if (!this.form.category_id) {
+                    //     this.$set(this.errors, 'category_id', 'Please pick a subcategory.');
+                    // }
 
                     if (this.isGemstone) {
                         if (!this.form.carat_weight) {

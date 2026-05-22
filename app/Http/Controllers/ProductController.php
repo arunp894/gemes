@@ -20,8 +20,7 @@ class ProductController extends Controller
 {
     public function __construct(
         protected BarcodeService $barcodeService,
-    ) {
-    }
+    ) {}
 
     /* =================================================================
      |  Listing
@@ -94,8 +93,8 @@ class ProductController extends Controller
                         <div>
                             <h5 class="mb-1">
                                 <a href="' . route('products.show', $product) . '" class="link-reset">'
-                                    . e($product->title) .
-                                '</a>
+                    . e($product->title) .
+                    '</a>
                             </h5>
                             <span class="text-muted fs-xs">' . e($subcategoryName) . '</span>
                         </div>
@@ -466,7 +465,7 @@ class ProductController extends Controller
 
         $duplicate = Barcode::withTrashed()
             ->where('barcode_value', $validated['value'])
-            ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+            ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
             ->first();
 
         if ($duplicate) {
@@ -498,7 +497,7 @@ class ProductController extends Controller
             // Core
             'title'             => $data['title'],
             'sku'               => $data['sku'],
-            'category_id'       => $data['category_id'],
+            'category_id'       => $data['category_id'] ?? null,
             'short_description' => $data['short_description'] ?? null,
             'full_description'  => $data['full_description'] ?? null,
             'country_of_origin' => $data['country_of_origin'] ?? null,

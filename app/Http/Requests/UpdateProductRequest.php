@@ -55,14 +55,14 @@ class UpdateProductRequest extends FormRequest
                     ->whereNull('deleted_at'),
             ],
 
-            'category_id' => [
-                'required',
-                'integer',
-                Rule::exists('categories', 'id')
-                    ->whereNull('deleted_at')
-                    ->where('status', 1)
-                    ->whereNotNull('parent_id'),
-            ],
+            // 'category_id' => [
+            //     'required',
+            //     'integer',
+            //     Rule::exists('categories', 'id')
+            //         ->whereNull('deleted_at')
+            //         ->where('status', 1)
+            //         ->whereNotNull('parent_id'),
+            // ],
 
             'short_description' => ['nullable', 'string', 'max:500'],
             'full_description'  => ['nullable', 'string'],
@@ -236,7 +236,7 @@ class UpdateProductRequest extends FormRequest
                 // belongs to this product.
                 $owner = Barcode::withTrashed()
                     ->where('barcode_value', $value)
-                    ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
+                    ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
                     ->first();
 
                 if ($owner && $product && $owner->product_id === $product->id) {
@@ -288,7 +288,7 @@ class UpdateProductRequest extends FormRequest
             'website_enabled'    => 'Website Enabled',
             'website_price'      => 'Website Price',
             'website_title'      => 'Website Title',
-            'website_description'=> 'Website Description',
+            'website_description' => 'Website Description',
             'featured_product'   => 'Featured Product',
             'website_sort_order' => 'Website Sort Order',
         ];

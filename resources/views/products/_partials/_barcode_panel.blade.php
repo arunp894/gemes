@@ -90,7 +90,7 @@
                 </div>
 
                 {{-- Channels --}}
-                <div class="col-md-3">
+                <div class="col-md-3" v-if="false">
                     <label class="form-label small">Channels</label>
                     <select class="form-select form-select-sm" multiple
                         v-model="barcode.channel_ids" size="2"

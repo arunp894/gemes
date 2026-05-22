@@ -11,7 +11,7 @@
         </div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
-                <li class="breadcrumb-item"><a href="{{ url('/') }}">Paces</a></li>
+                <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('purchases.index') }}">Purchases</a></li>
                 <li class="breadcrumb-item active">New</li>
             </ol>
@@ -83,13 +83,13 @@
                         <div class="row g-2 align-items-end">
 
                             <div class="col-md-5">
-                                <label class="form-label">Barcode</label>
+                                <label class="form-label">Barcode <small class="text-muted">Scanning a barcode adds the product to the table.</small></label>
                                 <input ref="barcodeInput" type="text" class="form-control form-control-lg"
                                        v-model="barcodeInput"
                                        placeholder="Scan or type barcode then Enter"
                                        @keyup.enter.prevent="onBarcodeEnter"
                                        autofocus>
-                                <small class="text-muted">Scanning a barcode adds the product to the table.</small>
+                                
                             </div>
 
                             <div class="col-md-5">
@@ -118,9 +118,9 @@
                                     </ul>
                                 </div>
                             </div>
-
+                            
                             <div class="col-md-2">
-                                <button type="button" class="btn btn-soft-secondary w-100"
+                                <button type="button" class="btn btn-soft-secondary w-100" style="color: white;"
                                         @click="resetForm" :disabled="form.lines.length === 0">
                                     <i class="ti ti-refresh me-1"></i> Clear
                                 </button>

@@ -5,7 +5,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>eCommerce Dashboard | Paces - Multipurpose Tailwind CSS & Bootstrap Admin Dashboard Template</title>
+    <title>Sukina Gems</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description"
         content="Paces is a modern, responsive admin dashboard available on ThemeForest. Ideal for building CRM, CMS, project management tools, and custom web applications with a clean UI, flexible layouts, and rich features." />
@@ -15,7 +15,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}" />
 
     <!-- App favicon -->
-    <link rel="shortcut icon" href="{{ asset('assets/images/favicon.ico') }}" />
+    {{-- <link rel="shortcut icon" href="{{ asset('assets/images/favicon.ico') }}" /> --}}
 
 
     <!-- Vector Maps css -->
@@ -27,13 +27,15 @@
 
     <!-- Vendor css -->
     <link href="{{ asset('assets/css/vendors.min.css') }}" rel="stylesheet" type="text/css" />
-        <link href="{{ asset('assets/plugins/datatables/responsive.bootstrap5.min.css')}}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('assets/plugins/datatables/responsive.bootstrap5.min.css')}}" rel="stylesheet" type="text/css" />
 
     <!-- App css -->
     <link id="app-style" href="{{ asset('assets/css/app.min.css') }}" rel="stylesheet" type="text/css" />
     <link id="app-style" href="{{ asset('assets/plugins/select2/select2.min.css') }}" rel="stylesheet" type="text/css" />
     <link rel="stylesheet" href="{{ asset('assets/vendor/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/vendor/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css') }}">
+            <link rel="stylesheet" href="{{ asset('assets/plugins/filepond/filepond.min.css') }}" type="text/css" />
+        <link rel="stylesheet" href="{{ asset('assets/plugins/filepond/filepond-plugin-image-preview.min.css') }}" />
     @stack('styles')
 
 </head>
@@ -45,8 +47,8 @@
         <!-- Topbar End -->
         <div class="sidenav-menu">
             <!-- Brand Logo -->
-            <a href="index.html" class="logo">
-                <span class="logo logo-light">
+            <a href="{{ route('dashboard') }}" class="logo">
+                {{-- <span class="logo logo-light">
                     <span class="logo-lg"><img src="{{ asset('assets/images/logo.png') }}" alt="logo" /></span>
                     <span class="logo-sm"><img src="{{ asset('assets/images/logo-sm.png') }}" alt="small logo" /></span>
                 </span>
@@ -54,7 +56,10 @@
                 <span class="logo logo-dark">
                     <span class="logo-lg"><img src="{{ asset('assets/images/logo-black.png') }}" alt="dark logo" /></span>
                     <span class="logo-sm"><img src="{{ asset('assets/images/logo-sm.png') }}" alt="small logo" /></span>
-                </span>
+                </span> --}}
+                <h5 class="mt-3 pro-username" style="text-align: center;color: white;">
+                    Sukina Gems
+                </h5>
             </a>
 
             <!-- Sidebar Hover Menu Toggle Button -->
@@ -811,6 +816,7 @@
     <script src="{{ asset('assets/plugins/datatables/dataTables.bootstrap5.min.js')}}"></script>
     <script src="{{ asset('assets/plugins/datatables/dataTables.responsive.min.js')}}"></script>
     <script src="{{ asset('assets/plugins/datatables/responsive.bootstrap5.min.js')}}"></script>    
+    <script src="{{ asset('assets/plugins/dropzone/dropzone-min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.min.js"></script>
     
     @stack('scripts')

@@ -56,14 +56,14 @@ class StoreProductRequest extends FormRequest
 
             // category_id MUST be a leaf-level category (subcategory in spec
             // language — i.e. has a non-null parent_id) AND must be active.
-            'category_id' => [
-                'required',
-                'integer',
-                Rule::exists('categories', 'id')
-                    ->whereNull('deleted_at')
-                    ->where('status', 1)
-                    ->whereNotNull('parent_id'),
-            ],
+            // 'category_id' => [
+            //     'required',
+            //     'integer',
+            //     Rule::exists('categories', 'id')
+            //         ->whereNull('deleted_at')
+            //         ->where('status', 1)
+            //         ->whereNotNull('parent_id'),
+            // ],
 
             'short_description' => ['nullable', 'string', 'max:500'],
             'full_description'  => ['nullable', 'string'],
@@ -266,7 +266,7 @@ class StoreProductRequest extends FormRequest
             'website_enabled'    => 'Website Enabled',
             'website_price'      => 'Website Price',
             'website_title'      => 'Website Title',
-            'website_description'=> 'Website Description',
+            'website_description' => 'Website Description',
             'featured_product'   => 'Featured Product',
             'website_sort_order' => 'Website Sort Order',
         ];

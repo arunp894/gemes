@@ -12,7 +12,7 @@
         </div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
-                <li class="breadcrumb-item"><a href="{{ url('/') }}">Paces</a></li>
+                <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('permissions.index') }}">Permissions</a></li>
                 <li class="breadcrumb-item active">{{ $permission->name }}</li>
             </ol>

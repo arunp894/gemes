@@ -66,8 +66,7 @@
             <div class="col-md-6">
                 <label class="form-label d-block">Product Status <span class="text-danger">*</span></label>
                 <div class="form-check form-switch mt-2">
-                    <input class="form-check-input" type="checkbox" role="switch"
-                        id="status" name="status" v-model="form.status">
+                    <input class="form-check-input" type="checkbox" role="switch" name="status" v-model="form.status">
                     <label class="form-check-label" for="status">
                         @{{ form.status ? 'Active — visible on listings' : 'Draft — not listed anywhere' }}
                     </label>

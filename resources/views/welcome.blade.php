@@ -1,6 +1,6 @@
 @extends('layout.app')
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid" style="display: none">
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
             <h4 class="page-main-title m-0">eCommerce</h4>
