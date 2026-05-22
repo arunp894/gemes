@@ -58,11 +58,12 @@
 @endsection
 
 @push('scripts')
-<script>
-    // Bootstrap data for the productApp Vue instance.
-    // Loaded BEFORE create.blade.php's script via stack ordering since
-    // edit.blade.php pushes this onto the same `scripts` stack first.
-    window.__productBootstrap = @json([
+@php
+    // Bootstrap payload for the productApp Vue instance.
+    // NOTE: built as a PHP variable first because Blade's @json directive
+    // splits its argument on every comma (see compileJson) and silently
+    // mangles multi-line inline arrays.
+    $productBootstrap = [
         'id'                 => $product->id,
         'top_category_id'    => $topCategoryId,
         'subcategories'      => $subcategories,
@@ -102,7 +103,11 @@
                 'channels'       => $b->channels->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])->values(),
             ];
         })->values(),
-    ]);
+    ];
+@endphp
+<script>
+    // Loaded BEFORE _product_app_script via stack ordering.
+    window.__productBootstrap = @json($productBootstrap);
 </script>
 
 {{-- Reuse the create form's Vue logic verbatim. --}}

@@ -4,7 +4,10 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\RackController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -125,6 +128,112 @@ Route::middleware('auth')->group(function () {
             'edit'    => 'permission:products.edit',
             'update'  => 'permission:products.edit',
             'destroy' => 'permission:products.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Suppliers
+    |--------------------------------------------------------------------------
+    | Permission-gated. `data` and `toggle-status` are registered BEFORE the
+    | resource so they win route matching. Resource binding is constrained
+    | to a numeric {supplier}.
+    */
+    Route::prefix('suppliers')->name('suppliers.')->group(function () {
+        Route::get('/data', [SupplierController::class, 'data'])
+            ->middleware('permission:suppliers.view')
+            ->name('data');
+
+        Route::patch('/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])
+            ->whereNumber('supplier')
+            ->middleware('permission:suppliers.edit')
+            ->name('toggle-status');
+    });
+
+    Route::resource('suppliers', SupplierController::class)
+        ->whereNumber('supplier')
+        ->middleware([
+            'index'   => 'permission:suppliers.view',
+            'show'    => 'permission:suppliers.view',
+            'create'  => 'permission:suppliers.create',
+            'store'   => 'permission:suppliers.create',
+            'edit'    => 'permission:suppliers.edit',
+            'update'  => 'permission:suppliers.edit',
+            'destroy' => 'permission:suppliers.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Racks (warehouse storage bins)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('racks')->name('racks.')->group(function () {
+        Route::get('/data', [RackController::class, 'data'])
+            ->middleware('permission:racks.view')
+            ->name('data');
+
+        Route::patch('/{rack}/toggle-status', [RackController::class, 'toggleStatus'])
+            ->whereNumber('rack')
+            ->middleware('permission:racks.edit')
+            ->name('toggle-status');
+    });
+
+    Route::resource('racks', RackController::class)
+        ->whereNumber('rack')
+        ->middleware([
+            'index'   => 'permission:racks.view',
+            'show'    => 'permission:racks.view',
+            'create'  => 'permission:racks.create',
+            'store'   => 'permission:racks.create',
+            'edit'    => 'permission:racks.edit',
+            'update'  => 'permission:racks.edit',
+            'destroy' => 'permission:racks.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Purchases
+    |--------------------------------------------------------------------------
+    | Non-resourceful endpoints (data, lookups, status transitions) are
+    | registered first so they win route matching against the resource.
+    */
+    Route::prefix('purchases')->name('purchases.')->group(function () {
+        Route::get('/data', [PurchaseController::class, 'data'])
+            ->middleware('permission:purchases.view')
+            ->name('data');
+
+        Route::get('/lookup-barcode', [PurchaseController::class, 'lookupByBarcode'])
+            ->middleware('permission:purchases.create')
+            ->name('lookup-barcode');
+
+        Route::get('/search-products', [PurchaseController::class, 'searchProducts'])
+            ->middleware('permission:purchases.create')
+            ->name('search-products');
+
+        Route::get('/preview-invoice-number', [PurchaseController::class, 'previewInvoiceNumber'])
+            ->middleware('permission:purchases.create')
+            ->name('preview-invoice-number');
+
+        Route::patch('/{purchase}/post', [PurchaseController::class, 'post'])
+            ->whereNumber('purchase')
+            ->middleware('permission:purchases.post')
+            ->name('post');
+
+        Route::patch('/{purchase}/cancel', [PurchaseController::class, 'cancel'])
+            ->whereNumber('purchase')
+            ->middleware('permission:purchases.edit')
+            ->name('cancel');
+    });
+
+    Route::resource('purchases', PurchaseController::class)
+        ->whereNumber('purchase')
+        ->middleware([
+            'index'   => 'permission:purchases.view',
+            'show'    => 'permission:purchases.view',
+            'create'  => 'permission:purchases.create',
+            'store'   => 'permission:purchases.create',
+            'edit'    => 'permission:purchases.edit',
+            'update'  => 'permission:purchases.edit',
+            'destroy' => 'permission:purchases.delete',
         ]);
 
     /*

@@ -83,6 +83,59 @@
         </li>
 
         {{-- =========================
+    PROCUREMENT MENU
+========================= --}}
+
+        @permission('suppliers.view')
+        <li class="side-nav-item {{ request()->routeIs('suppliers.*') || request()->routeIs('racks.*') || request()->routeIs('purchases.*') ? 'menuitem-active' : '' }}">
+
+            <a data-bs-toggle="collapse" href="#procurementMenu"
+                aria-expanded="{{ request()->routeIs('suppliers.*') || request()->routeIs('racks.*') || request()->routeIs('purchases.*') ? 'true' : 'false' }}"
+                aria-controls="procurementMenu" class="side-nav-link">
+
+                <span class="menu-icon">
+                    <i class="ti ti-truck-delivery"></i>
+                </span>
+
+                <span class="menu-text">
+                    Procurement
+                </span>
+                <span class="menu-arrow"></span>
+            </a>
+
+            <div class="collapse {{ request()->routeIs('suppliers.*') || request()->routeIs('racks.*') || request()->routeIs('purchases.*') ? 'show' : '' }}"
+                id="procurementMenu">
+
+                <ul class="sub-menu">
+
+                    <li class="side-nav-item {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
+                        <a href="{{ route('suppliers.index') }}" class="side-nav-link">
+                            <span class="menu-text">Suppliers</span>
+                        </a>
+                    </li>
+
+                    @permission('racks.view')
+                    <li class="side-nav-item {{ request()->routeIs('racks.*') ? 'active' : '' }}">
+                        <a href="{{ route('racks.index') }}" class="side-nav-link">
+                            <span class="menu-text">Racks</span>
+                        </a>
+                    </li>
+                    @endpermission
+
+                    @permission('purchases.view')
+                    <li class="side-nav-item {{ request()->routeIs('purchases.*') ? 'active' : '' }}">
+                        <a href="{{ route('purchases.index') }}" class="side-nav-link">
+                            <span class="menu-text">Purchases</span>
+                        </a>
+                    </li>
+                    @endpermission
+
+                </ul>
+            </div>
+        </li>
+        @endpermission
+
+        {{-- =========================
     ADMINISTRATION MENU
 ========================= --}}
 

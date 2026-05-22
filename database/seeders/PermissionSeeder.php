@@ -39,6 +39,25 @@ class PermissionSeeder extends Seeder
             ['slug' => 'products.delete',          'name' => 'Delete Products',          'module' => 'products'],
             ['slug' => 'products.toggle-website',  'name' => 'Toggle Website Visibility','module' => 'products'],
 
+            // ----- Suppliers module -----
+            ['slug' => 'suppliers.view',           'name' => 'View Suppliers',           'module' => 'suppliers'],
+            ['slug' => 'suppliers.create',         'name' => 'Create Suppliers',         'module' => 'suppliers'],
+            ['slug' => 'suppliers.edit',           'name' => 'Edit Suppliers',           'module' => 'suppliers'],
+            ['slug' => 'suppliers.delete',         'name' => 'Delete Suppliers',         'module' => 'suppliers'],
+
+            // ----- Racks module -----
+            ['slug' => 'racks.view',               'name' => 'View Racks',               'module' => 'racks'],
+            ['slug' => 'racks.create',             'name' => 'Create Racks',             'module' => 'racks'],
+            ['slug' => 'racks.edit',               'name' => 'Edit Racks',               'module' => 'racks'],
+            ['slug' => 'racks.delete',             'name' => 'Delete Racks',             'module' => 'racks'],
+
+            // ----- Purchases module -----
+            ['slug' => 'purchases.view',           'name' => 'View Purchases',           'module' => 'purchases'],
+            ['slug' => 'purchases.create',         'name' => 'Create Purchases',         'module' => 'purchases'],
+            ['slug' => 'purchases.edit',           'name' => 'Edit Purchases',           'module' => 'purchases'],
+            ['slug' => 'purchases.delete',         'name' => 'Delete Purchases',         'module' => 'purchases'],
+            ['slug' => 'purchases.post',           'name' => 'Post Purchases',           'module' => 'purchases'],
+
             // ----- Barcodes (sub-feature of products, but distinct enough to gate separately) -----
             ['slug' => 'barcodes.view',            'name' => 'View Barcodes',            'module' => 'barcodes'],
             ['slug' => 'barcodes.print',           'name' => 'Print Barcode Labels',     'module' => 'barcodes'],
