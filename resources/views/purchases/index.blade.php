@@ -35,28 +35,28 @@
                             <input id="purchaseSearch" type="search" class="form-control" placeholder="Search invoice / supplier..." />
                             <i class="ti ti-search app-search-icon text-muted"></i>
                         </div>
+                        
+                    </div>
 
+                    <div class="d-flex align-items-center gap-1">
+                        <div>
+                            <select id="rolePerPage" class="form-select form-control my-1 my-md-0">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+                        </div>
                         <select id="purchaseStatusFilter" class="form-select form-control">
                             <option value="">All Status</option>
                             <option value="draft">Draft</option>
                             <option value="posted">Posted</option>
                             <option value="cancelled">Cancelled</option>
                         </select>
-                    </div>
-
-                    <div class="d-flex align-items-center gap-1">
-                        <div>
-                            <select id="purchasePerPage" class="form-select form-control my-1 my-md-0">
-                                <option value="10" selected>10</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                            </select>
-                        </div>
-
                         @permission('purchases.create')
                         <a href="{{ route('purchases.create') }}" class="btn btn-primary ms-1">
-                            <i class="ti ti-plus fs-sm me-2"></i> New Purchase
+                            <i class="ti ti-plus fs-sm me-2"></i> Purchase
                         </a>
                         @endpermission
                     </div>
@@ -77,6 +77,12 @@
                         </thead>
                     </table>
                 </div>
+                <div class="card-footer border-0">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div id="rolesInfoSlot" class="text-muted small"></div>
+                        <div id="rolesPaginationSlot"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -95,6 +101,7 @@
                 d.status = $('#purchaseStatusFilter').val();
             }
         },
+            dom: 'rt<"d-none datatables-tail"ip>',
         columns: [
             { data: 'invoice_number',  name: 'invoice_number' },
             { data: 'purchase_date',   name: 'purchase_date' },
@@ -104,6 +111,10 @@
             { data: 'status_badge',    name: 'status' },
             { data: 'actions',         orderable: false, searchable: false, className: 'text-center' },
         ],
+        initComplete: function () {
+                $('#rolesInfoSlot').append($('#rolesTable_info'));
+                $('#rolesPaginationSlot').append($('#rolesTable_paginate'));
+            },
         order: [[0, 'desc']],
         pageLength: 10,
     });
