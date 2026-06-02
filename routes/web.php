@@ -2,11 +2,16 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RackController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SaleController;
+use App\Http\Controllers\StockController;
+use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Auth;
@@ -192,6 +197,41 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Locations (sales venues: warehouses / showrooms / stores / booths)
+    |--------------------------------------------------------------------------
+    | Non-resourceful endpoints registered BEFORE the resource so they win
+    | route matching. Resource binding is constrained to a numeric {location}.
+    */
+    Route::prefix('locations')->name('locations.')->group(function () {
+        Route::get('/data', [LocationController::class, 'data'])
+            ->middleware('permission:locations.view')
+            ->name('data');
+
+        Route::patch('/{location}/toggle-status', [LocationController::class, 'toggleStatus'])
+            ->whereNumber('location')
+            ->middleware('permission:locations.edit')
+            ->name('toggle-status');
+
+        Route::patch('/{location}/set-default', [LocationController::class, 'setDefault'])
+            ->whereNumber('location')
+            ->middleware('permission:locations.edit')
+            ->name('set-default');
+    });
+
+    Route::resource('locations', LocationController::class)
+        ->whereNumber('location')
+        ->middleware([
+            'index'   => 'permission:locations.view',
+            'show'    => 'permission:locations.view',
+            'create'  => 'permission:locations.create',
+            'store'   => 'permission:locations.create',
+            'edit'    => 'permission:locations.edit',
+            'update'  => 'permission:locations.edit',
+            'destroy' => 'permission:locations.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
     | Purchases
     |--------------------------------------------------------------------------
     | Non-resourceful endpoints (data, lookups, status transitions) are
@@ -235,6 +275,181 @@ Route::middleware('auth')->group(function () {
             'edit'    => 'permission:purchases.edit',
             'update'  => 'permission:purchases.edit',
             'destroy' => 'permission:purchases.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Customers (master data + search endpoint used by Sales terminal)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('customers')->name('customers.')->group(function () {
+        Route::get('/data', [CustomerController::class, 'data'])
+            ->middleware('permission:customers.view')
+            ->name('data');
+
+        // Search is open to anyone with sales.create OR customers.view so
+        // the terminal can populate without granting full customer access.
+        Route::get('/search', [CustomerController::class, 'search'])
+            ->middleware('permission:customers.view,sales.create')
+            ->name('search');
+
+        Route::patch('/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])
+            ->whereNumber('customer')
+            ->middleware('permission:customers.edit')
+            ->name('toggle-status');
+    });
+
+    Route::resource('customers', CustomerController::class)
+        ->whereNumber('customer')
+        ->middleware([
+            'index'   => 'permission:customers.view',
+            'show'    => 'permission:customers.view',
+            'create'  => 'permission:customers.create',
+            'store'   => 'permission:customers.create',
+            'edit'    => 'permission:customers.edit',
+            'update'  => 'permission:customers.edit',
+            'destroy' => 'permission:customers.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sales (invoices + terminal + payments)
+    |--------------------------------------------------------------------------
+    | Non-resourceful endpoints registered first so they win route matching.
+    */
+    Route::prefix('sales')->name('sales.')->group(function () {
+        Route::get('/data', [SaleController::class, 'data'])
+            ->middleware('permission:sales.view')
+            ->name('data');
+
+        Route::get('/lookup-barcode', [SaleController::class, 'lookupByBarcode'])
+            ->middleware('permission:sales.create')
+            ->name('lookup-barcode');
+
+        Route::get('/search-products', [SaleController::class, 'searchProducts'])
+            ->middleware('permission:sales.create')
+            ->name('search-products');
+
+        Route::get('/preview-number', [SaleController::class, 'previewSaleNumber'])
+            ->middleware('permission:sales.create')
+            ->name('preview-number');
+
+        // Status transitions (all POST so CSRF is enforced)
+        Route::post('/{sale}/post', [SaleController::class, 'post'])
+            ->whereNumber('sale')
+            ->middleware('permission:sales.post')
+            ->name('post');
+
+        Route::post('/{sale}/complete', [SaleController::class, 'complete'])
+            ->whereNumber('sale')
+            ->middleware('permission:sales.post')
+            ->name('complete');
+
+        Route::post('/{sale}/refund', [SaleController::class, 'refund'])
+            ->whereNumber('sale')
+            ->middleware('permission:sales.post')
+            ->name('refund');
+
+        Route::post('/{sale}/cancel', [SaleController::class, 'cancel'])
+            ->whereNumber('sale')
+            ->middleware('permission:sales.edit')
+            ->name('cancel');
+
+        // Payments
+        Route::post('/{sale}/payments', [SaleController::class, 'addPayment'])
+            ->whereNumber('sale')
+            ->middleware('permission:sales.edit')
+            ->name('payments.store');
+
+        Route::delete('/{sale}/payments/{payment}', [SaleController::class, 'removePayment'])
+            ->whereNumber('sale')->whereNumber('payment')
+            ->middleware('permission:sales.edit')
+            ->name('payments.destroy');
+    });
+
+    Route::resource('sales', SaleController::class)
+        ->whereNumber('sale')
+        ->middleware([
+            'index'   => 'permission:sales.view',
+            'show'    => 'permission:sales.view',
+            'create'  => 'permission:sales.create',
+            'store'   => 'permission:sales.create',
+            'edit'    => 'permission:sales.edit',
+            'update'  => 'permission:sales.edit',
+            'destroy' => 'permission:sales.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stock (read-only inventory reports)
+    |--------------------------------------------------------------------------
+    | Append-only ledger; movements are created by Purchase/Sale/Transfer
+    | services and viewed here. No write endpoints — manual adjustments
+    | are a separate concern for a future module.
+    */
+    Route::prefix('stock')->name('stock.')->group(function () {
+        Route::get('/',                  [StockController::class, 'index'])
+            ->middleware('permission:stock.view')
+            ->name('index');
+
+        Route::get('/data',              [StockController::class, 'data'])
+            ->middleware('permission:stock.view')
+            ->name('data');
+
+        Route::get('/product/{product}', [StockController::class, 'product'])
+            ->whereNumber('product')
+            ->middleware('permission:stock.view')
+            ->name('product');
+
+        Route::get('/piece/{purchaseProduct}', [StockController::class, 'piece'])
+            ->whereNumber('purchaseProduct')
+            ->middleware('permission:stock.view')
+            ->name('piece');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stock Transfers (inter-location movement)
+    |--------------------------------------------------------------------------
+    | Non-resourceful endpoints first (data feed, barcode lookup, status
+    | transitions) so the resource doesn't shadow them.
+    */
+    Route::prefix('stock-transfers')->name('stock-transfers.')->group(function () {
+        Route::get('/data', [StockTransferController::class, 'data'])
+            ->middleware('permission:stock-transfers.view')
+            ->name('data');
+
+        Route::get('/lookup-barcode', [StockTransferController::class, 'lookupByBarcode'])
+            ->middleware('permission:stock-transfers.create')
+            ->name('lookup-barcode');
+
+        Route::post('/{stockTransfer}/post', [StockTransferController::class, 'post'])
+            ->whereNumber('stockTransfer')
+            ->middleware('permission:stock-transfers.post')
+            ->name('post');
+
+        Route::post('/{stockTransfer}/receive', [StockTransferController::class, 'receive'])
+            ->whereNumber('stockTransfer')
+            ->middleware('permission:stock-transfers.post')
+            ->name('receive');
+
+        Route::post('/{stockTransfer}/cancel', [StockTransferController::class, 'cancel'])
+            ->whereNumber('stockTransfer')
+            ->middleware('permission:stock-transfers.edit')
+            ->name('cancel');
+    });
+
+    Route::resource('stock-transfers', StockTransferController::class)
+        ->whereNumber('stockTransfer')
+        ->parameters(['stock-transfers' => 'stockTransfer'])
+        ->middleware([
+            'index'   => 'permission:stock-transfers.view',
+            'show'    => 'permission:stock-transfers.view',
+            'create'  => 'permission:stock-transfers.create',
+            'store'   => 'permission:stock-transfers.create',
+            'edit'    => 'permission:stock-transfers.edit',
+            'update'  => 'permission:stock-transfers.edit',
+            'destroy' => 'permission:stock-transfers.delete',
         ]);
 
     /*

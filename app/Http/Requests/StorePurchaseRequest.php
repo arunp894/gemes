@@ -17,6 +17,7 @@ class StorePurchaseRequest extends FormRequest
     {
         return [
             'supplier_id'   => ['required', 'integer', 'exists:suppliers,id'],
+            'location_id'   => ['nullable', 'integer', 'exists:locations,id'],
             'purchase_date' => ['required', 'date'],
             'tax_type'      => ['required', 'in:' . implode(',', Purchase::TAX_TYPES)],
             'note'          => ['nullable', 'string'],

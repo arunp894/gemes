@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
 use App\Models\PurchaseProduct;
+use App\Models\StockMovement;
 use App\Models\Supplier;
 use App\Repositories\PurchaseRepository;
 use Carbon\Carbon;
@@ -27,7 +28,10 @@ use InvalidArgumentException;
  */
 class PurchaseService
 {
-    public function __construct(private PurchaseRepository $repo) {}
+    public function __construct(
+        private PurchaseRepository $repo,
+        private StockService       $stock,
+    ) {}
 
     /* ─── Public API ───────────────────────────────────────── */
 
@@ -134,6 +138,11 @@ class PurchaseService
 
     /**
      * Post a draft purchase. Once posted the inventory rows are live.
+     *
+     * Wires into StockService: emits IN movements per purchase_product
+     * row at the purchase's location. The movement creation runs in the
+     * SAME transaction as the status flip so a failure rolls everything
+     * back cleanly.
      */
     public function post(Purchase $purchase): Purchase
     {
@@ -147,17 +156,34 @@ class PurchaseService
             throw new InvalidArgumentException('Cannot post an empty purchase.');
         }
 
-        $purchase->status = Purchase::STATUS_POSTED;
-        $purchase->save();
+        return DB::transaction(function () use ($purchase) {
+            $purchase->status = Purchase::STATUS_POSTED;
+            $purchase->save();
 
-        return $this->repo->refresh($purchase);
+            // Emit IN movements. StockService guards against double-post
+            // via hasMovementsFromSource() so a retry is safe.
+            $this->stock->recordPurchasePosting($purchase);
+
+            return $this->repo->refresh($purchase);
+        });
     }
 
     public function cancel(Purchase $purchase): Purchase
     {
-        $purchase->status = Purchase::STATUS_CANCELLED;
-        $purchase->save();
-        return $this->repo->refresh($purchase);
+        return DB::transaction(function () use ($purchase) {
+            // If the purchase was posted, reverse its stock movements
+            // BEFORE flipping status — that way the safety guard in
+            // StockService::reversePurchasePosting() can still see the
+            // 'posted' history when checking downstream consumption.
+            if ($purchase->isPosted()) {
+                $this->stock->reversePurchasePosting($purchase);
+            }
+
+            $purchase->status = Purchase::STATUS_CANCELLED;
+            $purchase->save();
+
+            return $this->repo->refresh($purchase);
+        });
     }
 
     public function delete(Purchase $purchase): void
@@ -186,24 +212,19 @@ class PurchaseService
             /** @var Product $product */
             $product = Product::findOrFail($lineData['product_id']);
 
-            $type        = $lineData['type']        ?? $product->pack_type ?? PurchaseLine::TYPE_PIECE;
+            $type        = $lineData['type']        ?? PurchaseLine::TYPE_PIECE;
             $packageQty  = max(1, (int) ($lineData['package_qty'] ?? 1));
             $packageName = $lineData['package_name']
-                ?? ($type === PurchaseLine::TYPE_PIECE ? 'Piece' : $product->innerPackLabel());
+                ?? ($type === PurchaseLine::TYPE_PIECE ? 'Piece' : 'Box');
 
-            $unitContains = match ($type) {
-                PurchaseLine::TYPE_CARTON => (int) ($product->inner_pack_contains ?? 1),
-                PurchaseLine::TYPE_UNIT   => (int) ($product->inner_pack_contains ?? 1),
-                default                   => null,
-            };
+            $unitContains = ($type === PurchaseLine::TYPE_BOX)
+                ? (int) ($product->inner_pack_contains ?? 1)
+                : null;
 
-            // Total pieces purchased for this product on this invoice.
+            // Total pieces: for box lines, multiply package_qty × unit_contains.
             $totalQty = match ($type) {
-                PurchaseLine::TYPE_CARTON => $packageQty
-                    * (int) ($product->outer_pack_contains ?? 1)
-                    * (int) ($product->inner_pack_contains ?? 1),
-                PurchaseLine::TYPE_UNIT   => $packageQty * (int) ($product->inner_pack_contains ?? 1),
-                default                   => $packageQty,
+                PurchaseLine::TYPE_BOX   => $packageQty * (int) ($product->inner_pack_contains ?? 1),
+                default                  => $packageQty,
             };
 
             $line = new PurchaseLine([
@@ -219,11 +240,11 @@ class PurchaseService
 
             $rows = $lineData['rows'] ?? [];
 
-            // Guard: if the client didn't send enough rows for a carton
-            // line, fabricate the missing ones with the row[0] template.
+            // Guard: if the client didn't send enough rows for a box line,
+            // fabricate the missing ones with the row[0] template.
             $expectedRows = match ($type) {
-                PurchaseLine::TYPE_CARTON => $packageQty * (int) ($product->outer_pack_contains ?? 1),
-                default                   => max(1, count($rows) ?: 1),
+                PurchaseLine::TYPE_BOX => $packageQty,
+                default                => max(1, count($rows) ?: 1),
             };
 
             $template = $rows[0] ?? [

@@ -18,15 +18,16 @@ class PurchaseLine extends Model
     use SoftDeletes;
 
     public const TYPE_PIECE  = 'piece';
-    public const TYPE_BOX   = 'box';
-    public const TYPE_UNIT   = 'unit';
-    public const TYPE_CARTON = 'carton';
+    public const TYPE_BOX    = 'box';
+
+    /** @deprecated Use TYPE_BOX */
+    public const TYPE_UNIT   = 'box';
+    /** @deprecated Use TYPE_BOX */
+    public const TYPE_CARTON = 'box';
 
     public const TYPES = [
         self::TYPE_PIECE,
         self::TYPE_BOX,
-        self::TYPE_UNIT,
-        self::TYPE_CARTON,
     ];
 
     protected $fillable = [

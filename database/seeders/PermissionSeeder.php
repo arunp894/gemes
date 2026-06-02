@@ -51,12 +51,42 @@ class PermissionSeeder extends Seeder
             ['slug' => 'racks.edit',               'name' => 'Edit Racks',               'module' => 'racks'],
             ['slug' => 'racks.delete',             'name' => 'Delete Racks',             'module' => 'racks'],
 
+            // ----- Locations module (sales venues) -----
+            ['slug' => 'locations.view',           'name' => 'View Locations',           'module' => 'locations'],
+            ['slug' => 'locations.create',         'name' => 'Create Locations',         'module' => 'locations'],
+            ['slug' => 'locations.edit',           'name' => 'Edit Locations',           'module' => 'locations'],
+            ['slug' => 'locations.delete',         'name' => 'Delete Locations',         'module' => 'locations'],
+
             // ----- Purchases module -----
             ['slug' => 'purchases.view',           'name' => 'View Purchases',           'module' => 'purchases'],
             ['slug' => 'purchases.create',         'name' => 'Create Purchases',         'module' => 'purchases'],
             ['slug' => 'purchases.edit',           'name' => 'Edit Purchases',           'module' => 'purchases'],
             ['slug' => 'purchases.delete',         'name' => 'Delete Purchases',         'module' => 'purchases'],
             ['slug' => 'purchases.post',           'name' => 'Post Purchases',           'module' => 'purchases'],
+
+            // ----- Customers module -----
+            ['slug' => 'customers.view',           'name' => 'View Customers',           'module' => 'customers'],
+            ['slug' => 'customers.create',         'name' => 'Create Customers',         'module' => 'customers'],
+            ['slug' => 'customers.edit',           'name' => 'Edit Customers',           'module' => 'customers'],
+            ['slug' => 'customers.delete',         'name' => 'Delete Customers',         'module' => 'customers'],
+
+            // ----- Sales module -----
+            ['slug' => 'sales.view',               'name' => 'View Sales',               'module' => 'sales'],
+            ['slug' => 'sales.create',             'name' => 'Create Sales (Terminal)',  'module' => 'sales'],
+            ['slug' => 'sales.edit',               'name' => 'Edit Sales',               'module' => 'sales'],
+            ['slug' => 'sales.delete',             'name' => 'Delete Sales',             'module' => 'sales'],
+            ['slug' => 'sales.post',               'name' => 'Post / Complete Sales',    'module' => 'sales'],
+
+            // ----- Stock (read-only inventory reports) -----
+            ['slug' => 'stock.view',               'name' => 'View Stock Reports',       'module' => 'stock'],
+            ['slug' => 'stock.adjust',             'name' => 'Adjust Stock Manually',    'module' => 'stock'],
+
+            // ----- Stock Transfers module -----
+            ['slug' => 'stock-transfers.view',     'name' => 'View Stock Transfers',     'module' => 'stock-transfers'],
+            ['slug' => 'stock-transfers.create',   'name' => 'Create Stock Transfers',   'module' => 'stock-transfers'],
+            ['slug' => 'stock-transfers.edit',     'name' => 'Edit Stock Transfers',     'module' => 'stock-transfers'],
+            ['slug' => 'stock-transfers.delete',   'name' => 'Delete Stock Transfers',   'module' => 'stock-transfers'],
+            ['slug' => 'stock-transfers.post',     'name' => 'Post / Receive Transfers', 'module' => 'stock-transfers'],
 
             // ----- Barcodes (sub-feature of products, but distinct enough to gate separately) -----
             ['slug' => 'barcodes.view',            'name' => 'View Barcodes',            'module' => 'barcodes'],

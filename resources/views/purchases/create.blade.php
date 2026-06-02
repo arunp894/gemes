@@ -32,7 +32,7 @@
                     <div class="card-body">
                         <div class="row g-3">
 
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Supplier <span class="text-danger">*</span></label>
                                 <select class="form-select" v-model.number="form.supplier_id"
                                         :class="{ 'is-invalid': errors.supplier_id }"
@@ -46,6 +46,19 @@
                             </div>
 
                             <div class="col-md-3">
+                                <label class="form-label">Location <span class="text-danger">*</span></label>
+                                <select class="form-select" v-model.number="form.location_id"
+                                        :class="{ 'is-invalid': errors.location_id }" required>
+                                    <option :value="null">— Select location —</option>
+                                    <option v-for="l in locations" :key="l.id" :value="l.id">
+                                        @{{ l.name }} (@{{ l.location_code }})@{{ l.is_default ? ' ★' : '' }}
+                                    </option>
+                                </select>
+                                <div class="invalid-feedback">@{{ errors.location_id }}</div>
+                                <small class="text-muted">Where stock will arrive when posted.</small>
+                            </div>
+
+                            <div class="col-md-2">
                                 <label class="form-label">Purchase Date <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control" v-model="form.purchase_date"
                                        :class="{ 'is-invalid': errors.purchase_date }"
@@ -53,11 +66,11 @@
                                 <div class="invalid-feedback">@{{ errors.purchase_date }}</div>
                             </div>
 
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label">Invoice #</label>
                                 <input type="text" class="form-control bg-light" :value="form.invoice_number_preview"
                                        readonly placeholder="auto-generated">
-                                <small class="text-muted">Format: <code>PREFIX-YYYYMM-####</code></small>
+                                <small class="text-muted"><code>PREFIX-YYYYMM-####</code></small>
                             </div>
 
                             <div class="col-md-2">
@@ -157,6 +170,7 @@
 @include('purchases._partials._purchase_app_script', [
     'mode'            => 'create',
     'suppliersJson'   => $suppliers->toJson(),
+    'locationsJson'   => $locations->toJson(),
     'racksJson'       => $racks->toJson(),
     'lookupUrl'       => route('purchases.lookup-barcode'),
     'searchUrl'       => route('purchases.search-products'),

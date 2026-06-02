@@ -23,7 +23,9 @@ class RackController extends Controller
     {
         $q = Rack::query();
 
-        if ($search = trim((string) $request->query('search.value', $request->query('search', '')))) {
+        $searchParam = $request->query('search');
+        $searchValue = is_array($searchParam) ? ($searchParam['value'] ?? '') : ($searchParam ?? '');
+        if ($search = trim((string) $searchValue)) {
             $q->where(function ($qq) use ($search) {
                 $qq->where('code', 'like', "%{$search}%")
                    ->orWhere('name', 'like', "%{$search}%")
