@@ -37,7 +37,6 @@ return new class extends Migration
             // ── Parties ──────────────────────────────────────────────────
             $table->unsignedBigInteger('customer_id')->index();
             $table->unsignedBigInteger('location_id')->index();
-            $table->unsignedBigInteger('channel_id')->nullable()->index();
             $table->unsignedBigInteger('salesperson_id')->nullable()->index();
 
             // ── Tax model ────────────────────────────────────────────────
@@ -79,9 +78,6 @@ return new class extends Migration
 
             $table->foreign('location_id')
                 ->references('id')->on('locations')->restrictOnDelete();
-
-            $table->foreign('channel_id')
-                ->references('id')->on('channels')->nullOnDelete();
 
             $table->foreign('salesperson_id')
                 ->references('id')->on('users')->nullOnDelete();

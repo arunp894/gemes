@@ -17,7 +17,7 @@ class StoreSaleRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         // Empty-string FKs → null so exists rules don't break.
-        $nullFks = ['channel_id', 'salesperson_id'];
+        $nullFks = ['salesperson_id'];
         $merged  = [];
         foreach ($nullFks as $f) {
             if ($this->input($f) === '' || $this->input($f) === '0') {
@@ -49,7 +49,6 @@ class StoreSaleRequest extends FormRequest
             'sale_date'       => ['required', 'date'],
             'customer_id'     => ['required', 'integer', Rule::exists('customers', 'id')->whereNull('deleted_at')],
             'location_id'     => ['required', 'integer', Rule::exists('locations', 'id')->whereNull('deleted_at')],
-            'channel_id'      => ['nullable', 'integer', Rule::exists('channels', 'id')->whereNull('deleted_at')],
             'salesperson_id'  => ['nullable', 'integer', Rule::exists('users', 'id')->whereNull('deleted_at')],
 
             'tax_type'        => ['required', Rule::in(Sale::TAX_TYPES)],
@@ -98,7 +97,6 @@ class StoreSaleRequest extends FormRequest
             'sale_date'       => 'Sale Date',
             'customer_id'     => 'Customer',
             'location_id'     => 'Location',
-            'channel_id'      => 'Channel',
             'salesperson_id'  => 'Salesperson',
             'tax_type'        => 'Tax Type',
             'shipping_charge' => 'Shipping Charge',

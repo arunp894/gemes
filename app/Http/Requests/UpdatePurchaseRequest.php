@@ -28,7 +28,6 @@ class UpdatePurchaseRequest extends FormRequest
 
         return [
             'purchase_date' => ['required', 'date'],
-            'location_id'   => ['nullable', 'integer', 'exists:locations,id'],
             'tax_type'      => ['required', 'in:' . implode(',', Purchase::TAX_TYPES)],
             'note'          => ['nullable', 'string'],
             'paid_amount'   => ['nullable', 'numeric', 'min:0'],
@@ -43,6 +42,7 @@ class UpdatePurchaseRequest extends FormRequest
 
             'lines.*.rows'                       => ['required', 'array', 'min:1'],
             'lines.*.rows.*.qty'                 => ['required', 'integer', 'min:0'],
+            'lines.*.rows.*.carat_weight'        => ['nullable', 'numeric', 'min:0', 'max:99999.999'],
             'lines.*.rows.*.barcode'             => ['nullable', 'string', 'max:100'],
             'lines.*.rows.*.rack_id'             => ['nullable', 'integer', 'exists:racks,id'],
             'lines.*.rows.*.serial_number'       => ['nullable', 'string', 'max:100'],

@@ -19,6 +19,7 @@ class PurchaseProduct extends Model
     protected $fillable = [
         'purchase_line_id',
         'qty',
+        'carat_weight',
         'barcode',
         'rack_id',
         'serial_number',
@@ -34,6 +35,7 @@ class PurchaseProduct extends Model
 
     protected $casts = [
         'qty'              => 'integer',
+        'carat_weight'     => 'decimal:3',
         'price'            => 'decimal:2',
         'tax_percent'      => 'decimal:2',
         'tax_amount'       => 'decimal:2',

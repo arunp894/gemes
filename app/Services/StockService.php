@@ -251,9 +251,9 @@ class StockService
             return;
         }
 
-        $locationId = $purchase->location_id ?: $this->defaultLocationId();
+        $locationId = $this->defaultLocationId();
         if (! $locationId) {
-            throw new RuntimeException('Cannot post purchase: no location set and no default location available.');
+            throw new RuntimeException('Cannot post purchase: no default location available.');
         }
 
         DB::transaction(function () use ($purchase, $locationId) {

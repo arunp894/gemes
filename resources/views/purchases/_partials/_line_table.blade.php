@@ -28,12 +28,13 @@
                     <th style="width: 110px;">Type</th>
                     <th style="width: 110px;">Pack Qty</th>
                     <th style="width: 90px;">Qty</th>
+                    <th style="width: 100px;">Carat</th>
                     <th style="width: 170px;">Barcode</th>
                     <th style="width: 130px;">Rack</th>
                     <th style="width: 110px;">Price</th>
                     <th style="width: 80px;">Tax %</th>
                     <th style="width: 80px;">Disc %</th>
-                    <th v-if="false" style="width: 130px;">Expiry</th>
+                    {{-- <th v-if="false" style="width: 130px;">Expiry</th> --}}
                     <th style="width: 110px;" class="text-end">Line Total</th>
                     <th style="width: 40px;"></th>
                 </tr>
@@ -96,6 +97,11 @@
                                        v-model.number="line.rows[0].qty">
                             </td>
                             <td>
+                                <input type="number" step="0.001" min="0" class="form-control form-control-sm"
+                                       v-model.number="line.rows[0].carat_weight"
+                                       placeholder="ct">
+                            </td>
+                            <td>
                                 <input type="text" class="form-control form-control-sm"
                                        v-model="line.rows[0].barcode"
                                        placeholder="optional">
@@ -120,10 +126,10 @@
                                 <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
                                        v-model.number="line.rows[0].discount_percent">
                             </td>
-                            <td v-if="false">
+                            {{-- <td v-if="false">
                                 <input type="date" class="form-control form-control-sm"
                                        v-model="line.rows[0].expiry_date">
-                            </td>
+                            </td> --}}
                             <td class="text-end fw-semibold">@{{ formatMoney(rowNet(line.rows[0])) }}</td>
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-soft-danger" @click="removeLine(li)">
@@ -134,7 +140,7 @@
 
                         {{-- For carton/unit, the parent row shows aggregate readouts. --}}
                         <template v-else>
-                            <td colspan="8" class="bg-light bg-opacity-25" 
+                            <td colspan="9" class="bg-light bg-opacity-25" 
     :style="line.type === 'box' ? 'cursor: pointer;' : ''"
     @click="line.type === 'box' && toggleExpand(li)">
                                 <div class="d-flex flex-wrap gap-3 small">
@@ -177,6 +183,11 @@
                                        v-model.number="row.qty">
                             </td>
                             <td>
+                                <input type="number" step="0.001" min="0" class="form-control form-control-sm"
+                                       v-model.number="row.carat_weight"
+                                       placeholder="ct">
+                            </td>
+                            <td>
                                 <input type="text" class="form-control form-control-sm"
                                        :ref="'rowBarcode_' + li + '_' + ri"
                                        v-model="row.barcode"
@@ -203,10 +214,10 @@
                                 <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
                                        v-model.number="row.discount_percent">
                             </td>
-                            <td>
+                            {{-- <td>
                                 <input type="date" class="form-control form-control-sm"
                                        v-model="row.expiry_date">
-                            </td>
+                            </td> --}}
                             <td class="text-end small fw-semibold">@{{ formatMoney(rowNet(row)) }}</td>
                             <td></td>
                         </tr>
@@ -215,7 +226,7 @@
                 </template>
 
                 <tr v-if="form.lines.length === 0">
-                    <td colspan="13" class="text-center text-muted py-4">
+                    <td colspan="14" class="text-center text-muted py-4">
                         <i class="ti ti-barcode fs-22 d-block mb-1 text-muted"></i>
                         Scan a barcode or search for a product to begin.
                     </td>

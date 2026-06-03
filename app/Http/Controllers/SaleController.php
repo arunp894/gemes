@@ -6,7 +6,6 @@ use App\Http\Requests\StoreSalePaymentRequest;
 use App\Http\Requests\StoreSaleRequest;
 use App\Http\Requests\UpdateSaleRequest;
 use App\Models\Barcode;
-use App\Models\Channel;
 use App\Models\Customer;
 use App\Models\Location;
 use App\Models\Product;
@@ -63,27 +62,36 @@ class SaleController extends Controller
         }
 
         return DataTables::eloquent($q)
-            ->editColumn('sale_number', fn (Sale $s) =>
+            ->editColumn(
+                'sale_number',
+                fn(Sale $s) =>
                 '<a href="' . route('sales.show', $s) . '" class="link-reset"><code>' . e($s->sale_number) . '</code></a>'
             )
-            ->editColumn('sale_date', fn (Sale $s) => optional($s->sale_date)->format('d M Y'))
-            ->addColumn('customer_label', fn (Sale $s) =>
+            ->editColumn('sale_date', fn(Sale $s) => optional($s->sale_date)->format('d M Y'))
+            ->addColumn(
+                'customer_label',
+                fn(Sale $s) =>
                 $s->customer ? e($s->customer->display_name) : '<span class="text-muted">—</span>'
             )
-            ->addColumn('location_label', fn (Sale $s) =>
+            ->addColumn(
+                'location_label',
+                fn(Sale $s) =>
                 $s->location ? e($s->location->name) : '<span class="text-muted">—</span>'
             )
-            ->addColumn('channel_label', fn (Sale $s) =>
-                $s->channel ? e($s->channel->name) : '<span class="text-muted">—</span>'
-            )
-            ->editColumn('grand_total', fn (Sale $s) =>
+            ->editColumn(
+                'grand_total',
+                fn(Sale $s) =>
                 '<span class="fw-semibold">' . number_format((float) $s->grand_total, 2) . '</span>'
             )
-            ->editColumn('balance_due', fn (Sale $s) => number_format((float) $s->balance_due, 2))
-            ->addColumn('payment_badge', fn (Sale $s) =>
+            ->editColumn('balance_due', fn(Sale $s) => number_format((float) $s->balance_due, 2))
+            ->addColumn(
+                'payment_badge',
+                fn(Sale $s) =>
                 '<span class="badge ' . $s->paymentStatusBadgeClass() . ' fs-xxs">' . e($s->paymentStatusLabel()) . '</span>'
             )
-            ->addColumn('status_badge', fn (Sale $s) =>
+            ->addColumn(
+                'status_badge',
+                fn(Sale $s) =>
                 '<span class="badge ' . $s->statusBadgeClass() . ' fs-xxs">' . e($s->statusLabel()) . '</span>'
             )
             ->addColumn('actions', function (Sale $s) {
@@ -114,7 +122,7 @@ class SaleController extends Controller
                         ->orWhere('customer_code', 'like', $like);
                 });
             })
-            ->rawColumns(['sale_number', 'customer_label', 'location_label', 'channel_label', 'grand_total', 'payment_badge', 'status_badge', 'actions'])
+            ->rawColumns(['sale_number', 'customer_label', 'location_label', 'grand_total', 'payment_badge', 'status_badge', 'actions'])
             ->toJson();
     }
 
@@ -127,7 +135,6 @@ class SaleController extends Controller
 
         return view('sales.create', [
             'locations'       => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'type', 'is_default']),
-            'channels'        => Channel::where('status', true)->orderBy('display_order')->orderBy('name')->get(['id', 'name', 'code']),
             'salespeople'     => User::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'paymentMethods'  => SalePayment::METHODS,
             'taxTypes'        => Sale::TAX_TYPES,
@@ -173,7 +180,6 @@ class SaleController extends Controller
         return view('sales.edit', [
             'sale'                 => $this->repo->find($sale->id),
             'locations'            => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'type', 'is_default']),
-            'channels'             => Channel::where('status', true)->orderBy('display_order')->orderBy('name')->get(['id', 'name', 'code']),
             'salespeople'          => User::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'paymentMethods'       => SalePayment::METHODS,
             'taxTypes'             => Sale::TAX_TYPES,
@@ -389,7 +395,7 @@ class SaleController extends Controller
 
         return response()->json([
             'ok'    => true,
-            'items' => $q->get()->map(fn (Product $p) => [
+            'items' => $q->get()->map(fn(Product $p) => [
                 'id'    => $p->id,
                 'title' => $p->title,
                 'sku'   => $p->sku,

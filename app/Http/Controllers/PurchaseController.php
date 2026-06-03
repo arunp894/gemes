@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePurchaseRequest;
 use App\Http\Requests\UpdatePurchaseRequest;
 use App\Models\Barcode;
-use App\Models\Location;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Rack;
@@ -104,7 +103,6 @@ class PurchaseController extends Controller
     {
         return view('purchases.create', [
             'suppliers' => Supplier::active()->ordered()->get(['id', 'supplier_code', 'name', 'company_name', 'invoice_prefix', 'gst_number']),
-            'locations' => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'is_default']),
             'racks'     => Rack::active()->ordered()->get(['id', 'code', 'name']),
             'taxTypes'  => Purchase::TAX_TYPES,
         ]);
@@ -137,7 +135,6 @@ class PurchaseController extends Controller
         return view('purchases.edit', [
             'purchase'  => $this->repo->find($purchase->id),
             'suppliers' => Supplier::active()->ordered()->get(['id', 'supplier_code', 'name', 'company_name', 'invoice_prefix', 'gst_number']),
-            'locations' => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'is_default']),
             'racks'     => Rack::active()->ordered()->get(['id', 'code', 'name']),
             'taxTypes'  => Purchase::TAX_TYPES,
         ]);
@@ -201,6 +198,7 @@ class PurchaseController extends Controller
                 'title',
                 'sku',
                 'status',
+                'carat_weight',
                 'pack_type',
                 'outer_pack_name',
                 'outer_pack_contains',
@@ -224,6 +222,7 @@ class PurchaseController extends Controller
                 'id'        => $product->id,
                 'title'     => $product->title,
                 'sku'       => $product->sku,
+                'carat_weight' => $product->carat_weight,
                 'packaging' => $product->packagingPayload(),
             ],
             'barcode' => [
@@ -247,6 +246,7 @@ class PurchaseController extends Controller
                 'id',
                 'title',
                 'sku',
+                'carat_weight',
                 'pack_type',
                 'outer_pack_name',
                 'outer_pack_contains',
@@ -285,6 +285,7 @@ class PurchaseController extends Controller
             'id'        => $p->id,
             'title'     => $p->title,
             'sku'       => $p->sku,
+            'carat_weight' => $p->carat_weight,
             'packaging' => $p->packagingPayload(),
             'barcode'   => $p->primaryBarcode ? [
                 'value'      => $p->primaryBarcode->barcode_value,

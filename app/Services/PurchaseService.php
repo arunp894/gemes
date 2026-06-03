@@ -249,6 +249,7 @@ class PurchaseService
 
             $template = $rows[0] ?? [
                 'qty'              => $unitContains ?? 1,
+                'carat_weight'     => null,
                 'barcode'          => null,
                 'rack_id'          => null,
                 'serial_number'    => null,
@@ -276,6 +277,7 @@ class PurchaseService
 
                 $row = new PurchaseProduct([
                     'qty'              => $qty,
+                    'carat_weight'     => isset($r['carat_weight']) && $r['carat_weight'] !== '' ? (float) $r['carat_weight'] : null,
                     'barcode'          => $r['barcode']          ?? null,
                     'rack_id'          => $r['rack_id']          ?? null,
                     'serial_number'    => $r['serial_number']    ?? null,

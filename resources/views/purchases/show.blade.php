@@ -68,6 +68,7 @@
                                     <th>Type</th>
                                     <th>Pack Qty</th>
                                     <th>Qty</th>
+                                    <th class="text-end">Carat</th>
                                     <th>Barcode</th>
                                     <th>Rack</th>
                                     <th class="text-end">Price</th>
@@ -90,7 +91,7 @@
                                             <strong>{{ $line->package_qty }}</strong>
                                             <small class="text-muted">{{ $line->package_name }}</small>
                                         </td>
-                                        <td colspan="6"></td>
+                                        <td colspan="7"></td>
                                         <td class="text-end fw-bold">{{ number_format((float) $line->total, 2) }}</td>
                                     </tr>
 
@@ -104,6 +105,7 @@
                                             </td>
                                             <td colspan="2"></td>
                                             <td>{{ $row->qty }}</td>
+                                            <td class="text-end small">{{ $row->carat_weight !== null ? rtrim(rtrim(number_format((float) $row->carat_weight, 3), '0'), '.') : '—' }}</td>
                                             <td><code class="small">{{ $row->barcode ?: '—' }}</code></td>
                                             <td>{{ $row->rack?->code ?: '—' }}</td>
                                             <td class="text-end">{{ number_format((float) $row->price, 2) }}</td>

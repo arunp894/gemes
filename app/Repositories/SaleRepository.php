@@ -20,7 +20,6 @@ class SaleRepository
         return Sale::query()->with([
             'customer:id,customer_code,name,company_name,phone',
             'location:id,location_code,name',
-            'channel:id,name,code',
             'salesperson:id,name',
         ]);
     }
@@ -33,7 +32,6 @@ class SaleRepository
         return Sale::with([
             'customer',
             'location',
-            'channel',
             'salesperson:id,name,email',
             'lines.product:id,title,sku',
             'lines.purchaseProduct:id,purchase_line_id,barcode,price',

@@ -47,7 +47,6 @@ class SaleService
      *   'sale_date'        => 'YYYY-MM-DD',
      *   'customer_id'      => int,
      *   'location_id'      => int,
-     *   'channel_id'       => int|null,
      *   'salesperson_id'   => int|null,
      *   'tax_type'         => 'none'|'cgst_sgst'|'igst',
      *   'shipping_charge'  => float,
@@ -90,7 +89,6 @@ class SaleService
             $sale->sale_date       = $date->toDateString();
             $sale->customer_id     = $customer->id;
             $sale->location_id     = $location->id;
-            $sale->channel_id      = $data['channel_id']      ?? null;
             $sale->salesperson_id  = $data['salesperson_id']  ?? auth()->id();
             $sale->tax_type        = $data['tax_type']        ?? Sale::TAX_NONE;
             $sale->shipping_charge = (float) ($data['shipping_charge'] ?? 0);
@@ -142,7 +140,6 @@ class SaleService
             $sale->sale_date       = $data['sale_date']       ?? $sale->sale_date;
             $sale->customer_id     = $data['customer_id']     ?? $sale->customer_id;
             $sale->location_id     = $data['location_id']     ?? $sale->location_id;
-            $sale->channel_id      = $data['channel_id']      ?? $sale->channel_id;
             $sale->salesperson_id  = $data['salesperson_id']  ?? $sale->salesperson_id;
             $sale->tax_type        = $data['tax_type']        ?? $sale->tax_type;
             $sale->shipping_charge = (float) ($data['shipping_charge'] ?? 0);

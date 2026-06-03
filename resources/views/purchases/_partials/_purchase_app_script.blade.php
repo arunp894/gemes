@@ -20,7 +20,6 @@
     const CONFIG = {
         mode:        @json($mode),
         suppliers:   {!! $suppliersJson !!},
-        locations:   {!! $locationsJson ?? '[]' !!},
         racks:       {!! $racksJson !!},
         lookupUrl:   @json($lookupUrl),
         searchUrl:   @json($searchUrl),
@@ -36,6 +35,7 @@
     function emptyRow(qty) {
         return {
             qty:              qty || 0,
+            carat_weight:     null,
             barcode:          '',
             rack_id:          null,
             serial_number:    null,
@@ -61,9 +61,15 @@ const innerRows = 1;                                          // piece default
 const perRowQty = 1;
 
 
+        // Prefill carat weight from the product's catalogue value (editable per row).
+        const caratDefault = (product.carat_weight !== null && product.carat_weight !== undefined && product.carat_weight !== '')
+            ? parseFloat(product.carat_weight)
+            : null;
+
         const rows = [];
         for (let i = 0; i < innerRows; i++) {
             const r = emptyRow(perRowQty);
+            r.carat_weight = caratDefault;
             if (i === 0 && scannedBarcode) {
                 r.barcode = scannedBarcode;
             }
@@ -111,6 +117,7 @@ const perRowQty = 1;
             remarks:       l.remarks,
             rows: (l.rows || []).map(r => ({
                 qty:              r.qty,
+                carat_weight:     (r.carat_weight !== null && r.carat_weight !== undefined) ? parseFloat(r.carat_weight) : null,
                 barcode:          r.barcode || '',
                 rack_id:          r.rack_id,
                 serial_number:    r.serial_number,
@@ -130,7 +137,6 @@ const perRowQty = 1;
         el: '#purchaseFormApp',
         data: {
             suppliers:      CONFIG.suppliers,
-            locations:      CONFIG.locations,
             racks:          CONFIG.racks,
             barcodeInput:   '',
             productSearch:  '',
@@ -143,12 +149,6 @@ const perRowQty = 1;
 
             form: {
                 supplier_id:            CONFIG.existing ? CONFIG.existing.supplier_id : null,
-                location_id:            CONFIG.existing
-                    ? CONFIG.existing.location_id
-                    : (function () {
-                        const def = (CONFIG.locations || []).find(l => l.is_default);
-                        return def ? def.id : ((CONFIG.locations || [])[0] ? CONFIG.locations[0].id : null);
-                    })(),
                 purchase_date:          CONFIG.existing ? CONFIG.existing.purchase_date : new Date().toISOString().slice(0, 10),
                 invoice_number_preview: CONFIG.existing ? CONFIG.existing.invoice_number : '',
                 tax_type:               CONFIG.existing ? CONFIG.existing.tax_type : 'none',
@@ -361,6 +361,7 @@ const perRowQty = 1;
                         const t = line.rows[0] || emptyRow(innerN);
                         line.rows.push({
                             qty:              t.qty || 1,
+                            carat_weight:     (t.carat_weight !== null && t.carat_weight !== undefined) ? t.carat_weight : null,
                             barcode:          '',
                             rack_id:          t.rack_id,
                             serial_number:    null,
@@ -412,7 +413,6 @@ const perRowQty = 1;
             buildPayload(post) {
                 return {
                     supplier_id:   this.form.supplier_id,
-                    location_id:   this.form.location_id,
                     purchase_date: this.form.purchase_date,
                     tax_type:      this.form.tax_type,
                     note:          this.form.note,
@@ -427,6 +427,7 @@ const perRowQty = 1;
                         remarks:       l.remarks,
                         rows: l.rows.map(r => ({
                             qty:              r.qty,
+                            carat_weight:     (r.carat_weight === '' || r.carat_weight === undefined) ? null : r.carat_weight,
                             barcode:          r.barcode || null,
                             rack_id:          r.rack_id,
                             serial_number:    r.serial_number,
@@ -444,10 +445,9 @@ const perRowQty = 1;
                 this.wasValidated = true;
                 this.errors = {};
 
-                if (!this.form.supplier_id || !this.form.purchase_date || !this.form.location_id) {
+                if (!this.form.supplier_id || !this.form.purchase_date) {
                     this.errors.supplier_id   = !this.form.supplier_id   ? 'Required' : '';
                     this.errors.purchase_date = !this.form.purchase_date ? 'Required' : '';
-                    this.errors.location_id   = !this.form.location_id   ? 'Required' : '';
                     return;
                 }
                 if (this.form.lines.length === 0) {

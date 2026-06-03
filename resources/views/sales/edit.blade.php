@@ -51,13 +51,6 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Channel</label>
-                                <select class="form-select" v-model.number="form.channel_id">
-                                    <option :value="null">— None —</option>
-                                    <option v-for="c in channels" :key="c.id" :value="c.id">@{{ c.name }}</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
                                 <label class="form-label">Salesperson</label>
                                 <select class="form-select" v-model.number="form.salesperson_id">
                                     <option :value="null">— Unassigned —</option>
@@ -240,7 +233,6 @@ $(function () {
         el: '#salesTerminalApp',
         data: {
             locations:   @json($locations),
-            channels:    @json($channels),
             salespeople: @json($salespeople),
 
             barcodeInput: '',
@@ -268,7 +260,6 @@ $(function () {
                 sale_number_preview: @json($sale->sale_number),
                 customer_id:         @json($sale->customer_id),
                 location_id:         @json($sale->location_id),
-                channel_id:          @json($sale->channel_id),
                 salesperson_id:      @json($sale->salesperson_id),
                 tax_type:            @json($sale->tax_type),
                 shipping_charge:     @json((float) $sale->shipping_charge),
@@ -392,7 +383,6 @@ $(function () {
                     sale_date: this.form.sale_date,
                     customer_id: this.form.customer_id,
                     location_id: this.form.location_id,
-                    channel_id: this.form.channel_id,
                     salesperson_id: this.form.salesperson_id,
                     tax_type: this.form.tax_type,
                     shipping_charge: Number(this.form.shipping_charge) || 0,

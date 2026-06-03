@@ -107,9 +107,6 @@
                             @if ($sale->location)
                                 <small class="d-block text-muted">Location: {{ $sale->location->name }}</small>
                             @endif
-                            @if ($sale->channel)
-                                <small class="d-block text-muted">Channel: {{ $sale->channel->name }}</small>
-                            @endif
                             @if ($sale->salesperson)
                                 <small class="d-block text-muted">Salesperson: {{ $sale->salesperson->name }}</small>
                             @endif

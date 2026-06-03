@@ -34,17 +34,6 @@
                                        value="{{ $purchase->supplier ? ($purchase->supplier->company_name ?: $purchase->supplier->name) : '' }}">
                                 <small class="text-muted">Cannot be changed.</small>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Location <span class="text-danger">*</span></label>
-                                <select class="form-select" v-model.number="form.location_id"
-                                        :class="{ 'is-invalid': errors.location_id }" required>
-                                    <option :value="null">— Select location —</option>
-                                    <option v-for="l in locations" :key="l.id" :value="l.id">
-                                        @{{ l.name }} (@{{ l.location_code }})@{{ l.is_default ? ' ★' : '' }}
-                                    </option>
-                                </select>
-                                <div class="invalid-feedback">@{{ errors.location_id }}</div>
-                            </div>
                             <div class="col-md-2">
                                 <label class="form-label">Purchase Date</label>
                                 <input type="date" class="form-control" v-model="form.purchase_date">
@@ -126,7 +115,6 @@
 @include('purchases._partials._purchase_app_script', [
     'mode'             => 'edit',
     'suppliersJson'    => $suppliers->toJson(),
-    'locationsJson'    => $locations->toJson(),
     'racksJson'        => $racks->toJson(),
     'lookupUrl'        => route('purchases.lookup-barcode'),
     'searchUrl'        => route('purchases.search-products'),

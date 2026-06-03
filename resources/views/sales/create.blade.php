@@ -63,16 +63,6 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Channel</label>
-                                <select class="form-select" v-model.number="form.channel_id">
-                                    <option :value="null">— None —</option>
-                                    <option v-for="c in channels" :key="c.id" :value="c.id">
-                                        @{{ c.name }}
-                                    </option>
-                                </select>
-                            </div>
-
-                            <div class="col-md-3">
                                 <label class="form-label">Salesperson</label>
                                 <select class="form-select" v-model.number="form.salesperson_id">
                                     <option :value="null">— Unassigned —</option>
@@ -446,7 +436,6 @@ $(function () {
     const csrfToken = $('meta[name="csrf-token"]').attr('content');
 
     const locations    = @json($locations);
-    const channels     = @json($channels);
     const salespeople  = @json($salespeople);
     const defaultLoc   = @json($defaultLocation);
     const defaultSPId  = @json($defaultSalespersonId);
@@ -455,7 +444,7 @@ $(function () {
         el: '#salesTerminalApp',
         data: {
             // Reference data
-            locations, channels, salespeople,
+            locations, salespeople,
             newCustomerUrl: '{{ route('customers.create') }}',
 
             // Search states
@@ -478,7 +467,6 @@ $(function () {
                 sale_number_preview: '',
                 customer_id: null,
                 location_id: defaultLoc ? defaultLoc.id : null,
-                channel_id: null,
                 salesperson_id: defaultSPId || null,
                 tax_type: 'none',
                 shipping_charge: 0,
@@ -763,7 +751,6 @@ $(function () {
                     sale_date:       this.form.sale_date,
                     customer_id:     this.form.customer_id,
                     location_id:     this.form.location_id,
-                    channel_id:      this.form.channel_id,
                     salesperson_id:  this.form.salesperson_id,
                     tax_type:        this.form.tax_type,
                     shipping_charge: Number(this.form.shipping_charge) || 0,

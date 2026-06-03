@@ -23,7 +23,7 @@ class UpdateSaleRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $nullFks = ['channel_id', 'salesperson_id'];
+        $nullFks = ['salesperson_id'];
         $merged  = [];
         foreach ($nullFks as $f) {
             if ($this->input($f) === '' || $this->input($f) === '0') {
@@ -44,7 +44,6 @@ class UpdateSaleRequest extends FormRequest
             'sale_date'       => ['sometimes', 'required', 'date'],
             'customer_id'     => ['sometimes', 'required', 'integer', Rule::exists('customers', 'id')->whereNull('deleted_at')],
             'location_id'     => ['sometimes', 'required', 'integer', Rule::exists('locations', 'id')->whereNull('deleted_at')],
-            'channel_id'      => ['nullable', 'integer', Rule::exists('channels', 'id')->whereNull('deleted_at')],
             'salesperson_id'  => ['nullable', 'integer', Rule::exists('users', 'id')->whereNull('deleted_at')],
 
             'tax_type'        => ['sometimes', 'required', Rule::in(Sale::TAX_TYPES)],
