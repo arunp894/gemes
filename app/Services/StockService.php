@@ -106,6 +106,80 @@ class StockService
     }
 
     /**
+     * Global on-hand for a piece, summed across every location. Stock is
+     * a single pool — purchases don't carry a location, so this is the
+     * canonical balance the sale terminal asks about.
+     */
+    public function onHandForPieceGlobal(int $purchaseProductId): int
+    {
+        $rows = StockMovement::query()
+            ->selectRaw('direction, SUM(qty) as total')
+            ->where('purchase_product_id', $purchaseProductId)
+            ->groupBy('direction')
+            ->pluck('total', 'direction');
+
+        return (int) ($rows[StockMovement::DIRECTION_IN] ?? 0)
+             - (int) ($rows[StockMovement::DIRECTION_OUT] ?? 0);
+    }
+
+    /**
+     * Global on-hand for a product, summed across every location + piece.
+     */
+    public function onHandForProductGlobal(int $productId): int
+    {
+        $rows = StockMovement::query()
+            ->selectRaw('direction, SUM(qty) as total')
+            ->where('product_id', $productId)
+            ->groupBy('direction')
+            ->pluck('total', 'direction');
+
+        return (int) ($rows[StockMovement::DIRECTION_IN] ?? 0)
+             - (int) ($rows[StockMovement::DIRECTION_OUT] ?? 0);
+    }
+
+    /**
+     * FIFO-ordered [purchase_product_id => global_balance], positives
+     * only — used to allocate a product sale line across the global pool
+     * when no specific piece is given.
+     */
+    public function availablePiecesForProductGlobal(int $productId): array
+    {
+        $rows = StockMovement::query()
+            ->selectRaw('purchase_product_id, '
+                . 'SUM(CASE WHEN direction = ? THEN qty ELSE 0 END) as in_qty, '
+                . 'SUM(CASE WHEN direction = ? THEN qty ELSE 0 END) as out_qty',
+                [StockMovement::DIRECTION_IN, StockMovement::DIRECTION_OUT])
+            ->where('product_id', $productId)
+            ->groupBy('purchase_product_id')
+            ->get();
+
+        $available = [];
+        foreach ($rows as $r) {
+            $bal = (int) $r->in_qty - (int) $r->out_qty;
+            if ($bal > 0) {
+                $available[(int) $r->purchase_product_id] = $bal;
+            }
+        }
+        if (empty($available)) {
+            return [];
+        }
+
+        $order = PurchaseProduct::whereIn('id', array_keys($available))
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->pluck('id')
+            ->toArray();
+
+        $ordered = [];
+        foreach ($order as $id) {
+            if (isset($available[$id])) {
+                $ordered[$id] = $available[$id];
+            }
+        }
+        return $ordered;
+    }
+
+    /**
      * Pieces of a given product that have positive balance at the given
      * location. Used when a sale line references a product but no
      * specific piece — FIFO pick.
@@ -356,11 +430,9 @@ class StockService
     public function checkSaleAvailability(Sale $sale): array
     {
         $errors = [];
-        $locationId = (int) $sale->location_id;
-        if (! $locationId) {
-            return ['Sale has no location — cannot validate stock.'];
-        }
 
+        // Stock is a single global pool — the sale's location_id is a
+        // sales attribute, not a stock dimension, so it isn't used here.
         // Roll the lines up so multiple lines hitting the same piece are
         // aggregated for the check. Otherwise two lines of qty=2 each on
         // a piece with on-hand=3 would both pass individually.
@@ -385,16 +457,16 @@ class StockService
         }
 
         foreach ($byPiece as $ppId => $needed) {
-            $onHand = $this->onHandForPiece($ppId, $locationId);
+            $onHand = $this->onHandForPieceGlobal($ppId);
             if ($onHand < $needed) {
-                $errors[] = "Insufficient stock for piece #{$ppId} at location: need {$needed}, on hand {$onHand}.";
+                $errors[] = "Insufficient stock for piece #{$ppId}: need {$needed}, on hand {$onHand}.";
             }
         }
 
         foreach ($byProduct as $productId => $needed) {
-            $onHand = $this->onHandForProduct($productId, $locationId);
+            $onHand = $this->onHandForProductGlobal($productId);
             if ($onHand < $needed) {
-                $errors[] = "Insufficient stock for product #{$productId} at location: need {$needed}, on hand {$onHand}.";
+                $errors[] = "Insufficient stock for product #{$productId}: need {$needed}, on hand {$onHand}.";
             }
         }
 
@@ -421,9 +493,7 @@ class StockService
             throw new RuntimeException('Cannot post sale: ' . implode(' ', $errors));
         }
 
-        $locationId = (int) $sale->location_id;
-
-        DB::transaction(function () use ($sale, $locationId) {
+        DB::transaction(function () use ($sale) {
             $sale->load('lines');
 
             foreach ($sale->lines as $line) {
@@ -433,48 +503,30 @@ class StockService
                 }
 
                 if ($line->purchase_product_id) {
-                    // Exact piece specified — consume directly.
-                    $this->record([
-                        'purchase_product_id' => (int) $line->purchase_product_id,
-                        'product_id'          => (int) $line->product_id,
-                        'location_id'         => $locationId,
-                        'direction'           => StockMovement::DIRECTION_OUT,
-                        'qty'                 => $qty,
-                        'reason'              => StockMovement::REASON_SALE,
-                        'source_type'         => StockMovement::SOURCE_SALE,
-                        'source_id'           => $sale->id,
-                        'source_line_id'      => $line->id,
-                        'movement_date'       => optional($sale->sale_date)->toDateString() ?? now()->toDateString(),
-                    ]);
+                    // Exact piece specified — consume it from wherever it's held.
+                    $this->bookPieceOut(
+                        (int) $line->purchase_product_id,
+                        (int) $line->product_id,
+                        $qty,
+                        $sale,
+                        (int) $line->id
+                    );
                     continue;
                 }
 
-                // No specific piece — FIFO-allocate across available
-                // pieces of this product at the sale's location. Snapshot
-                // the chosen piece(s) back onto the SaleLine so future
-                // refunds reverse the correct rows.
-                $available = $this->availablePiecesForProduct((int) $line->product_id, $locationId);
+                // No specific piece — FIFO-allocate across available pieces
+                // of this product from the global pool. Snapshot the chosen
+                // first piece back onto the SaleLine so refunds reverse it.
+                $available = $this->availablePiecesForProductGlobal((int) $line->product_id);
                 $remaining = $qty;
                 $firstPpId = null;
 
                 foreach ($available as $ppId => $bal) {
                     if ($remaining <= 0) break;
-                    $take = min($bal, $remaining);
+                    $take = min((int) $bal, $remaining);
                     if ($take <= 0) continue;
 
-                    $this->record([
-                        'purchase_product_id' => $ppId,
-                        'product_id'          => (int) $line->product_id,
-                        'location_id'         => $locationId,
-                        'direction'           => StockMovement::DIRECTION_OUT,
-                        'qty'                 => $take,
-                        'reason'              => StockMovement::REASON_SALE,
-                        'source_type'         => StockMovement::SOURCE_SALE,
-                        'source_id'           => $sale->id,
-                        'source_line_id'      => $line->id,
-                        'movement_date'       => optional($sale->sale_date)->toDateString() ?? now()->toDateString(),
-                        'notes'               => 'FIFO-allocated from piece #' . $ppId,
-                    ]);
+                    $this->bookPieceOut($ppId, (int) $line->product_id, $take, $sale, (int) $line->id);
 
                     if ($firstPpId === null) {
                         $firstPpId = $ppId;
@@ -493,7 +545,7 @@ class StockService
                 // Tag the line with the first piece consumed so the show
                 // page has something useful to display and the reversal
                 // can find a starting point. Cost snapshot from the piece.
-                if ($firstPpId !== null && ! $line->purchase_product_id) {
+                if ($firstPpId !== null) {
                     $firstPiece = PurchaseProduct::find($firstPpId);
                     SaleLine::where('id', $line->id)->update([
                         'purchase_product_id' => $firstPpId,
@@ -502,6 +554,52 @@ class StockService
                 }
             }
         });
+    }
+
+    /**
+     * Book `qty` OUT for a single piece, drawing from whichever
+     * location(s) actually hold positive balance. Stock is one global
+     * pool; the sale's own location_id is a sales attribute and is NOT
+     * used as a stock dimension here.
+     */
+    private function bookPieceOut(int $ppId, int $productId, int $qty, Sale $sale, int $lineId): void
+    {
+        $byLoc = $this->onHandForPieceByLocation($ppId); // [location_id => balance], positives only
+
+        if (empty($byLoc)) {
+            // Shouldn't happen after the availability check, but stay safe
+            // so we never silently skip a movement.
+            $def = $this->defaultLocationId();
+            if (! $def) {
+                throw new RuntimeException("No stock location available to book OUT for piece #{$ppId}.");
+            }
+            $byLoc = [$def => $qty];
+        }
+
+        $remaining = $qty;
+        foreach ($byLoc as $locId => $bal) {
+            if ($remaining <= 0) break;
+            $take = min((int) $bal, $remaining);
+            if ($take <= 0) continue;
+
+            $this->record([
+                'purchase_product_id' => $ppId,
+                'product_id'          => $productId,
+                'location_id'         => (int) $locId,
+                'direction'           => StockMovement::DIRECTION_OUT,
+                'qty'                 => $take,
+                'reason'              => StockMovement::REASON_SALE,
+                'source_type'         => StockMovement::SOURCE_SALE,
+                'source_id'           => $sale->id,
+                'source_line_id'      => $lineId,
+                'movement_date'       => optional($sale->sale_date)->toDateString() ?? now()->toDateString(),
+            ]);
+            $remaining -= $take;
+        }
+
+        if ($remaining > 0) {
+            throw new RuntimeException("Stock booking underflow for piece #{$ppId}: {$remaining} unfilled.");
+        }
     }
 
     /**

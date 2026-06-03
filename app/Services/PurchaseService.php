@@ -80,18 +80,27 @@ class PurchaseService
             $supplier = Supplier::findOrFail($data['supplier_id']);
             $date     = Carbon::parse($data['purchase_date']);
 
+            $intendedStatus = $data['status'] ?? Purchase::STATUS_DRAFT;
+
             $purchase = new Purchase();
             $purchase->supplier_id    = $supplier->id;
             $purchase->purchase_date  = $date->toDateString();
             $purchase->invoice_number = Purchase::generateInvoiceNumber($supplier, $date);
             $purchase->tax_type       = $data['tax_type'] ?? Purchase::TAX_NONE;
             $purchase->note           = $data['note'] ?? null;
-            $purchase->status         = $data['status'] ?? Purchase::STATUS_DRAFT;
+            // Always build as DRAFT first, then promote via post() so the
+            // stock IN movements are written. Setting status='posted'
+            // directly here would leave the ledger empty.
+            $purchase->status         = Purchase::STATUS_DRAFT;
             $purchase->paid_amount    = (float) ($data['paid_amount'] ?? 0);
             $purchase->save();
 
             $this->syncLines($purchase, $data['lines'] ?? []);
             $this->recalculate($purchase);
+
+            if ($intendedStatus === Purchase::STATUS_POSTED) {
+                $this->post($purchase);
+            }
 
             return $this->repo->refresh($purchase);
         });

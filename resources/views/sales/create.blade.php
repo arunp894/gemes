@@ -578,7 +578,7 @@ $(function () {
                     if (data.inventory && data.inventory.on_hand !== null && data.inventory.on_hand <= 0) {
                         this.scannerAlertClass = 'alert-danger';
                         this.scannerIconClass  = 'ti ti-x';
-                        this.scannerMessage    = `${data.product.title} has no stock at this location.`;
+                        this.scannerMessage    = `${data.product.title} is out of stock.`;
                         return;
                     }
 

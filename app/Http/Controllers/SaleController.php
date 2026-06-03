@@ -316,11 +316,10 @@ class SaleController extends Controller
             ->first();
 
         if ($pp && $pp->line && $pp->line->product) {
-            // Live on-hand from the ledger. Falls back to 0 silently if
-            // no location is supplied — the terminal handles that case.
-            $onHand = $locationId
-                ? $this->stock->onHandForPiece((int) $pp->id, $locationId)
-                : null;
+            // Live on-hand from the ledger, summed across all locations.
+            // Stock is one global pool; the sale's location is recorded on
+            // the sale but does not gate availability.
+            $onHand = $this->stock->onHandForPieceGlobal((int) $pp->id);
 
             return response()->json([
                 'ok'       => true,
@@ -346,9 +345,7 @@ class SaleController extends Controller
         // specific purchase row — still useful, just no cost / qty info.
         $bc = Barcode::with('product:id,title,sku')->where('barcode_value', $value)->first();
         if ($bc && $bc->product) {
-            $onHand = $locationId
-                ? $this->stock->onHandForProduct((int) $bc->product->id, $locationId)
-                : null;
+            $onHand = $this->stock->onHandForProductGlobal((int) $bc->product->id);
 
             return response()->json([
                 'ok'      => true,
