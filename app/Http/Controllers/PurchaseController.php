@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePurchaseRequest;
 use App\Http\Requests\UpdatePurchaseRequest;
 use App\Models\Barcode;
+use App\Models\Location;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\Rack;
@@ -54,6 +55,13 @@ class PurchaseController extends Controller
                 fn(Purchase $p) =>
                 $p->supplier ? ($p->supplier->company_name ?: $p->supplier->name) : '—'
             )
+            ->addColumn(
+                'location_label',
+                fn(Purchase $p) =>
+                $p->location
+                    ? '<span title="' . e($p->location->location_code) . '">' . e($p->location->name) . '</span>'
+                    : '<span class="text-muted">—</span>'
+            )
             ->editColumn(
                 'purchase_date',
                 fn(Purchase $p) =>
@@ -93,7 +101,7 @@ class PurchaseController extends Controller
                 $html .= '</div>';
                 return $html;
             })
-            ->rawColumns(['status_badge', 'actions'])
+            ->rawColumns(['status_badge', 'actions', 'location_label'])
             ->toJson();
     }
 
@@ -103,6 +111,7 @@ class PurchaseController extends Controller
     {
         return view('purchases.create', [
             'suppliers' => Supplier::active()->ordered()->get(['id', 'supplier_code', 'name', 'company_name', 'invoice_prefix', 'gst_number']),
+            'locations' => Location::active()->ordered()->get(['id', 'location_code', 'name', 'type']),
             'racks'     => Rack::active()->ordered()->get(['id', 'code', 'name']),
             'taxTypes'  => Purchase::TAX_TYPES,
         ]);
@@ -135,6 +144,7 @@ class PurchaseController extends Controller
         return view('purchases.edit', [
             'purchase'  => $this->repo->find($purchase->id),
             'suppliers' => Supplier::active()->ordered()->get(['id', 'supplier_code', 'name', 'company_name', 'invoice_prefix', 'gst_number']),
+            'locations' => Location::active()->ordered()->get(['id', 'location_code', 'name', 'type']),
             'racks'     => Rack::active()->ordered()->get(['id', 'code', 'name']),
             'taxTypes'  => Purchase::TAX_TYPES,
         ]);

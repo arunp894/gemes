@@ -325,9 +325,14 @@ class StockService
             return;
         }
 
-        $locationId = $this->defaultLocationId();
+        // Use the purchase's own location; fall back to system default so
+        // legacy / backfilled purchases still post cleanly.
+        $locationId = $purchase->location_id
+            ? (int) $purchase->location_id
+            : $this->defaultLocationId();
+
         if (! $locationId) {
-            throw new RuntimeException('Cannot post purchase: no default location available.');
+            throw new RuntimeException('Cannot post purchase: no location set and no default location available.');
         }
 
         DB::transaction(function () use ($purchase, $locationId) {

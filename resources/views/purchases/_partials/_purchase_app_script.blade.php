@@ -20,6 +20,7 @@
     const CONFIG = {
         mode:        @json($mode),
         suppliers:   {!! $suppliersJson !!},
+        locations:   {!! $locationsJson !!},
         racks:       {!! $racksJson !!},
         lookupUrl:   @json($lookupUrl),
         searchUrl:   @json($searchUrl),
@@ -137,6 +138,7 @@ const perRowQty = 1;
         el: '#purchaseFormApp',
         data: {
             suppliers:      CONFIG.suppliers,
+            locations:      CONFIG.locations,
             racks:          CONFIG.racks,
             barcodeInput:   '',
             productSearch:  '',
@@ -149,6 +151,7 @@ const perRowQty = 1;
 
             form: {
                 supplier_id:            CONFIG.existing ? CONFIG.existing.supplier_id : null,
+                location_id:            CONFIG.existing ? (CONFIG.existing.location_id || null) : null,
                 purchase_date:          CONFIG.existing ? CONFIG.existing.purchase_date : new Date().toISOString().slice(0, 10),
                 invoice_number_preview: CONFIG.existing ? CONFIG.existing.invoice_number : '',
                 tax_type:               CONFIG.existing ? CONFIG.existing.tax_type : 'none',
@@ -413,6 +416,7 @@ const perRowQty = 1;
             buildPayload(post) {
                 return {
                     supplier_id:   this.form.supplier_id,
+                    location_id:   this.form.location_id,
                     purchase_date: this.form.purchase_date,
                     tax_type:      this.form.tax_type,
                     note:          this.form.note,
@@ -445,9 +449,10 @@ const perRowQty = 1;
                 this.wasValidated = true;
                 this.errors = {};
 
-                if (!this.form.supplier_id || !this.form.purchase_date) {
+                if (!this.form.supplier_id || !this.form.purchase_date || !this.form.location_id) {
                     this.errors.supplier_id   = !this.form.supplier_id   ? 'Required' : '';
                     this.errors.purchase_date = !this.form.purchase_date ? 'Required' : '';
+                    this.errors.location_id   = !this.form.location_id   ? 'Required' : '';
                     return;
                 }
                 if (this.form.lines.length === 0) {

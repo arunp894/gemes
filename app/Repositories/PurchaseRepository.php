@@ -17,13 +17,17 @@ class PurchaseRepository
     public function query(): Builder
     {
         return Purchase::query()
-            ->with(['supplier:id,supplier_code,name,company_name,invoice_prefix']);
+            ->with([
+                'supplier:id,supplier_code,name,company_name,invoice_prefix',
+                'location:id,name,location_code,type',
+            ]);
     }
 
     public function find(int $id): ?Purchase
     {
         return Purchase::with([
             'supplier',
+            'location:id,name,location_code,type',
             'lines.product:id,title,sku,pack_type,outer_pack_name,outer_pack_contains,inner_pack_name,inner_pack_contains',
             'lines.rows.rack:id,code,name',
         ])->find($id);

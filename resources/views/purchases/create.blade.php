@@ -69,6 +69,19 @@
                                 </select>
                             </div>
 
+                            <div class="col-md-3">
+                                <label class="form-label">Location <span class="text-danger">*</span></label>
+                                <select class="form-select" v-model.number="form.location_id"
+                                        :class="{ 'is-invalid': errors.location_id }"
+                                        required>
+                                    <option :value="null">&mdash; Select location &mdash;</option>
+                                    <option v-for="loc in locations" :key="loc.id" :value="loc.id">
+                                        @{{ loc.name }} <span v-if="loc.location_code">&middot; @{{ loc.location_code }}</span>
+                                    </option>
+                                </select>
+                                <div class="invalid-feedback">@{{ errors.location_id }}</div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -157,6 +170,7 @@
 @include('purchases._partials._purchase_app_script', [
     'mode'            => 'create',
     'suppliersJson'   => $suppliers->toJson(),
+    'locationsJson'   => $locations->toJson(),
     'racksJson'       => $racks->toJson(),
     'lookupUrl'       => route('purchases.lookup-barcode'),
     'searchUrl'       => route('purchases.search-products'),

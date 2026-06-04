@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\Location;
 
 /**
  * Purchase invoice (header).
@@ -49,6 +50,7 @@ class Purchase extends Model
         'invoice_number',
         'purchase_date',
         'supplier_id',
+        'location_id',
         'tax_type',
         'subtotal',
         'tax_total',
@@ -141,6 +143,11 @@ class Purchase extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
     }
 
     public function lines(): HasMany

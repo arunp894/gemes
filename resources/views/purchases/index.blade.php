@@ -69,6 +69,7 @@
                                 <th>Invoice #</th>
                                 <th>Date</th>
                                 <th>Supplier</th>
+                                <th>Location</th>
                                 <th class="text-end">Grand Total</th>
                                 <th class="text-end">Due</th>
                                 <th>Status</th>
@@ -106,6 +107,7 @@
             { data: 'invoice_number',  name: 'invoice_number' },
             { data: 'purchase_date',   name: 'purchase_date' },
             { data: 'supplier_label',  name: 'supplier.name', orderable: false },
+            { data: 'location_label',  name: 'location.name', orderable: false },
             { data: 'grand_total',     name: 'grand_total',  className: 'text-end' },
             { data: 'due_amount',      name: 'due_amount',   className: 'text-end' },
             { data: 'status_badge',    name: 'status' },

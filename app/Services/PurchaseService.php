@@ -86,6 +86,7 @@ class PurchaseService
             $purchase->supplier_id    = $supplier->id;
             $purchase->purchase_date  = $date->toDateString();
             $purchase->invoice_number = Purchase::generateInvoiceNumber($supplier, $date);
+            $purchase->location_id    = $data['location_id'] ?? null;
             $purchase->tax_type       = $data['tax_type'] ?? Purchase::TAX_NONE;
             $purchase->note           = $data['note'] ?? null;
             // Always build as DRAFT first, then promote via post() so the
@@ -126,6 +127,7 @@ class PurchaseService
             }
 
             $purchase->purchase_date = $data['purchase_date'] ?? $purchase->purchase_date;
+            $purchase->location_id   = $data['location_id']   ?? $purchase->location_id;
             $purchase->tax_type      = $data['tax_type']      ?? $purchase->tax_type;
             $purchase->note          = $data['note']          ?? $purchase->note;
             $purchase->paid_amount   = (float) ($data['paid_amount'] ?? 0);

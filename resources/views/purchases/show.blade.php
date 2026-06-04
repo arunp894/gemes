@@ -52,7 +52,17 @@
                                 <br><small class="text-muted">GST: {{ $purchase->supplier->gst_number }}</small>
                             @endif
                         </div>
-                        <div class="col-md-6 text-md-end">
+                        <div class="col-md-3">
+                            <h6 class="text-muted text-uppercase fs-xxs mb-1">Location</h6>
+                            @if ($purchase->location)
+                                <strong>{{ $purchase->location->name }}</strong><br>
+                                <small class="text-muted">{{ $purchase->location->location_code }}</small>
+                                <br><small class="text-muted">{{ $purchase->location->typeLabel() }}</small>
+                            @else
+                                <span class="text-muted">&mdash;</span>
+                            @endif
+                        </div>
+                        <div class="col-md-3 text-md-end">
                             <h6 class="text-muted text-uppercase fs-xxs mb-1">Purchase Date</h6>
                             <strong>{{ $purchase->purchase_date?->format('d M Y') }}</strong><br>
                             <small class="text-muted">Tax: {{ strtoupper($purchase->tax_type) }}</small>
@@ -136,6 +146,16 @@
                     <h5 class="card-title mb-0">Summary</h5>
                 </div>
                 <div class="card-body">
+
+                    <div class="mb-3 pb-3 border-bottom">
+                        <div class="text-muted fs-xxs text-uppercase mb-1">Location</div>
+                        @if ($purchase->location)
+                            <div class="fw-semibold">{{ $purchase->location->name }}</div>
+                            <div class="text-muted small">{{ $purchase->location->location_code }} &middot; {{ $purchase->location->typeLabel() }}</div>
+                        @else
+                            <span class="text-muted">&mdash;</span>
+                        @endif
+                    </div>
 
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Subtotal</span>

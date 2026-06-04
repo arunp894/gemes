@@ -28,6 +28,7 @@ class UpdatePurchaseRequest extends FormRequest
 
         return [
             'purchase_date' => ['required', 'date'],
+            'location_id'   => ['required', 'integer', 'exists:locations,id'],
             'tax_type'      => ['required', 'in:' . implode(',', Purchase::TAX_TYPES)],
             'note'          => ['nullable', 'string'],
             'paid_amount'   => ['nullable', 'numeric', 'min:0'],
