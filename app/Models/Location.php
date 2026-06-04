@@ -178,6 +178,11 @@ class Location extends Model
         return $this->belongsTo(User::class, 'manager_id');
     }
 
+    public function users(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class)->withTimestamps();
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

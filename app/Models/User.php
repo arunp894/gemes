@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
+use App\Models\Location;
 
 /**
  * Authenticated user.
@@ -59,6 +60,11 @@ class User extends Authenticatable
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(Role::class)->withTimestamps();
+    }
+
+    public function locations(): BelongsToMany
+    {
+        return $this->belongsToMany(Location::class)->withTimestamps();
     }
 
     // -----------------------------------------------------------------

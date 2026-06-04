@@ -130,15 +130,19 @@ class SaleController extends Controller
 
     public function create(): View
     {
-        $defaultLocation = Location::active()->where('is_default', true)->first()
-            ?? Location::active()->orderBy('name')->first();
+        /** @var User $user */
+        $user          = auth()->user();
+        $userLocations = $user->locations()->active()->ordered()->get(['locations.id', 'location_code', 'name', 'type', 'is_default']);
+
+        [$locationMode, $defaultLocation] = $this->resolveLocationContext($userLocations);
 
         return view('sales.create', [
-            'locations'       => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'type', 'is_default']),
-            'salespeople'     => User::where('is_active', true)->orderBy('name')->get(['id', 'name']),
-            'paymentMethods'  => SalePayment::METHODS,
-            'taxTypes'        => Sale::TAX_TYPES,
-            'defaultLocation' => $defaultLocation,
+            'userLocations'        => $userLocations,
+            'locationMode'         => $locationMode,   // 'none' | 'single' | 'multiple'
+            'salespeople'          => User::where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'paymentMethods'       => SalePayment::METHODS,
+            'taxTypes'             => Sale::TAX_TYPES,
+            'defaultLocation'      => $defaultLocation,
             'defaultSalespersonId' => auth()->id(),
         ]);
     }
@@ -177,13 +181,20 @@ class SaleController extends Controller
     {
         abort_unless($sale->isEditable(), 403, 'Only draft sales can be edited.');
 
+        /** @var User $user */
+        $user          = auth()->user();
+        $userLocations = $user->locations()->active()->ordered()->get(['locations.id', 'location_code', 'name', 'type', 'is_default']);
+
+        [$locationMode, $defaultLocation] = $this->resolveLocationContext($userLocations, $sale->location);
+
         return view('sales.edit', [
             'sale'                 => $this->repo->find($sale->id),
-            'locations'            => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'type', 'is_default']),
+            'userLocations'        => $userLocations,
+            'locationMode'         => $locationMode,
             'salespeople'          => User::where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'paymentMethods'       => SalePayment::METHODS,
             'taxTypes'             => Sale::TAX_TYPES,
-            'defaultLocation'      => $sale->location,
+            'defaultLocation'      => $defaultLocation,
             'defaultSalespersonId' => $sale->salesperson_id,
         ]);
     }
@@ -409,5 +420,48 @@ class SaleController extends Controller
         $date = $request->query('date', now()->toDateString());
         $next = Sale::generateSaleNumber(\Carbon\Carbon::parse($date));
         return response()->json(['ok' => true, 'sale_number' => $next]);
+    }
+
+    /* ─── Private helpers ─────────────────────────────────── */
+
+    /**
+     * Determine the location UI mode and default selection for the sale terminal.
+     *
+     * Rules:
+     *   - 0 locations assigned → mode 'none'  : block entry with an alert.
+     *   - 1 location  assigned → mode 'single': auto-select, show readonly badge.
+     *   - 2+ locations assigned → mode 'multiple': show a dropdown of the user's
+     *     assigned locations only, defaulting to their is_default location or the
+     *     first in the list.
+     *
+     * When $preferredLocation is given (edit flow) it overrides the default
+     * selection, but only if that location is in the user's allowed set.
+     *
+     * @param  \Illuminate\Support\Collection  $userLocations
+     * @param  Location|null                   $preferredLocation
+     * @return array{0: string, 1: Location|null}  [mode, defaultLocation]
+     */
+    private function resolveLocationContext(
+        \Illuminate\Support\Collection $userLocations,
+        ?Location $preferredLocation = null
+    ): array {
+        $count = $userLocations->count();
+
+        if ($count === 0) {
+            return ['none', null];
+        }
+
+        if ($count === 1) {
+            return ['single', $userLocations->first()];
+        }
+
+        // Multiple — pick the preferred location if it's in the user's set,
+        // else fall back to their default-flagged one, else first in list.
+        if ($preferredLocation && $userLocations->contains('id', $preferredLocation->id)) {
+            return ['multiple', $preferredLocation];
+        }
+
+        $default = $userLocations->firstWhere('is_default', true) ?? $userLocations->first();
+        return ['multiple', $default];
     }
 }

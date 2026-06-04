@@ -61,6 +61,17 @@
                                 <i class="ti ti-x text-muted"></i> No
                             @endif
                         </dd>
+
+                        @if ($user->locations->isNotEmpty())
+                        <dt class="col-5 text-muted small">Locations</dt>
+                        <dd class="col-7 small">
+                            @foreach ($user->locations as $loc)
+                                <span class="badge badge-soft-secondary me-1 mb-1">
+                                    <i class="ti ti-map-pin me-1"></i>{{ $loc->name }}
+                                </span>
+                            @endforeach
+                        </dd>
+                        @endif
                     </dl>
 
                     @permission('users.edit')

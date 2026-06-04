@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
+use App\Models\Location;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -42,7 +43,7 @@ class UserController extends Controller
      */
     public function data(Request $request): JsonResponse
     {
-        $query = User::query()->with('roles:id,name,slug,is_super');
+        $query = User::query()->with('roles:id,name,slug,is_super', 'locations:id,name,location_code');
 
         return DataTables::of($query)
             ->addColumn('checkbox', function (User $user) {
@@ -51,6 +52,11 @@ class UserController extends Controller
             })
             ->editColumn('name', function (User $user) {
                 $initial = strtoupper(mb_substr($user->name, 0, 1));
+                $locationBadge = $user->locations->isNotEmpty()
+                    ? $user->locations->map(fn ($l) =>
+                        '<span class="badge badge-soft-secondary fs-xxs ms-1"><i class="ti ti-map-pin me-1"></i>' . e($l->name) . '</span>'
+                      )->implode('')
+                    : '';
                 return '
                     <div class="d-flex align-items-center">
                         <div class="avatar-sm me-2">
@@ -64,8 +70,9 @@ class UserController extends Controller
                                     . e($user->name) .
                                 '</a>
                             </h5>
-                            <small class="text-muted">' . e($user->email) . '</small>
-                        </div>
+                            <small class="text-muted">' . e($user->email) . '</small>'
+                            . $locationBadge .
+                        '</div>
                     </div>
                 ';
             })
@@ -135,8 +142,9 @@ class UserController extends Controller
      */
     public function create(): View
     {
-        $roles = Role::orderBy('name')->get(['id', 'name', 'slug', 'description', 'is_super']);
-        return view('users.create', compact('roles'));
+        $roles     = Role::orderBy('name')->get(['id', 'name', 'slug', 'description', 'is_super']);
+        $locations = Location::active()->ordered()->get(['id', 'name', 'location_code', 'type']);
+        return view('users.create', compact('roles', 'locations'));
     }
 
     /**
@@ -155,6 +163,7 @@ class UserController extends Controller
             ]);
 
             $user->roles()->sync($data['role_ids']);
+            $user->locations()->sync($data['location_ids'] ?? []);
 
             return $user;
         });
@@ -178,7 +187,7 @@ class UserController extends Controller
      */
     public function show(User $user): View
     {
-        $user->load(['roles.permissions']);
+        $user->load(['roles.permissions', 'locations:id,name,location_code,type']);
         $permissionSlugs = $user->permissionSlugs();
         return view('users.show', compact('user', 'permissionSlugs'));
     }
@@ -188,10 +197,12 @@ class UserController extends Controller
      */
     public function edit(User $user): View
     {
-        $user->load('roles:id');
-        $roles = Role::orderBy('name')->get(['id', 'name', 'slug', 'description', 'is_super']);
-        $assignedRoleIds = $user->roles->pluck('id')->all();
-        return view('users.edit', compact('user', 'roles', 'assignedRoleIds'));
+        $user->load('roles:id', 'locations:id');
+        $roles              = Role::orderBy('name')->get(['id', 'name', 'slug', 'description', 'is_super']);
+        $locations          = Location::active()->ordered()->get(['id', 'name', 'location_code', 'type']);
+        $assignedRoleIds     = $user->roles->pluck('id')->all();
+        $assignedLocationIds = $user->locations->pluck('id')->all();
+        return view('users.edit', compact('user', 'roles', 'locations', 'assignedRoleIds', 'assignedLocationIds'));
     }
 
     /**
@@ -229,6 +240,7 @@ class UserController extends Controller
 
             $user->fill($payload)->save();
             $user->roles()->sync($data['role_ids']);
+            $user->locations()->sync($data['location_ids'] ?? []);
             $user->flushPermissionCache();
         });
 

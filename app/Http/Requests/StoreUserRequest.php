@@ -31,6 +31,18 @@ class StoreUserRequest extends FormRequest
                 fn ($v) => $v > 0,
             )),
         ]);
+
+        // Normalize location_ids the same way.
+        $locations = $this->input('location_ids', []);
+        if (is_string($locations)) {
+            $locations = array_filter(array_map('trim', explode(',', $locations)));
+        }
+        $this->merge([
+            'location_ids' => array_values(array_filter(
+                array_map('intval', (array) $locations),
+                fn ($v) => $v > 0,
+            )),
+        ]);
     }
 
     public function rules(): array
@@ -45,6 +57,11 @@ class StoreUserRequest extends FormRequest
             ],
             'password' => ['required', 'confirmed', Password::min(8)],
             'is_active' => ['required', 'boolean'],
+            'location_ids'   => ['nullable', 'array'],
+            'location_ids.*' => [
+                'integer',
+                Rule::exists('locations', 'id')->whereNull('deleted_at')->where('status', true),
+            ],
 
             // Multi-role assignment. At least one role required so the user
             // has *some* defined access; pure no-role users are essentially

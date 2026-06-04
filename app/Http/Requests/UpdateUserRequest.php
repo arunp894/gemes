@@ -29,6 +29,18 @@ class UpdateUserRequest extends FormRequest
                 fn ($v) => $v > 0,
             )),
         ]);
+
+        // Normalize location_ids.
+        $locations = $this->input('location_ids', []);
+        if (is_string($locations)) {
+            $locations = array_filter(array_map('trim', explode(',', $locations)));
+        }
+        $this->merge([
+            'location_ids' => array_values(array_filter(
+                array_map('intval', (array) $locations),
+                fn ($v) => $v > 0,
+            )),
+        ]);
     }
 
     public function rules(): array
@@ -48,6 +60,11 @@ class UpdateUserRequest extends FormRequest
             // Password optional on update — only validate when provided.
             'password' => ['nullable', 'confirmed', Password::min(8)],
             'is_active' => ['required', 'boolean'],
+            'location_ids'   => ['nullable', 'array'],
+            'location_ids.*' => [
+                'integer',
+                Rule::exists('locations', 'id')->whereNull('deleted_at')->where('status', true),
+            ],
 
             'role_ids'   => ['required', 'array', 'min:1'],
             'role_ids.*' => [

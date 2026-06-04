@@ -52,14 +52,39 @@
 
                             <div class="col-md-3">
                                 <label class="form-label">Location <span class="text-danger">*</span></label>
+
+                                {{-- ── NONE: user has no assigned locations ── --}}
+                                @if ($locationMode === 'none')
+                                <div class="alert alert-danger mb-0 py-2 px-3 d-flex align-items-center gap-2">
+                                    <i class="ti ti-lock fs-18 flex-shrink-0"></i>
+                                    <div>
+                                        <strong>No location access.</strong><br>
+                                        <small>Ask an administrator to assign you to a location before creating sales.</small>
+                                    </div>
+                                </div>
+                                {{-- hide the submit buttons server-side by passing locationMode to JS --}}
+
+                                {{-- ── SINGLE: user has exactly one location ── --}}
+                                @elseif ($locationMode === 'single')
+                                <div class="form-control bg-light d-flex align-items-center gap-2 h-auto py-2">
+                                    <i class="ti ti-map-pin text-primary"></i>
+                                    <div class="lh-sm">
+                                        <div class="fw-semibold">{{ $defaultLocation->name }}</div>
+                                        <small class="text-muted">{{ $defaultLocation->location_code }}</small>
+                                    </div>
+                                </div>
+
+                                {{-- ── MULTIPLE: user has 2+ locations → dropdown ── --}}
+                                @else
                                 <select class="form-select" v-model.number="form.location_id"
                                     :class="{ 'is-invalid': errors.location_id }" required>
                                     <option :value="null">— Select location —</option>
-                                    <option v-for="l in locations" :key="l.id" :value="l.id">
+                                    <option v-for="l in userLocations" :key="l.id" :value="l.id">
                                         @{{ l.name }} (@{{ l.location_code }})@{{ l.is_default ? ' ★' : '' }}
                                     </option>
                                 </select>
                                 <div class="invalid-feedback">@{{ errors.location_id }}</div>
+                                @endif
                             </div>
 
                             <div class="col-md-3">
@@ -399,6 +424,17 @@
                 {{-- Actions --}}
                 <div v-if="serverError" class="alert alert-danger">@{{ serverError }}</div>
 
+                @if ($locationMode === 'none')
+                {{-- Full block: no location access --}}
+                <div class="alert alert-danger d-flex align-items-start gap-2 mb-3">
+                    <i class="ti ti-lock fs-22 flex-shrink-0 mt-1"></i>
+                    <div>
+                        <strong>Sales entry blocked.</strong><br>
+                        You have no location assigned to your account. Contact an administrator to get access before creating sales.
+                    </div>
+                </div>
+                <a href="{{ route('sales.index') }}" class="btn btn-secondary w-100">Back to Sales</a>
+                @else
                 <div class="d-grid gap-2 mb-4">
                     <button type="button" class="btn btn-lg btn-success" :disabled="submitting"
                         @click="submit('completed')">
@@ -422,6 +458,7 @@
                     </div>
                     <a href="{{ route('sales.index') }}" class="btn btn-link text-muted">Cancel and go back</a>
                 </div>
+                @endif
 
             </div>{{-- /col-xl-4 --}}
 
@@ -435,16 +472,18 @@
 $(function () {
     const csrfToken = $('meta[name="csrf-token"]').attr('content');
 
-    const locations    = @json($locations);
-    const salespeople  = @json($salespeople);
-    const defaultLoc   = @json($defaultLocation);
-    const defaultSPId  = @json($defaultSalespersonId);
+    const userLocations = @json($userLocations);
+    const salespeople   = @json($salespeople);
+    const defaultLoc    = @json($defaultLocation);
+    const locationMode  = @json($locationMode);
+    const defaultSPId   = @json($defaultSalespersonId);
 
     new Vue({
         el: '#salesTerminalApp',
         data: {
             // Reference data
-            locations, salespeople,
+            userLocations, salespeople,
+            locationMode,
             newCustomerUrl: '{{ route('customers.create') }}',
 
             // Search states
@@ -723,7 +762,7 @@ $(function () {
                 if (!this.form.customer_id) {
                     this.$set(this.errors, 'customer_id', 'Customer is required.');
                 }
-                if (!this.form.location_id) {
+                if (this.locationMode === 'none' || !this.form.location_id) {
                     this.$set(this.errors, 'location_id', 'Location is required.');
                 }
                 if (!this.form.sale_date) {

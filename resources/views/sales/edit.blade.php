@@ -46,9 +46,32 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Location</label>
+
+                                {{-- NONE --}}
+                                @if ($locationMode === 'none')
+                                <div class="alert alert-danger mb-0 py-2 px-3 d-flex align-items-center gap-2">
+                                    <i class="ti ti-lock fs-18"></i>
+                                    <small><strong>No location access.</strong> Contact an administrator.</small>
+                                </div>
+
+                                {{-- SINGLE --}}
+                                @elseif ($locationMode === 'single')
+                                <div class="form-control bg-light d-flex align-items-center gap-2 h-auto py-2">
+                                    <i class="ti ti-map-pin text-primary"></i>
+                                    <div class="lh-sm">
+                                        <div class="fw-semibold">{{ $defaultLocation->name }}</div>
+                                        <small class="text-muted">{{ $defaultLocation->location_code }}</small>
+                                    </div>
+                                </div>
+
+                                {{-- MULTIPLE --}}
+                                @else
                                 <select class="form-select" v-model.number="form.location_id">
-                                    <option v-for="l in locations" :key="l.id" :value="l.id">@{{ l.name }}</option>
+                                    <option v-for="l in userLocations" :key="l.id" :value="l.id">
+                                        @{{ l.name }} (@{{ l.location_code }})@{{ l.is_default ? ' ★' : '' }}
+                                    </option>
                                 </select>
+                                @endif
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Salesperson</label>
@@ -232,8 +255,8 @@ $(function () {
     new Vue({
         el: '#salesTerminalApp',
         data: {
-            locations:   @json($locations),
-            salespeople: @json($salespeople),
+            userLocations: @json($userLocations),
+            salespeople:   @json($salespeople),
 
             barcodeInput: '',
             productSearch: '',

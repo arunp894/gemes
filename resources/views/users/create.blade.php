@@ -45,6 +45,33 @@
                                 <div class="invalid-feedback">@{{ errors.email }}</div>
                             </div>
 
+                            {{-- Locations (multiselect) --}}
+                            <div class="col-md-12">
+                                <label class="form-label">Assigned Locations</label>
+                                <div class="border rounded p-3"
+                                    :class="{ 'border-danger': errors.location_ids }">
+                                    <div v-if="!locations.length" class="text-muted small">
+                                        No active locations available.
+                                    </div>
+                                    <div class="row g-2">
+                                        <div v-for="loc in locations" :key="loc.id" class="col-md-4 col-sm-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                    :id="'loc_' + loc.id"
+                                                    :value="loc.id"
+                                                    v-model="form.location_ids">
+                                                <label class="form-check-label" :for="'loc_' + loc.id">
+                                                    @{{ loc.name }}
+                                                    <small class="d-block text-muted">@{{ loc.location_code }}</small>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div v-if="errors.location_ids" class="text-danger small mt-1">@{{ errors.location_ids }}</div>
+                                <small class="text-muted">Optional. Assign the locations this user operates at.</small>
+                            </div>
+
                             {{-- Password --}}
                             <div class="col-md-6">
                                 <label for="password" class="form-label">Password <span class="text-danger">*</span></label>
@@ -128,15 +155,18 @@
 <script>
     $(function () {
         const csrfToken = $('meta[name="csrf-token"]').attr('content');
-        const rolesData = @json($roles);
+        const rolesData     = @json($roles);
+        const locationsData = @json($locations);
 
         new Vue({
             el: '#userFormApp',
             data: {
                 roles: rolesData,
+                locations: locationsData,
                 form: {
                     name: '',
                     email: '',
+                    location_ids: [],
                     password: '',
                     password_confirmation: '',
                     is_active: true,
@@ -171,6 +201,7 @@
                     const fd = new FormData();
                     fd.append('name', this.form.name);
                     fd.append('email', this.form.email);
+                    this.form.location_ids.forEach(id => fd.append('location_ids[]', id));
                     fd.append('password', this.form.password);
                     fd.append('password_confirmation', this.form.password_confirmation);
                     fd.append('is_active', this.form.is_active ? 1 : 0);
