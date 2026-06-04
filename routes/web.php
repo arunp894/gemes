@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\LocationController;
@@ -51,7 +52,7 @@ Route::middleware('auth')->group(function () {
 
     // Root + dashboard. `/` and `/dashboard` both land on the same view.
     Route::get('/', fn() => redirect()->route('dashboard'));
-    Route::get('/dashboard', fn() => view('welcome'))->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     /*
     |--------------------------------------------------------------------------
