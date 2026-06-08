@@ -82,9 +82,7 @@
                                     <th>Barcode</th>
                                     <th>Rack</th>
                                     <th class="text-end">Price</th>
-                                    <th class="text-end">Tax</th>
-                                    <th class="text-end">Disc</th>
-                                    {{-- <th>Expiry</th> --}}
+                                    {{-- Tax and Disc columns hidden --}}
                                     <th class="text-end">Net</th>
                                 </tr>
                             </thead>
@@ -101,7 +99,7 @@
                                             <strong>{{ $line->package_qty }}</strong>
                                             <small class="text-muted">{{ $line->package_name }}</small>
                                         </td>
-                                        <td colspan="7"></td>
+                                        <td colspan="5"></td>
                                         <td class="text-end fw-bold">{{ number_format((float) $line->total, 2) }}</td>
                                     </tr>
 
@@ -119,9 +117,7 @@
                                             <td><code class="small">{{ $row->barcode ?: '—' }}</code></td>
                                             <td>{{ $row->rack?->code ?: '—' }}</td>
                                             <td class="text-end">{{ number_format((float) $row->price, 2) }}</td>
-                                            <td class="text-end small">{{ rtrim(rtrim(number_format((float) $row->tax_percent, 2), '0'), '.') }}%</td>
-                                            <td class="text-end small">{{ rtrim(rtrim(number_format((float) $row->discount_percent, 2), '0'), '.') }}%</td>
-                                            {{-- <td>{{ optional($row->expiry_date)->format('d M Y') ?: '—' }}</td> --}}
+                                            {{-- Tax and Disc columns hidden --}}
                                             <td class="text-end">{{ number_format($row->net(), 2) }}</td>
                                         </tr>
                                     @endforeach
@@ -161,32 +157,7 @@
                         <span class="text-muted">Subtotal</span>
                         <span>{{ number_format((float) $purchase->subtotal, 2) }}</span>
                     </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Discount</span>
-                        <span class="text-danger">- {{ number_format((float) $purchase->discount_total, 2) }}</span>
-                    </div>
-
-                    @php $tax = $purchase->tax_breakdown; @endphp
-                    @if ($purchase->tax_type === \App\Models\Purchase::TAX_CGST_SGST)
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">CGST</span>
-                            <span>{{ number_format($tax['cgst'], 2) }}</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">SGST</span>
-                            <span>{{ number_format($tax['sgst'], 2) }}</span>
-                        </div>
-                    @elseif ($purchase->tax_type === \App\Models\Purchase::TAX_IGST)
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">IGST</span>
-                            <span>{{ number_format($tax['igst'], 2) }}</span>
-                        </div>
-                    @else
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="text-muted">Tax</span>
-                            <span>{{ number_format((float) $purchase->tax_total, 2) }}</span>
-                        </div>
-                    @endif
+                    {{-- Discount and Tax rows hidden (line totals are Carat × Price) --}}
 
                     <hr class="my-2">
 

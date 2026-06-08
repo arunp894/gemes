@@ -276,27 +276,22 @@ class PurchaseService
                 $r = $rows[$i] ?? $template;
 
                 // Per-row money math — server is the source of truth.
+                // Net = carat_weight × price (tax and discount not used).
                 $qty             = max(0, (int) ($r['qty'] ?? ($unitContains ?? 1)));
+                $caratWeight     = isset($r['carat_weight']) && $r['carat_weight'] !== '' ? (float) $r['carat_weight'] : null;
                 $price           = (float) ($r['price'] ?? 0);
-                $taxPercent      = (float) ($r['tax_percent'] ?? 0);
-                $discountPercent = (float) ($r['discount_percent'] ?? 0);
-
-                $gross           = $qty * $price;
-                $discountAmount  = round($gross * $discountPercent / 100, 2);
-                $taxableBase     = $gross - $discountAmount;
-                $taxAmount       = round($taxableBase * $taxPercent / 100, 2);
 
                 $row = new PurchaseProduct([
                     'qty'              => $qty,
-                    'carat_weight'     => isset($r['carat_weight']) && $r['carat_weight'] !== '' ? (float) $r['carat_weight'] : null,
+                    'carat_weight'     => $caratWeight,
                     'barcode'          => $r['barcode']          ?? null,
                     'rack_id'          => $r['rack_id']          ?? null,
                     'serial_number'    => $r['serial_number']    ?? null,
                     'price'            => $price,
-                    'tax_percent'      => $taxPercent,
-                    'tax_amount'       => $taxAmount,
-                    'discount_percent' => $discountPercent,
-                    'discount_amount'  => $discountAmount,
+                    'tax_percent'      => 0,
+                    'tax_amount'       => 0,
+                    'discount_percent' => 0,
+                    'discount_amount'  => 0,
                     'expiry_date'      => $r['expiry_date']      ?? null,
                     'manufacture_date' => $r['manufacture_date'] ?? null,
                     'remarks'          => $r['remarks']          ?? null,
@@ -309,41 +304,32 @@ class PurchaseService
 
     /**
      * Recompute line and invoice totals from the persisted rows.
-     * This is the ONLY place subtotal/tax/discount/grand totals are set.
+     * Net = carat_weight × price; tax and discount are not used.
      */
     private function recalculate(Purchase $purchase): void
     {
-        $invoiceSubtotal = 0.0;
-        $invoiceTax      = 0.0;
-        $invoiceDiscount = 0.0;
+        $invoiceTotal = 0.0;
 
         foreach ($purchase->lines()->with('rows')->get() as $line) {
-            $lineSubtotal = 0.0;
-            $lineTotal    = 0.0;
+            $lineTotal = 0.0;
 
             foreach ($line->rows as $row) {
-                $gross = (float) $row->qty * (float) $row->price;
-                $net   = $gross - (float) $row->discount_amount + (float) $row->tax_amount;
-
-                $lineSubtotal     += $gross;
-                $lineTotal        += $net;
-                $invoiceSubtotal  += $gross;
-                $invoiceDiscount  += (float) $row->discount_amount;
-                $invoiceTax       += (float) $row->tax_amount;
+                $net        = (float) $row->carat_weight * (float) $row->price;
+                $lineTotal += $net;
             }
 
-            $line->subtotal = round($lineSubtotal, 2);
+            $line->subtotal = round($lineTotal, 2);
             $line->total    = round($lineTotal, 2);
             $line->save();
+
+            $invoiceTotal += $lineTotal;
         }
 
-        $grand = $invoiceSubtotal - $invoiceDiscount + $invoiceTax;
-
-        $purchase->subtotal       = round($invoiceSubtotal, 2);
-        $purchase->discount_total = round($invoiceDiscount, 2);
-        $purchase->tax_total      = round($invoiceTax, 2);
-        $purchase->grand_total    = round($grand, 2);
-        $purchase->due_amount     = round(max(0, $grand - (float) $purchase->paid_amount), 2);
+        $purchase->subtotal       = round($invoiceTotal, 2);
+        $purchase->discount_total = 0;
+        $purchase->tax_total      = 0;
+        $purchase->grand_total    = round($invoiceTotal, 2);
+        $purchase->due_amount     = round(max(0, $invoiceTotal - (float) $purchase->paid_amount), 2);
         $purchase->save();
     }
 }

@@ -163,26 +163,20 @@ const perRowQty = 1;
 
         computed: {
             totals() {
-                let subtotal = 0, discount = 0, tax = 0;
+                let subtotal = 0;
 
                 this.form.lines.forEach(line => {
                     line.rows.forEach(r => {
-                        const qty   = parseFloat(r.qty)   || 0;
+                        const carat = parseFloat(r.carat_weight) || 0;
                         const price = parseFloat(r.price) || 0;
-                        const gross = qty * price;
-                        const disc  = gross * ((parseFloat(r.discount_percent) || 0) / 100);
-                        const tx    = (gross - disc) * ((parseFloat(r.tax_percent) || 0) / 100);
-
-                        subtotal += gross;
-                        discount += disc;
-                        tax      += tx;
+                        subtotal += carat * price;
                     });
                 });
 
-                const grand = subtotal - discount + tax;
+                const grand = subtotal;
                 const due   = Math.max(0, grand - (parseFloat(this.form.paid_amount) || 0));
 
-                return { subtotal, discount, tax, grand, due };
+                return { subtotal, discount: 0, tax: 0, grand, due };
             },
             totalRows() {
                 return this.form.lines.reduce((acc, l) => acc + l.rows.length, 0);
@@ -222,12 +216,9 @@ const perRowQty = 1;
                 return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             },
             rowNet(r) {
-                const qty   = parseFloat(r.qty)   || 0;
+                const carat = parseFloat(r.carat_weight) || 0;
                 const price = parseFloat(r.price) || 0;
-                const gross = qty * price;
-                const disc  = gross * ((parseFloat(r.discount_percent) || 0) / 100);
-                const tx    = (gross - disc) * ((parseFloat(r.tax_percent) || 0) / 100);
-                return gross - disc + tx;
+                return carat * price;
             },
             lineNet(line) {
                 return line.rows.reduce((acc, r) => acc + this.rowNet(r), 0);

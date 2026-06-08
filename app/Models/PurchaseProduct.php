@@ -71,16 +71,15 @@ class PurchaseProduct extends Model
     /* ─── Money helpers ────────────────────────────────────── */
 
     /**
-     * gross = qty × price
-     * net   = gross − discount_amount + tax_amount
+     * net = carat_weight × price
      */
     public function gross(): float
     {
-        return (float) $this->qty * (float) $this->price;
+        return (float) $this->carat_weight * (float) $this->price;
     }
 
     public function net(): float
     {
-        return $this->gross() - (float) $this->discount_amount + (float) $this->tax_amount;
+        return $this->gross();
     }
 }

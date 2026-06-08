@@ -13,34 +13,7 @@
             <span class="fw-semibold">@{{ formatMoney(totals.subtotal) }}</span>
         </div>
 
-        <div class="d-flex justify-content-between mb-2">
-            <span class="text-muted">Discount</span>
-            <span class="text-danger">- @{{ formatMoney(totals.discount) }}</span>
-        </div>
-
-        {{-- Tax: split for CGST/SGST display, single line for IGST/none --}}
-        <template v-if="form.tax_type === 'cgst_sgst'">
-            <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted">CGST</span>
-                <span>@{{ formatMoney(totals.tax / 2) }}</span>
-            </div>
-            <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted">SGST</span>
-                <span>@{{ formatMoney(totals.tax / 2) }}</span>
-            </div>
-        </template>
-        <template v-else-if="form.tax_type === 'igst'">
-            <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted">IGST</span>
-                <span>@{{ formatMoney(totals.tax) }}</span>
-            </div>
-        </template>
-        <template v-else>
-            <div class="d-flex justify-content-between mb-2">
-                <span class="text-muted">Tax</span>
-                <span>@{{ formatMoney(totals.tax) }}</span>
-            </div>
-        </template>
+        {{-- Discount and Tax rows hidden (not used; line totals are Carat × Price) --}}
 
         <hr class="my-2">
 

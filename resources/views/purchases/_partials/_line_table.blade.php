@@ -32,8 +32,7 @@
                     <th style="width: 170px;">Barcode</th>
                     <th style="width: 130px;">Rack</th>
                     <th style="width: 110px;">Price</th>
-                    <th style="width: 80px;">Tax %</th>
-                    <th style="width: 80px;">Disc %</th>
+                    {{-- Tax % and Disc % hidden --}}
                     {{-- <th v-if="false" style="width: 130px;">Expiry</th> --}}
                     <th style="width: 110px;" class="text-end">Line Total</th>
                     <th style="width: 40px;"></th>
@@ -118,14 +117,7 @@
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
                                        v-model.number="line.rows[0].price">
                             </td>
-                            <td>
-                                <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
-                                       v-model.number="line.rows[0].tax_percent">
-                            </td>
-                            <td>
-                                <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
-                                       v-model.number="line.rows[0].discount_percent">
-                            </td>
+                            {{-- Tax % and Disc % inputs hidden --}}
                             {{-- <td v-if="false">
                                 <input type="date" class="form-control form-control-sm"
                                        v-model="line.rows[0].expiry_date">
@@ -206,14 +198,7 @@
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
                                        v-model.number="row.price">
                             </td>
-                            <td>
-                                <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
-                                       v-model.number="row.tax_percent">
-                            </td>
-                            <td>
-                                <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm"
-                                       v-model.number="row.discount_percent">
-                            </td>
+                            {{-- Tax % and Disc % inputs hidden --}}
                             {{-- <td>
                                 <input type="date" class="form-control form-control-sm"
                                        v-model="row.expiry_date">
