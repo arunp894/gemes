@@ -246,6 +246,43 @@
         @endpermission
 
         {{-- =========================
+    MARKETING MENU
+========================= --}}
+
+        @permission('banners.view')
+        <li class="side-nav-item {{ request()->routeIs('banners.*') ? 'menuitem-active' : '' }}">
+
+            <a data-bs-toggle="collapse" href="#marketingMenu"
+                aria-expanded="{{ request()->routeIs('banners.*') ? 'true' : 'false' }}"
+                aria-controls="marketingMenu" class="side-nav-link">
+
+                <span class="menu-icon">
+                    <i class="ti ti-speakerphone"></i>
+                </span>
+
+                <span class="menu-text">
+                    Marketing
+                </span>
+                <span class="menu-arrow"></span>
+            </a>
+
+            <div class="collapse {{ request()->routeIs('banners.*') ? 'show' : '' }}"
+                id="marketingMenu">
+
+                <ul class="sub-menu">
+
+                    <li class="side-nav-item {{ request()->routeIs('banners.*') ? 'active' : '' }}">
+                        <a href="{{ route('banners.index') }}" class="side-nav-link">
+                            <span class="menu-text">Banners</span>
+                        </a>
+                    </li>
+
+                </ul>
+            </div>
+        </li>
+        @endpermission
+
+        {{-- =========================
     ADMINISTRATION MENU
 ========================= --}}
 

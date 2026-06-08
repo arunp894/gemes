@@ -88,6 +88,12 @@ class PermissionSeeder extends Seeder
             ['slug' => 'stock-transfers.delete',   'name' => 'Delete Stock Transfers',   'module' => 'stock-transfers'],
             ['slug' => 'stock-transfers.post',     'name' => 'Post / Receive Transfers', 'module' => 'stock-transfers'],
 
+            // ----- Banners module -----
+            ['slug' => 'banners.view',             'name' => 'View Banners',              'module' => 'banners'],
+            ['slug' => 'banners.create',           'name' => 'Create Banners',            'module' => 'banners'],
+            ['slug' => 'banners.edit',             'name' => 'Edit Banners',              'module' => 'banners'],
+            ['slug' => 'banners.delete',           'name' => 'Delete Banners',            'module' => 'banners'],
+
             // ----- Barcodes (sub-feature of products, but distinct enough to gate separately) -----
             ['slug' => 'barcodes.view',            'name' => 'View Barcodes',            'module' => 'barcodes'],
             ['slug' => 'barcodes.print',           'name' => 'Print Barcode Labels',     'module' => 'barcodes'],

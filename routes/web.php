@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\BannerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
@@ -451,6 +452,35 @@ Route::middleware('auth')->group(function () {
             'edit'    => 'permission:stock-transfers.edit',
             'update'  => 'permission:stock-transfers.edit',
             'destroy' => 'permission:stock-transfers.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Banners (marketing / website)
+    |--------------------------------------------------------------------------
+    | Non-resourceful endpoints registered BEFORE the resource.
+    */
+    Route::prefix('banners')->name('banners.')->group(function () {
+        Route::get('/data', [BannerController::class, 'data'])
+            ->middleware('permission:banners.view')
+            ->name('data');
+
+        Route::patch('/{banner}/toggle-status', [BannerController::class, 'toggleStatus'])
+            ->whereNumber('banner')
+            ->middleware('permission:banners.edit')
+            ->name('toggle-status');
+    });
+
+    Route::resource('banners', BannerController::class)
+        ->whereNumber('banner')
+        ->middleware([
+            'index'   => 'permission:banners.view',
+            'show'    => 'permission:banners.view',
+            'create'  => 'permission:banners.create',
+            'store'   => 'permission:banners.create',
+            'edit'    => 'permission:banners.edit',
+            'update'  => 'permission:banners.edit',
+            'destroy' => 'permission:banners.delete',
         ]);
 
     /*
