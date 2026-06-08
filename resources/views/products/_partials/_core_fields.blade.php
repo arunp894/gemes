@@ -74,7 +74,7 @@
             </div>
 
             {{-- Short Description --}}
-            <div class="col-md-12">
+            <div class="col-md-12 d-none">
                 <label for="short_description" class="form-label">Short Description</label>
                 <textarea class="form-control" id="short_description" name="short_description"
                     v-model="form.short_description" rows="2" maxlength="500"
@@ -83,7 +83,7 @@
             </div>
 
             {{-- Full Description --}}
-            <div class="col-md-12">
+            <div class="col-md-12 d-none">
                 <label for="full_description" class="form-label">Full Description</label>
                 <textarea class="form-control" id="full_description" name="full_description"
                     v-model="form.full_description" rows="5"
@@ -91,7 +91,7 @@
             </div>
 
             {{-- Notes / Tags --}}
-            <div class="col-md-12">
+            <div class="col-md-12 d-none">
                 <label for="notes_tags" class="form-label">Notes / Tags</label>
                 <input type="text" class="form-control" id="notes_tags" name="notes_tags"
                     v-model="form.notes_tags" maxlength="1000"

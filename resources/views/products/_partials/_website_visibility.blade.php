@@ -4,7 +4,7 @@
      (mirrors the server-side `booted()` behaviour in Product model).
 --}}
 
-<div class="card mb-3">
+<div class="card mb-3 d-none">
     <div class="card-header">
         <h5 class="card-title mb-0"><i class="ti ti-world me-1"></i>Website Visibility</h5>
     </div>
