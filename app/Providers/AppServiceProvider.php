@@ -2,14 +2,18 @@
 
 namespace App\Providers;
 
+use App\Services\SettingService;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        //
+        // Register SettingService as a singleton so the cache is shared
+        // across the entire request lifecycle.
+        $this->app->singleton(SettingService::class, fn () => new SettingService());
     }
 
     /**
@@ -47,6 +51,12 @@ class AppServiceProvider extends ServiceProvider
         Blade::if('allpermissions', function (array $slugs) {
             $user = auth()->user();
             return $user && $user->hasAllPermissions($slugs);
+        });
+
+        // ----- Share $settings with ALL website.* views -----
+        View::composer('website.*', function ($view) {
+            $settings = app(SettingService::class);
+            $view->with('settings', $settings);
         });
     }
 }

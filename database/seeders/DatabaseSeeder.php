@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Database\Seeders\WebsiteDataSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -36,6 +37,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             RackSeeder::class,
             WalkInCustomerSeeder::class,
+            WebsiteDataSeeder::class,
         ]);
     }
 }

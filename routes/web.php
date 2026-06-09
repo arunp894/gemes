@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BannerController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\CustomerController;
@@ -12,32 +14,73 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RackController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\UserController;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\WebsiteController;
 use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Public Storefront — Sukaina Gems Website
+|--------------------------------------------------------------------------
+| No auth required. Serves the teal-themed customer-facing store.
+| Data pulled live from Product / Category / Banner models.
+|
+| Route names:
+|   website.home            GET  /store
+|   website.collections     GET  /store/collections
+|   website.product         GET  /store/products/{id}
+|   website.cart.index      GET  /store/cart
+|   website.cart.data       GET  /store/cart/data
+|   website.cart.add        POST /store/cart/add
+|   website.cart.remove     POST /store/cart/remove
+|   website.cart.clear      POST /store/cart/clear
+|   website.cart.count      GET  /store/cart/count
+|   website.checkout.index  GET  /store/checkout
+|   website.checkout.create POST /store/checkout/create
+|   website.checkout.capture POST /store/checkout/capture
+|   website.checkout.success GET  /store/checkout/success
+*/
+
+Route::prefix('store')->name('website.')->group(function () {
+
+    // ── Storefront pages ──
+    Route::get('/',                   [WebsiteController::class, 'home'])->name('home');
+    Route::get('/collections',        [WebsiteController::class, 'collections'])->name('collections');
+    Route::get('/products/{product}', [WebsiteController::class, 'product'])->name('product')->whereNumber('product');
+
+    // ── Shopping Cart (session-backed, no auth required) ──
+    Route::prefix('cart')->name('cart.')->group(function () {
+        Route::get('/',        [CartController::class, 'index'])->name('index');
+        Route::get('/data',    [CartController::class, 'data'])->name('data');
+        Route::post('/add',    [CartController::class, 'add'])->name('add');
+        Route::post('/remove', [CartController::class, 'remove'])->name('remove');
+        Route::post('/clear',  [CartController::class, 'clear'])->name('clear');
+        Route::get('/count',   [CartController::class, 'count'])->name('count');
+    });
+
+    // ── Checkout + PayPal ──
+    Route::prefix('checkout')->name('checkout.')->group(function () {
+        Route::get('/',          [CheckoutController::class, 'index'])->name('index');
+        Route::post('/create',   [CheckoutController::class, 'createOrder'])->name('create');
+        Route::post('/capture',  [CheckoutController::class, 'captureOrder'])->name('capture');
+        Route::get('/success',   [CheckoutController::class, 'success'])->name('success');
+    });
+});
 
 /*
 |--------------------------------------------------------------------------
 | Guest routes
 |--------------------------------------------------------------------------
-| Login form + form submit. The `guest` middleware bounces an already
-| authenticated user back to the dashboard instead of re-showing the form.
 */
-
 Route::middleware('guest')->group(function () {
     Route::get('/login',  [LoginController::class, 'showLogin'])->name('login');
     Route::post('/login', [LoginController::class, 'login']);
 });
 
-/*
-|--------------------------------------------------------------------------
-| Logout
-|--------------------------------------------------------------------------
-| POST only (no GET) so CSRF is enforced and crawlers can't trigger it.
-*/
 Route::get('/logout', [LoginController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
@@ -46,22 +89,27 @@ Route::get('/logout', [LoginController::class, 'logout'])
 |--------------------------------------------------------------------------
 | Authenticated app
 |--------------------------------------------------------------------------
-| Everything below requires a live session. `/` redirects either to the
-| dashboard (authed) or to the login screen (guest, via the `auth` guard).
 */
 Route::middleware('auth')->group(function () {
 
-    // Root + dashboard. `/` and `/dashboard` both land on the same view.
     Route::get('/', fn() => redirect()->route('dashboard'));
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     /*
     |--------------------------------------------------------------------------
+    | Application Settings (admin only)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware('role:admin')->prefix('settings')->name('settings.')->group(function () {
+        Route::get('/',             [SettingController::class, 'index'])->name('index');
+        Route::post('/save',        [SettingController::class, 'save'])->name('save');
+        Route::post('/paypal-test', [SettingController::class, 'testPaypal'])->name('paypal-test');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
     | Categories
     |--------------------------------------------------------------------------
-    | Permission-gated. `data` and `toggle-status` are registered BEFORE the
-    | resource so they win route matching. The resource is constrained to a
-    | numeric {category} as a safeguard against literal-path collisions.
     */
     Route::prefix('categories')->name('categories.')->group(function () {
         Route::get('/data', [CategoryController::class, 'data'])
@@ -90,8 +138,6 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     | Products
     |--------------------------------------------------------------------------
-    | Non-resourceful routes registered BEFORE the resource so they win route
-    | matching. The resource binding is restricted to a numeric {product}.
     */
     Route::prefix('products')->name('products.')->group(function () {
         Route::get('/data', [ProductController::class, 'data'])
@@ -142,9 +188,6 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     | Suppliers
     |--------------------------------------------------------------------------
-    | Permission-gated. `data` and `toggle-status` are registered BEFORE the
-    | resource so they win route matching. Resource binding is constrained
-    | to a numeric {supplier}.
     */
     Route::prefix('suppliers')->name('suppliers.')->group(function () {
         Route::get('/data', [SupplierController::class, 'data'])
@@ -171,7 +214,7 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Racks (warehouse storage bins)
+    | Racks
     |--------------------------------------------------------------------------
     */
     Route::prefix('racks')->name('racks.')->group(function () {
@@ -199,10 +242,8 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Locations (sales venues: warehouses / showrooms / stores / booths)
+    | Locations
     |--------------------------------------------------------------------------
-    | Non-resourceful endpoints registered BEFORE the resource so they win
-    | route matching. Resource binding is constrained to a numeric {location}.
     */
     Route::prefix('locations')->name('locations.')->group(function () {
         Route::get('/data', [LocationController::class, 'data'])
@@ -236,8 +277,6 @@ Route::middleware('auth')->group(function () {
     |--------------------------------------------------------------------------
     | Purchases
     |--------------------------------------------------------------------------
-    | Non-resourceful endpoints (data, lookups, status transitions) are
-    | registered first so they win route matching against the resource.
     */
     Route::prefix('purchases')->name('purchases.')->group(function () {
         Route::get('/data', [PurchaseController::class, 'data'])
@@ -281,7 +320,7 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Customers (master data + search endpoint used by Sales terminal)
+    | Customers
     |--------------------------------------------------------------------------
     */
     Route::prefix('customers')->name('customers.')->group(function () {
@@ -289,8 +328,6 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:customers.view')
             ->name('data');
 
-        // Search is open to anyone with sales.create OR customers.view so
-        // the terminal can populate without granting full customer access.
         Route::get('/search', [CustomerController::class, 'search'])
             ->middleware('permission:customers.view,sales.create')
             ->name('search');
@@ -315,9 +352,8 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Sales (invoices + terminal + payments)
+    | Sales
     |--------------------------------------------------------------------------
-    | Non-resourceful endpoints registered first so they win route matching.
     */
     Route::prefix('sales')->name('sales.')->group(function () {
         Route::get('/data', [SaleController::class, 'data'])
@@ -336,7 +372,6 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:sales.create')
             ->name('preview-number');
 
-        // Status transitions (all POST so CSRF is enforced)
         Route::post('/{sale}/post', [SaleController::class, 'post'])
             ->whereNumber('sale')
             ->middleware('permission:sales.post')
@@ -357,7 +392,6 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:sales.edit')
             ->name('cancel');
 
-        // Payments
         Route::post('/{sale}/payments', [SaleController::class, 'addPayment'])
             ->whereNumber('sale')
             ->middleware('permission:sales.edit')
@@ -383,18 +417,15 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Stock (read-only inventory reports)
+    | Stock
     |--------------------------------------------------------------------------
-    | Append-only ledger; movements are created by Purchase/Sale/Transfer
-    | services and viewed here. No write endpoints — manual adjustments
-    | are a separate concern for a future module.
     */
     Route::prefix('stock')->name('stock.')->group(function () {
-        Route::get('/',                  [StockController::class, 'index'])
+        Route::get('/', [StockController::class, 'index'])
             ->middleware('permission:stock.view')
             ->name('index');
 
-        Route::get('/data',              [StockController::class, 'data'])
+        Route::get('/data', [StockController::class, 'data'])
             ->middleware('permission:stock.view')
             ->name('data');
 
@@ -411,10 +442,8 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Stock Transfers (inter-location movement)
+    | Stock Transfers
     |--------------------------------------------------------------------------
-    | Non-resourceful endpoints first (data feed, barcode lookup, status
-    | transitions) so the resource doesn't shadow them.
     */
     Route::prefix('stock-transfers')->name('stock-transfers.')->group(function () {
         Route::get('/data', [StockTransferController::class, 'data'])
@@ -456,9 +485,8 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Banners (marketing / website)
+    | Banners
     |--------------------------------------------------------------------------
-    | Non-resourceful endpoints registered BEFORE the resource.
     */
     Route::prefix('banners')->name('banners.')->group(function () {
         Route::get('/data', [BannerController::class, 'data'])
@@ -485,10 +513,8 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Users admin (RBAC)
+    | Users (RBAC)
     |--------------------------------------------------------------------------
-    | DataTables endpoint + toggle-status registered BEFORE the resource so
-    | they win route matching. Resource is constrained to numeric {user}.
     */
     Route::prefix('users')->name('users.')->group(function () {
         Route::get('/data', [UserController::class, 'data'])
@@ -515,7 +541,7 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Roles admin (RBAC)
+    | Roles (RBAC)
     |--------------------------------------------------------------------------
     */
     Route::prefix('roles')->name('roles.')->group(function () {
@@ -538,10 +564,8 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Permissions admin (RBAC) — admin-only by default
+    | Permissions (RBAC) — admin only
     |--------------------------------------------------------------------------
-    | Permission management is power-user territory; gated to the admin role
-    | rather than a granular permission so it's never accidentally granted.
     */
     Route::prefix('permissions')->name('permissions.')->group(function () {
         Route::get('/data', [PermissionController::class, 'data'])

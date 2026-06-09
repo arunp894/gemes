@@ -290,6 +290,34 @@
         auth()->user()->hasRole('admin') || auth()->user()->isSuperAdmin()))
         <li class="side-nav-title mt-2">Administration</li>
 
+        <li class="side-nav-item {{ request()->routeIs('settings.*') ? 'menuitem-active' : '' }}">
+
+            <a data-bs-toggle="collapse" href="#settingsMenu"
+                aria-expanded="{{ request()->routeIs('settings.*') ? 'true' : 'false' }}"
+                aria-controls="settingsMenu" class="side-nav-link">
+
+                <span class="menu-icon">
+                    <i class="ti ti-settings"></i>
+                </span>
+
+                <span class="menu-text">
+                    Settings
+                </span>
+                <span class="menu-arrow"></span>
+            </a>
+
+            <div class="collapse {{ request()->routeIs('settings.*') ? 'show' : '' }}"
+                id="settingsMenu">
+                <ul class="sub-menu">
+                    <li class="side-nav-item {{ request()->routeIs('settings.index') ? 'active' : '' }}">
+                        <a href="{{ route('settings.index') }}" class="side-nav-link">
+                            <span class="menu-text">App Settings</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </li>
+
         <li
             class="side-nav-item {{ request()->routeIs('users.*') || request()->routeIs('roles.*') || request()->routeIs('permissions.*') ? 'menuitem-active' : '' }}">
 
