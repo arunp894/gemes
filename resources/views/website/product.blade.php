@@ -139,7 +139,7 @@
           + Add to Cart
         </button>
         @if($settings->bool('checkout_enabled', true))
-        <a href="{{ route('website.checkout') }}"
+        <a href="{{ route('website.checkout.index') }}"
           style="padding:16px 20px;background:transparent;border:1px solid rgba(0,191,176,.3);color:var(--teal-300);font-family:'Jost',sans-serif;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;border-radius:2px;text-decoration:none;display:inline-flex;align-items:center;transition:all .3s"
           onmouseenter="this.style.background='rgba(0,191,176,.08)';this.style.borderColor='var(--teal-400)'" onmouseleave="this.style.background='';this.style.borderColor='rgba(0,191,176,.3)'">
           Checkout
