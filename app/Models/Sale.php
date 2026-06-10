@@ -68,6 +68,7 @@ class Sale extends Model
         'sale_date',
         'customer_id',
         'location_id',
+        'channel_id',
         'salesperson_id',
         'tax_type',
         'subtotal',
@@ -170,6 +171,11 @@ class Sale extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    public function channel(): BelongsTo
+    {
+        return $this->belongsTo(Channel::class);
     }
 
     public function salesperson(): BelongsTo

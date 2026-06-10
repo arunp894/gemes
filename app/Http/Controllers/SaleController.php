@@ -6,6 +6,7 @@ use App\Http\Requests\StoreSalePaymentRequest;
 use App\Http\Requests\StoreSaleRequest;
 use App\Http\Requests\UpdateSaleRequest;
 use App\Models\Barcode;
+use App\Models\Channel;
 use App\Models\Customer;
 use App\Models\Location;
 use App\Models\Product;
@@ -78,6 +79,13 @@ class SaleController extends Controller
                 fn(Sale $s) =>
                 $s->location ? e($s->location->name) : '<span class="text-muted">—</span>'
             )
+            ->addColumn(
+                'channel_label',
+                fn(Sale $s) =>
+                $s->channel
+                    ? '<span class="badge badge-soft-info fs-xxs"><i class="' . e($s->channel->icon ?? 'ti ti-tag') . ' me-1"></i>' . e($s->channel->name) . '</span>'
+                    : '<span class="text-muted">—</span>'
+            )
             ->editColumn(
                 'grand_total',
                 fn(Sale $s) =>
@@ -122,7 +130,7 @@ class SaleController extends Controller
                         ->orWhere('customer_code', 'like', $like);
                 });
             })
-            ->rawColumns(['sale_number', 'customer_label', 'location_label', 'grand_total', 'payment_badge', 'status_badge', 'actions'])
+            ->rawColumns(['sale_number', 'customer_label', 'location_label', 'channel_label', 'grand_total', 'payment_badge', 'status_badge', 'actions'])
             ->toJson();
     }
 
@@ -136,6 +144,11 @@ class SaleController extends Controller
 
         [$locationMode, $defaultLocation] = $this->resolveLocationContext($userLocations);
 
+        // Default channel for the POS terminal → 'pos'
+        $channels       = Channel::active()->ordered()->get(['id', 'name', 'code', 'icon']);
+        $defaultChannel = $channels->firstWhere('code', Channel::CODE_POS)
+                       ?? $channels->first();
+
         return view('sales.create', [
             'userLocations'        => $userLocations,
             'locationMode'         => $locationMode,   // 'none' | 'single' | 'multiple'
@@ -144,6 +157,8 @@ class SaleController extends Controller
             'taxTypes'             => Sale::TAX_TYPES,
             'defaultLocation'      => $defaultLocation,
             'defaultSalespersonId' => auth()->id(),
+            'channels'             => $channels,
+            'defaultChannelId'     => $defaultChannel?->id,
         ]);
     }
 
@@ -187,6 +202,8 @@ class SaleController extends Controller
 
         [$locationMode, $defaultLocation] = $this->resolveLocationContext($userLocations, $sale->location);
 
+        $channels = Channel::active()->ordered()->get(['id', 'name', 'code', 'icon']);
+
         return view('sales.edit', [
             'sale'                 => $this->repo->find($sale->id),
             'userLocations'        => $userLocations,
@@ -196,6 +213,8 @@ class SaleController extends Controller
             'taxTypes'             => Sale::TAX_TYPES,
             'defaultLocation'      => $defaultLocation,
             'defaultSalespersonId' => $sale->salesperson_id,
+            'channels'             => $channels,
+            'defaultChannelId'     => $sale->channel_id,
         ]);
     }
 

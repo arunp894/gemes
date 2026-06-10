@@ -213,10 +213,10 @@
 ========================= --}}
 
         @permission('locations.view')
-        <li class="side-nav-item {{ request()->routeIs('locations.*') ? 'menuitem-active' : '' }}">
+        <li class="side-nav-item {{ request()->routeIs('locations.*') || request()->routeIs('channels.*') ? 'menuitem-active' : '' }}">
 
             <a data-bs-toggle="collapse" href="#operationsMenu"
-                aria-expanded="{{ request()->routeIs('locations.*') ? 'true' : 'false' }}"
+                aria-expanded="{{ request()->routeIs('locations.*') || request()->routeIs('channels.*') ? 'true' : 'false' }}"
                 aria-controls="operationsMenu" class="side-nav-link">
 
                 <span class="menu-icon">
@@ -229,7 +229,7 @@
                 <span class="menu-arrow"></span>
             </a>
 
-            <div class="collapse {{ request()->routeIs('locations.*') ? 'show' : '' }}"
+            <div class="collapse {{ request()->routeIs('locations.*') || request()->routeIs('channels.*') ? 'show' : '' }}"
                 id="operationsMenu">
 
                 <ul class="sub-menu">
@@ -239,6 +239,14 @@
                             <span class="menu-text">Locations</span>
                         </a>
                     </li>
+
+                    @permission('channels.view')
+                    <li class="side-nav-item {{ request()->routeIs('channels.*') ? 'active' : '' }}">
+                        <a href="{{ route('channels.index') }}" class="side-nav-link">
+                            <span class="menu-text">Channels</span>
+                        </a>
+                    </li>
+                    @endpermission
 
                 </ul>
             </div>

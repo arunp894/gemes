@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\CheckRole;
+use App\Http\Middleware\EnsureCustomerAuth;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,17 +17,19 @@ return Application::configure(basePath: dirname(__DIR__))
         /*
          | Route middleware aliases.
          |
-         | role:        ->middleware('role:admin,manager')
-         | permission:  ->middleware('permission:products.view')
+         | role:           ->middleware('role:admin,manager')
+         | permission:     ->middleware('permission:products.view')
+         | customer.auth:  ->middleware('customer.auth')  ← storefront guard
          */
         $middleware->alias([
-            'role'       => CheckRole::class,
-            'permission' => CheckPermission::class,
+            'role'          => CheckRole::class,
+            'permission'    => CheckPermission::class,
+            'customer.auth' => EnsureCustomerAuth::class,
         ]);
 
         /*
-         | Redirect unauthenticated users to the named `login` route
-         | instead of the framework default `/login` URL.
+         | Redirect unauthenticated back-office users to the named `login` route.
+         | Storefront customer redirects are handled by EnsureCustomerAuth.
          */
         $middleware->redirectGuestsTo(fn () => route('login'));
     })

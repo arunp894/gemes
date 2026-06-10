@@ -20,6 +20,12 @@ class PermissionSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
+            // ----- Channels module -----
+            ['slug' => 'channels.view',            'name' => 'View Channels',            'module' => 'channels'],
+            ['slug' => 'channels.create',          'name' => 'Create Channels',          'module' => 'channels'],
+            ['slug' => 'channels.edit',            'name' => 'Edit Channels',            'module' => 'channels'],
+            ['slug' => 'channels.delete',          'name' => 'Delete Channels',          'module' => 'channels'],
+
             // ----- Categories module -----
             ['slug' => 'categories.view',          'name' => 'View Categories',          'module' => 'categories'],
             ['slug' => 'categories.create',        'name' => 'Create Categories',        'module' => 'categories'],

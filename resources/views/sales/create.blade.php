@@ -96,6 +96,14 @@
                             </div>
 
                             <div class="col-md-3">
+                                <label class="form-label">Sales Channel</label>
+                                <select class="form-select" v-model.number="form.channel_id">
+                                    <option :value="null">— No Channel —</option>
+                                    <option v-for="c in channels" :key="c.id" :value="c.id">@{{ c.name }}</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
                                 <label class="form-label">Tax Type</label>
                                 <select class="form-select" v-model="form.tax_type">
                                     <option value="none">No Tax</option>
@@ -477,6 +485,8 @@ $(function () {
     const defaultLoc    = @json($defaultLocation);
     const locationMode  = @json($locationMode);
     const defaultSPId   = @json($defaultSalespersonId);
+    const channels      = @json($channels);
+    const defaultChId   = @json($defaultChannelId);
 
     new Vue({
         el: '#salesTerminalApp',
@@ -484,6 +494,7 @@ $(function () {
             // Reference data
             userLocations, salespeople,
             locationMode,
+            channels,
             newCustomerUrl: '{{ route('customers.create') }}',
 
             // Search states
@@ -506,6 +517,7 @@ $(function () {
                 sale_number_preview: '',
                 customer_id: null,
                 location_id: defaultLoc ? defaultLoc.id : null,
+                channel_id: defaultChId || null,
                 salesperson_id: defaultSPId || null,
                 tax_type: 'none',
                 shipping_charge: 0,
@@ -790,6 +802,7 @@ $(function () {
                     sale_date:       this.form.sale_date,
                     customer_id:     this.form.customer_id,
                     location_id:     this.form.location_id,
+                    channel_id:      this.form.channel_id,
                     salesperson_id:  this.form.salesperson_id,
                     tax_type:        this.form.tax_type,
                     shipping_charge: Number(this.form.shipping_charge) || 0,

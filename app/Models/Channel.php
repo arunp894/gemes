@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Channel extends Model
 {
@@ -27,6 +28,7 @@ class Channel extends Model
     public const CODE_CATAWIKI    = 'catawiki';
     public const CODE_WEBSITE     = 'website';
     public const CODE_SUKAINAGEMS = 'sukainagems';
+    public const CODE_POS         = 'pos';
 
     /**
      * The attributes that are mass assignable.
@@ -96,6 +98,11 @@ class Channel extends Model
      |  Relationships
      | -----------------------------------------------------------------
      */
+    public function sales(): HasMany
+    {
+        return $this->hasMany(Sale::class);
+    }
+
     public function barcodes(): BelongsToMany
     {
         return $this->belongsToMany(Barcode::class, 'barcode_channel')
@@ -116,6 +123,15 @@ class Channel extends Model
      |  Helpers
      | -----------------------------------------------------------------
      */
+    /**
+     * True when at least one sale (including soft-deleted) is linked
+     * to this channel. Used to block deletion.
+     */
+    public function hasSales(): bool
+    {
+        return $this->sales()->withTrashed()->exists();
+    }
+
     public function isActive(): bool
     {
         return (bool) $this->status === true;

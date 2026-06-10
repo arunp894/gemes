@@ -21,6 +21,20 @@
     <div>
       <h3 style="font-family:'Cormorant Garamond',serif;font-size:28px;margin-bottom:24px">Payment</h3>
 
+      {{-- Customer info card --}}
+      @if(isset($customer))
+      <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--teal-600),var(--teal-800));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👤</div>
+          <div>
+            <div style="font-size:14px;font-weight:500;color:var(--white)">{{ $customer->name }}</div>
+            <div style="font-size:12px;color:var(--teal-300);margin-top:2px">{{ $customer->email }}</div>
+          </div>
+        </div>
+        <a href="{{ route('website.account.profile') }}" style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-faint);text-decoration:none;transition:color .3s" onmouseover="this.style.color='var(--teal-300)'" onmouseout="this.style.color='var(--white-faint)'">My Account →</a>
+      </div>
+      @endif
+
       @if($paypalEnabled && $paypalClientId)
         {{-- Status message --}}
         <div id="paypalMsg" style="display:none;padding:16px;border-radius:4px;margin-bottom:20px;font-size:14px"></div>

@@ -159,7 +159,11 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
   </div>
   <div class="sg-nav-right">
     <button class="sg-icon-btn" title="Search">🔍</button>
-    <button class="sg-icon-btn" title="Account">👤</button>
+    @if(auth('customer')->check())
+      <a href="{{ route('website.account.profile') }}" class="sg-icon-btn" title="My Account" style="text-decoration:none">👤</a>
+    @else
+      <a href="{{ route('website.auth.login') }}" class="sg-icon-btn" title="Sign In" style="text-decoration:none">👤</a>
+    @endif
 
     @if($settings->bool('cart_enabled', true))
     {{-- Cart icon with live badge --}}

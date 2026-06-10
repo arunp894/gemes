@@ -3,22 +3,27 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
 /**
- * Customer master. Mirrors the Supplier pattern — auto-generated code
- * (CUST-0001), audit columns in booted(), SoftDeletes, badge helpers.
+ * Customer master — extended to implement Laravel Authenticatable so that
+ * customers can register/login on the storefront via the 'customer' guard.
+ *
+ * Mirrors the Supplier pattern: auto-generated code (CUST-0001), audit
+ * columns in booted(), SoftDeletes, badge helpers.
  *
  * Customer ↔ Sale is 1:N. A "Walk-in" customer record should be seeded
  * so the sales terminal always has a valid default to bind to.
  */
-class Customer extends Model
+class Customer extends Authenticatable
 {
     use HasFactory;
     use SoftDeletes;
+    use Notifiable;
 
     public const STATUS_ACTIVE   = 1;
     public const STATUS_INACTIVE = 0;
@@ -54,12 +59,21 @@ class Customer extends Model
         'zip_code',
         'status',
         'notes',
+        'password',
+        'email_verified_at',
         'created_by',
         'updated_by',
     ];
 
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
     protected $casts = [
-        'status' => 'boolean',
+        'status'            => 'boolean',
+        'email_verified_at' => 'datetime',
+        'password'          => 'hashed',
     ];
 
     /* -----------------------------------------------------------------
@@ -89,7 +103,7 @@ class Customer extends Model
     }
 
     /**
-     * Build next sequential customer code. Withers trashed rows so codes
+     * Build next sequential customer code. Includes trashed rows so codes
      * are never recycled.
      */
     public static function generateNextCode(): string

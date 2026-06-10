@@ -85,6 +85,7 @@
                                 <th>Date</th>
                                 <th>Customer</th>
                                 <th>Location</th>
+                                <th>Channel</th>
                                 <th class="text-end">Total</th>
                                 <th class="text-end">Balance</th>
                                 <th>Payment</th>
@@ -144,7 +145,8 @@
                 { data: 'sale_number',     name: 'sales.sale_number' },
                 { data: 'sale_date',       name: 'sales.sale_date' },
                 { data: 'customer_label',  name: 'customer_label', orderable: false },
-                { data: 'location_label',  name: 'location_label', orderable: false, searchable: false },
+                { data: 'location_label',  name: 'location_label',  orderable: false, searchable: false },
+                { data: 'channel_label',   name: 'channel_label',   orderable: false, searchable: false },
                 { data: 'grand_total',     name: 'sales.grand_total', className: 'text-end' },
                 { data: 'balance_due',     name: 'sales.balance_due', className: 'text-end' },
                 { data: 'payment_badge',   name: 'sales.payment_status', orderable: false, searchable: false },

@@ -43,6 +43,13 @@ class ChannelSeeder extends Seeder
                 'status'        => true,
                 'display_order' => 4,
             ],
+            [
+                'name'          => 'POS',
+                'code'          => Channel::CODE_POS,
+                'icon'          => 'ti ti-cash-register',
+                'status'        => true,
+                'display_order' => 5,
+            ],
         ];
 
         foreach ($channels as $channel) {

@@ -2,10 +2,13 @@
 
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BannerController;
+use App\Http\Controllers\CustomerAccountController;
+use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ChannelController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PermissionController;
@@ -69,6 +72,29 @@ Route::prefix('store')->name('website.')->group(function () {
         Route::post('/capture',  [CheckoutController::class, 'captureOrder'])->name('capture');
         Route::get('/success',   [CheckoutController::class, 'success'])->name('success');
     });
+
+    // ── Customer Auth (guest guard for customer) ──
+    Route::prefix('auth')->name('auth.')->group(function () {
+        Route::get('/login',     [CustomerAuthController::class, 'showLogin'])->name('login');
+        Route::post('/login',    [CustomerAuthController::class, 'login'])->name('login.post');
+        Route::get('/register',  [CustomerAuthController::class, 'showRegister'])->name('register');
+        Route::post('/register', [CustomerAuthController::class, 'register'])->name('register.post');
+        Route::post('/logout',   [CustomerAuthController::class, 'logout'])
+            ->middleware('customer.auth')
+            ->name('logout');
+    });
+
+    // ── Customer Account (requires customer login) ──
+    Route::prefix('account')->name('account.')
+        ->middleware('customer.auth')
+        ->group(function () {
+            Route::get('/',                          [CustomerAccountController::class, 'profile'])->name('profile');
+            Route::get('/edit',                      [CustomerAccountController::class, 'editProfile'])->name('edit');
+            Route::patch('/update',                  [CustomerAccountController::class, 'updateProfile'])->name('update');
+            Route::get('/orders',                    [CustomerAccountController::class, 'orders'])->name('orders');
+            Route::get('/orders/{sale}',             [CustomerAccountController::class, 'orderDetail'])->name('order-detail')->whereNumber('sale');
+            Route::patch('/change-password',         [CustomerAccountController::class, 'changePassword'])->name('change-password');
+        });
 });
 
 /*
@@ -105,6 +131,34 @@ Route::middleware('auth')->group(function () {
         Route::post('/save',        [SettingController::class, 'save'])->name('save');
         Route::post('/paypal-test', [SettingController::class, 'testPaypal'])->name('paypal-test');
     });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Channels
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('channels')->name('channels.')->group(function () {
+        Route::get('/data', [ChannelController::class, 'data'])
+            ->middleware('permission:channels.view')
+            ->name('data');
+
+        Route::patch('/{channel}/toggle-status', [ChannelController::class, 'toggleStatus'])
+            ->whereNumber('channel')
+            ->middleware('permission:channels.edit')
+            ->name('toggle-status');
+    });
+
+    Route::resource('channels', ChannelController::class)
+        ->whereNumber('channel')
+        ->middleware([
+            'index'   => 'permission:channels.view',
+            'show'    => 'permission:channels.view',
+            'create'  => 'permission:channels.create',
+            'store'   => 'permission:channels.create',
+            'edit'    => 'permission:channels.edit',
+            'update'  => 'permission:channels.edit',
+            'destroy' => 'permission:channels.delete',
+        ]);
 
     /*
     |--------------------------------------------------------------------------
