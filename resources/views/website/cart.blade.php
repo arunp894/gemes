@@ -61,20 +61,33 @@
             </div>
           </div>
 
-          {{-- Price --}}
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--teal-300)">
-              {{ $settings->formatPrice($item['price']) }}
+          {{-- Right column: price · stepper · remove --}}
+          <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+            {{-- Subtotal --}}
+            <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--teal-300)" class="item-subtotal">
+              {{ $settings->formatPrice($item['subtotal'] ?? $item['price']) }}
             </div>
-            <div style="font-size:11px;color:var(--white-faint);margin-top:2px">Qty: 1</div>
+            {{-- Stepper + Remove on same row --}}
+            <div style="display:flex;align-items:center;gap:6px">
+              <button type="button"
+                onclick="changeQty({{ $item['id'] }}, -1, this)"
+                style="width:28px;height:28px;background:none;border:1px solid rgba(0,191,176,.25);color:var(--teal-300);cursor:pointer;border-radius:2px;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .3s"
+                onmouseenter="this.style.background='rgba(0,191,176,.1)'"
+                onmouseleave="this.style.background=''">−</button>
+              <span class="qty-display" style="min-width:26px;text-align:center;font-size:14px;font-weight:600;color:var(--white)">{{ $item['qty'] ?? 1 }}</span>
+              <button type="button"
+                onclick="changeQty({{ $item['id'] }}, +1, this)"
+                style="width:28px;height:28px;background:none;border:1px solid rgba(0,191,176,.25);color:var(--teal-300);cursor:pointer;border-radius:2px;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .3s"
+                onmouseenter="this.style.background='rgba(0,191,176,.1)'"
+                onmouseleave="this.style.background=''">+</button>
+              <div style="width:1px;height:20px;background:rgba(255,255,255,.1);margin:0 2px"></div>
+              <button type="button" onclick="removeItem({{ $item['id'] }}, this)"
+                style="width:28px;height:28px;flex-shrink:0;background:none;border:1px solid rgba(220,80,80,.25);color:rgba(220,80,80,.6);cursor:pointer;border-radius:2px;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .3s"
+                onmouseenter="this.style.background='rgba(220,80,80,.08)';this.style.borderColor='rgba(220,80,80,.5)';this.style.color='#e07070'"
+                onmouseleave="this.style.background='';this.style.borderColor='rgba(220,80,80,.25)';this.style.color='rgba(220,80,80,.6)'"
+                title="Remove">✕</button>
+            </div>
           </div>
-
-          {{-- Remove --}}
-          <button onclick="removeItem({{ $item['id'] }}, this)"
-            style="width:34px;height:34px;flex-shrink:0;background:none;border:1px solid rgba(220,80,80,.25);color:rgba(220,80,80,.6);cursor:pointer;border-radius:2px;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .3s"
-            onmouseenter="this.style.background='rgba(220,80,80,.08)';this.style.borderColor='rgba(220,80,80,.5)';this.style.color='#e07070'"
-            onmouseleave="this.style.background='';this.style.borderColor='rgba(220,80,80,.25)';this.style.color='rgba(220,80,80,.6)'"
-            title="Remove">✕</button>
 
         </div>
         @endforeach
@@ -126,22 +139,61 @@
 @push('scripts')
 <script>
 var CSRF = document.querySelector('meta[name=csrf-token]').getAttribute('content');
+var UPDATE_QTY_URL = '{{ route("website.cart.update-qty") }}';
+var REMOVE_URL     = '{{ route("website.cart.remove") }}';
+var CLEAR_URL      = '{{ route("website.cart.clear") }}';
+
+function changeQty(productId, delta, btn) {
+  var wrap     = btn.closest('.sg-cart-item');
+  var qtyEl    = wrap.querySelector('.qty-display');
+  var subtotal = wrap.querySelector('.item-subtotal');
+  var currentQty = parseInt(qtyEl.textContent, 10) || 1;
+  var newQty   = Math.max(1, Math.min(99, currentQty + delta));
+
+  if (newQty === currentQty) return;
+
+  // Optimistic disable while saving
+  wrap.style.opacity = '0.6';
+  wrap.style.pointerEvents = 'none';
+
+  fetch(UPDATE_QTY_URL, {
+    method: 'POST',
+    headers: { 'X-CSRF-TOKEN': CSRF, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({ product_id: productId, qty: newQty }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    wrap.style.opacity = '';
+    wrap.style.pointerEvents = '';
+    if (d.success) {
+      qtyEl.textContent    = d.qty;
+      subtotal.textContent = d.item_subtotal;
+      document.getElementById('summaryTotal').textContent = d.cart_total;
+      updateCartBadge(d.count);
+    }
+  })
+  .catch(function() {
+    wrap.style.opacity = '';
+    wrap.style.pointerEvents = '';
+  });
+}
 
 function removeItem(productId, btn) {
   var wrap = btn.closest('.sg-cart-item');
   wrap.style.opacity = '0.4';
   wrap.style.pointerEvents = 'none';
 
-  fetch('{{ route("website.cart.remove") }}', {
+  fetch(REMOVE_URL, {
     method: 'POST',
     headers: { 'X-CSRF-TOKEN': CSRF, 'Content-Type': 'application/json', 'Accept': 'application/json' },
     body: JSON.stringify({ product_id: productId }),
   })
-  .then(r => r.json())
-  .then(function (d) {
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
     if (d.success) {
       wrap.remove();
       updateCartBadge(d.count);
+      document.getElementById('summaryTotal').textContent = d.total;
       if (d.count === 0) {
         location.reload();
       }
@@ -154,12 +206,12 @@ function removeItem(productId, btn) {
 
 function clearCart() {
   if (!confirm('Clear all items from your cart?')) return;
-  fetch('{{ route("website.cart.clear") }}', {
+  fetch(CLEAR_URL, {
     method: 'POST',
     headers: { 'X-CSRF-TOKEN': CSRF, 'Content-Type': 'application/json', 'Accept': 'application/json' },
   })
-  .then(r => r.json())
-  .then(function (d) {
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
     if (d.success) { location.reload(); }
   });
 }

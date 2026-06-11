@@ -17,6 +17,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * Status lifecycle: draft → posted → completed; refunded / cancelled are
  * branches off the main path. See migration for full semantics.
+ *
+ * Import columns (nullable, only set by SaleImportService):
+ *   external_ref      – Platform order reference (eBay Sales Record #, etc.)
+ *   external_order_id – Higher-level platform order ID
+ *   import_batch_id   – UUID of the upload batch
  */
 class Sale extends Model
 {
@@ -81,6 +86,11 @@ class Sale extends Model
         'payment_status',
         'status',
         'note',
+        // import traceability columns
+        'external_ref',
+        'external_order_id',
+        'import_batch_id',
+        // audit
         'created_by',
         'updated_by',
     ];
@@ -127,8 +137,6 @@ class Sale extends Model
     {
         $stub = self::NUMBER_PREFIX . '-' . $date->format('Ym') . '-';
 
-        // Include trashed so we never recycle numbers — they're real
-        // document references that may have been printed.
         $max = self::withTrashed()
             ->where('sale_number', 'like', $stub . '%')
             ->get(['sale_number'])
@@ -159,6 +167,12 @@ class Sale extends Model
     public function scopeForCustomer($query, int $customerId)
     {
         return $query->where('customer_id', $customerId);
+    }
+
+    /** Filter sales that came from a bulk import. */
+    public function scopeImported($query)
+    {
+        return $query->whereNotNull('import_batch_id');
     }
 
     /* ─── Relationships ────────────────────────────────────── */
@@ -211,13 +225,14 @@ class Sale extends Model
     public function isRefunded():  bool { return $this->status === self::STATUS_REFUNDED; }
     public function isCancelled(): bool { return $this->status === self::STATUS_CANCELLED; }
 
-    /**
-     * Editable means: lines and totals can still be changed. Only drafts
-     * qualify. Posted sales can still receive payments via SalePayment.
-     */
     public function isEditable(): bool
     {
         return $this->isDraft();
+    }
+
+    public function isImported(): bool
+    {
+        return $this->import_batch_id !== null;
     }
 
     public function statusLabel(): string

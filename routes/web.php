@@ -17,6 +17,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RackController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SaleController;
+use App\Http\Controllers\SaleImportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\StockTransferController;
@@ -29,43 +30,24 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 | Public Storefront — Sukaina Gems Website
 |--------------------------------------------------------------------------
-| No auth required. Serves the teal-themed customer-facing store.
-| Data pulled live from Product / Category / Banner models.
-|
-| Route names:
-|   website.home            GET  /store
-|   website.collections     GET  /store/collections
-|   website.product         GET  /store/products/{id}
-|   website.cart.index      GET  /store/cart
-|   website.cart.data       GET  /store/cart/data
-|   website.cart.add        POST /store/cart/add
-|   website.cart.remove     POST /store/cart/remove
-|   website.cart.clear      POST /store/cart/clear
-|   website.cart.count      GET  /store/cart/count
-|   website.checkout.index  GET  /store/checkout
-|   website.checkout.create POST /store/checkout/create
-|   website.checkout.capture POST /store/checkout/capture
-|   website.checkout.success GET  /store/checkout/success
 */
 
 Route::prefix('store')->name('website.')->group(function () {
 
-    // ── Storefront pages ──
     Route::get('/',                   [WebsiteController::class, 'home'])->name('home');
     Route::get('/collections',        [WebsiteController::class, 'collections'])->name('collections');
     Route::get('/products/{product}', [WebsiteController::class, 'product'])->name('product')->whereNumber('product');
 
-    // ── Shopping Cart (session-backed, no auth required) ──
     Route::prefix('cart')->name('cart.')->group(function () {
-        Route::get('/',        [CartController::class, 'index'])->name('index');
-        Route::get('/data',    [CartController::class, 'data'])->name('data');
-        Route::post('/add',    [CartController::class, 'add'])->name('add');
-        Route::post('/remove', [CartController::class, 'remove'])->name('remove');
-        Route::post('/clear',  [CartController::class, 'clear'])->name('clear');
-        Route::get('/count',   [CartController::class, 'count'])->name('count');
+        Route::get('/',             [CartController::class, 'index'])->name('index');
+        Route::get('/data',         [CartController::class, 'data'])->name('data');
+        Route::post('/add',         [CartController::class, 'add'])->name('add');
+        Route::post('/remove',      [CartController::class, 'remove'])->name('remove');
+        Route::post('/update-qty',  [CartController::class, 'updateQty'])->name('update-qty');
+        Route::post('/clear',       [CartController::class, 'clear'])->name('clear');
+        Route::get('/count',        [CartController::class, 'count'])->name('count');
     });
 
-    // ── Checkout + PayPal ──
     Route::prefix('checkout')->name('checkout.')->group(function () {
         Route::get('/',          [CheckoutController::class, 'index'])->name('index');
         Route::post('/create',   [CheckoutController::class, 'createOrder'])->name('create');
@@ -73,7 +55,6 @@ Route::prefix('store')->name('website.')->group(function () {
         Route::get('/success',   [CheckoutController::class, 'success'])->name('success');
     });
 
-    // ── Customer Auth (guest guard for customer) ──
     Route::prefix('auth')->name('auth.')->group(function () {
         Route::get('/login',     [CustomerAuthController::class, 'showLogin'])->name('login');
         Route::post('/login',    [CustomerAuthController::class, 'login'])->name('login.post');
@@ -84,16 +65,15 @@ Route::prefix('store')->name('website.')->group(function () {
             ->name('logout');
     });
 
-    // ── Customer Account (requires customer login) ──
     Route::prefix('account')->name('account.')
         ->middleware('customer.auth')
         ->group(function () {
-            Route::get('/',                          [CustomerAccountController::class, 'profile'])->name('profile');
-            Route::get('/edit',                      [CustomerAccountController::class, 'editProfile'])->name('edit');
-            Route::patch('/update',                  [CustomerAccountController::class, 'updateProfile'])->name('update');
-            Route::get('/orders',                    [CustomerAccountController::class, 'orders'])->name('orders');
-            Route::get('/orders/{sale}',             [CustomerAccountController::class, 'orderDetail'])->name('order-detail')->whereNumber('sale');
-            Route::patch('/change-password',         [CustomerAccountController::class, 'changePassword'])->name('change-password');
+            Route::get('/',                  [CustomerAccountController::class, 'profile'])->name('profile');
+            Route::get('/edit',              [CustomerAccountController::class, 'editProfile'])->name('edit');
+            Route::patch('/update',          [CustomerAccountController::class, 'updateProfile'])->name('update');
+            Route::get('/orders',            [CustomerAccountController::class, 'orders'])->name('orders');
+            Route::get('/orders/{sale}',     [CustomerAccountController::class, 'orderDetail'])->name('order-detail')->whereNumber('sale');
+            Route::patch('/change-password', [CustomerAccountController::class, 'changePassword'])->name('change-password');
         });
 });
 
@@ -121,11 +101,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/', fn() => redirect()->route('dashboard'));
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Application Settings (admin only)
-    |--------------------------------------------------------------------------
-    */
     Route::middleware('role:admin')->prefix('settings')->name('settings.')->group(function () {
         Route::get('/',             [SettingController::class, 'index'])->name('index');
         Route::post('/save',        [SettingController::class, 'save'])->name('save');
@@ -139,17 +114,11 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('channels')->name('channels.')->group(function () {
         Route::get('/data', [ChannelController::class, 'data'])
-            ->middleware('permission:channels.view')
-            ->name('data');
-
+            ->middleware('permission:channels.view')->name('data');
         Route::patch('/{channel}/toggle-status', [ChannelController::class, 'toggleStatus'])
-            ->whereNumber('channel')
-            ->middleware('permission:channels.edit')
-            ->name('toggle-status');
+            ->whereNumber('channel')->middleware('permission:channels.edit')->name('toggle-status');
     });
-
-    Route::resource('channels', ChannelController::class)
-        ->whereNumber('channel')
+    Route::resource('channels', ChannelController::class)->whereNumber('channel')
         ->middleware([
             'index'   => 'permission:channels.view',
             'show'    => 'permission:channels.view',
@@ -167,17 +136,11 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('categories')->name('categories.')->group(function () {
         Route::get('/data', [CategoryController::class, 'data'])
-            ->middleware('permission:categories.view')
-            ->name('data');
-
+            ->middleware('permission:categories.view')->name('data');
         Route::patch('/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])
-            ->whereNumber('category')
-            ->middleware('permission:categories.edit')
-            ->name('toggle-status');
+            ->whereNumber('category')->middleware('permission:categories.edit')->name('toggle-status');
     });
-
-    Route::resource('categories', CategoryController::class)
-        ->whereNumber('category')
+    Route::resource('categories', CategoryController::class)->whereNumber('category')
         ->middleware([
             'index'   => 'permission:categories.view',
             'show'    => 'permission:categories.view',
@@ -195,39 +158,21 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('products')->name('products.')->group(function () {
         Route::get('/data', [ProductController::class, 'data'])
-            ->middleware('permission:products.view')
-            ->name('data');
-
+            ->middleware('permission:products.view')->name('data');
         Route::get('/subcategories/{category}', [ProductController::class, 'subcategoriesByParent'])
-            ->whereNumber('category')
-            ->middleware('permission:products.view')
-            ->name('subcategories');
-
+            ->whereNumber('category')->middleware('permission:products.view')->name('subcategories');
         Route::post('/barcodes/generate', [ProductController::class, 'generateBarcode'])
-            ->middleware('permission:products.create,products.edit')
-            ->name('barcodes.generate');
-
+            ->middleware('permission:products.create,products.edit')->name('barcodes.generate');
         Route::post('/barcodes/validate', [ProductController::class, 'validateBarcode'])
-            ->middleware('permission:products.create,products.edit')
-            ->name('barcodes.validate');
-
+            ->middleware('permission:products.create,products.edit')->name('barcodes.validate');
         Route::post('/bulk-website-toggle', [ProductController::class, 'bulkWebsiteToggle'])
-            ->middleware('permission:products.toggle-website')
-            ->name('bulk-website-toggle');
-
+            ->middleware('permission:products.toggle-website')->name('bulk-website-toggle');
         Route::patch('/{product}/toggle-status', [ProductController::class, 'toggleStatus'])
-            ->whereNumber('product')
-            ->middleware('permission:products.edit')
-            ->name('toggle-status');
-
+            ->whereNumber('product')->middleware('permission:products.edit')->name('toggle-status');
         Route::patch('/{product}/toggle-website', [ProductController::class, 'toggleWebsite'])
-            ->whereNumber('product')
-            ->middleware('permission:products.toggle-website')
-            ->name('toggle-website');
+            ->whereNumber('product')->middleware('permission:products.toggle-website')->name('toggle-website');
     });
-
-    Route::resource('products', ProductController::class)
-        ->whereNumber('product')
+    Route::resource('products', ProductController::class)->whereNumber('product')
         ->middleware([
             'index'   => 'permission:products.view',
             'show'    => 'permission:products.view',
@@ -245,17 +190,11 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('suppliers')->name('suppliers.')->group(function () {
         Route::get('/data', [SupplierController::class, 'data'])
-            ->middleware('permission:suppliers.view')
-            ->name('data');
-
+            ->middleware('permission:suppliers.view')->name('data');
         Route::patch('/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])
-            ->whereNumber('supplier')
-            ->middleware('permission:suppliers.edit')
-            ->name('toggle-status');
+            ->whereNumber('supplier')->middleware('permission:suppliers.edit')->name('toggle-status');
     });
-
-    Route::resource('suppliers', SupplierController::class)
-        ->whereNumber('supplier')
+    Route::resource('suppliers', SupplierController::class)->whereNumber('supplier')
         ->middleware([
             'index'   => 'permission:suppliers.view',
             'show'    => 'permission:suppliers.view',
@@ -273,17 +212,11 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('racks')->name('racks.')->group(function () {
         Route::get('/data', [RackController::class, 'data'])
-            ->middleware('permission:racks.view')
-            ->name('data');
-
+            ->middleware('permission:racks.view')->name('data');
         Route::patch('/{rack}/toggle-status', [RackController::class, 'toggleStatus'])
-            ->whereNumber('rack')
-            ->middleware('permission:racks.edit')
-            ->name('toggle-status');
+            ->whereNumber('rack')->middleware('permission:racks.edit')->name('toggle-status');
     });
-
-    Route::resource('racks', RackController::class)
-        ->whereNumber('rack')
+    Route::resource('racks', RackController::class)->whereNumber('rack')
         ->middleware([
             'index'   => 'permission:racks.view',
             'show'    => 'permission:racks.view',
@@ -301,22 +234,13 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('locations')->name('locations.')->group(function () {
         Route::get('/data', [LocationController::class, 'data'])
-            ->middleware('permission:locations.view')
-            ->name('data');
-
+            ->middleware('permission:locations.view')->name('data');
         Route::patch('/{location}/toggle-status', [LocationController::class, 'toggleStatus'])
-            ->whereNumber('location')
-            ->middleware('permission:locations.edit')
-            ->name('toggle-status');
-
+            ->whereNumber('location')->middleware('permission:locations.edit')->name('toggle-status');
         Route::patch('/{location}/set-default', [LocationController::class, 'setDefault'])
-            ->whereNumber('location')
-            ->middleware('permission:locations.edit')
-            ->name('set-default');
+            ->whereNumber('location')->middleware('permission:locations.edit')->name('set-default');
     });
-
-    Route::resource('locations', LocationController::class)
-        ->whereNumber('location')
+    Route::resource('locations', LocationController::class)->whereNumber('location')
         ->middleware([
             'index'   => 'permission:locations.view',
             'show'    => 'permission:locations.view',
@@ -334,34 +258,19 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('purchases')->name('purchases.')->group(function () {
         Route::get('/data', [PurchaseController::class, 'data'])
-            ->middleware('permission:purchases.view')
-            ->name('data');
-
+            ->middleware('permission:purchases.view')->name('data');
         Route::get('/lookup-barcode', [PurchaseController::class, 'lookupByBarcode'])
-            ->middleware('permission:purchases.create')
-            ->name('lookup-barcode');
-
+            ->middleware('permission:purchases.create')->name('lookup-barcode');
         Route::get('/search-products', [PurchaseController::class, 'searchProducts'])
-            ->middleware('permission:purchases.create')
-            ->name('search-products');
-
+            ->middleware('permission:purchases.create')->name('search-products');
         Route::get('/preview-invoice-number', [PurchaseController::class, 'previewInvoiceNumber'])
-            ->middleware('permission:purchases.create')
-            ->name('preview-invoice-number');
-
+            ->middleware('permission:purchases.create')->name('preview-invoice-number');
         Route::patch('/{purchase}/post', [PurchaseController::class, 'post'])
-            ->whereNumber('purchase')
-            ->middleware('permission:purchases.post')
-            ->name('post');
-
+            ->whereNumber('purchase')->middleware('permission:purchases.post')->name('post');
         Route::patch('/{purchase}/cancel', [PurchaseController::class, 'cancel'])
-            ->whereNumber('purchase')
-            ->middleware('permission:purchases.edit')
-            ->name('cancel');
+            ->whereNumber('purchase')->middleware('permission:purchases.edit')->name('cancel');
     });
-
-    Route::resource('purchases', PurchaseController::class)
-        ->whereNumber('purchase')
+    Route::resource('purchases', PurchaseController::class)->whereNumber('purchase')
         ->middleware([
             'index'   => 'permission:purchases.view',
             'show'    => 'permission:purchases.view',
@@ -379,21 +288,13 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('customers')->name('customers.')->group(function () {
         Route::get('/data', [CustomerController::class, 'data'])
-            ->middleware('permission:customers.view')
-            ->name('data');
-
+            ->middleware('permission:customers.view')->name('data');
         Route::get('/search', [CustomerController::class, 'search'])
-            ->middleware('permission:customers.view,sales.create')
-            ->name('search');
-
+            ->middleware('permission:customers.view,sales.create')->name('search');
         Route::patch('/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])
-            ->whereNumber('customer')
-            ->middleware('permission:customers.edit')
-            ->name('toggle-status');
+            ->whereNumber('customer')->middleware('permission:customers.edit')->name('toggle-status');
     });
-
-    Route::resource('customers', CustomerController::class)
-        ->whereNumber('customer')
+    Route::resource('customers', CustomerController::class)->whereNumber('customer')
         ->middleware([
             'index'   => 'permission:customers.view',
             'show'    => 'permission:customers.view',
@@ -406,59 +307,50 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Sales
+    | Sales  (import routes BEFORE resource to avoid {sale} wildcard clash)
     |--------------------------------------------------------------------------
     */
     Route::prefix('sales')->name('sales.')->group(function () {
+
+        // ── DataTables / lookup / terminal helpers ──
         Route::get('/data', [SaleController::class, 'data'])
-            ->middleware('permission:sales.view')
-            ->name('data');
-
+            ->middleware('permission:sales.view')->name('data');
         Route::get('/lookup-barcode', [SaleController::class, 'lookupByBarcode'])
-            ->middleware('permission:sales.create')
-            ->name('lookup-barcode');
-
+            ->middleware('permission:sales.create')->name('lookup-barcode');
         Route::get('/search-products', [SaleController::class, 'searchProducts'])
-            ->middleware('permission:sales.create')
-            ->name('search-products');
-
+            ->middleware('permission:sales.create')->name('search-products');
         Route::get('/preview-number', [SaleController::class, 'previewSaleNumber'])
-            ->middleware('permission:sales.create')
-            ->name('preview-number');
+            ->middleware('permission:sales.create')->name('preview-number');
 
-        Route::post('/{sale}/post', [SaleController::class, 'post'])
-            ->whereNumber('sale')
-            ->middleware('permission:sales.post')
-            ->name('post');
+        // ── Import (registered BEFORE resource so they don't match {sale}) ──
+        Route::get('/import',          [SaleImportController::class, 'showUploadForm'])
+            ->middleware('permission:sales.import')->name('import');
+        Route::post('/import/preview', [SaleImportController::class, 'preview'])
+            ->middleware('permission:sales.import')->name('import.preview');
+        Route::post('/import/confirm', [SaleImportController::class, 'confirm'])
+            ->middleware('permission:sales.import')->name('import.confirm');
+        Route::get('/import/template', [SaleImportController::class, 'downloadTemplate'])
+            ->middleware('permission:sales.import')->name('import.template');
 
+        // ── Status transitions ──
+        Route::post('/{sale}/post',     [SaleController::class, 'post'])
+            ->whereNumber('sale')->middleware('permission:sales.post')->name('post');
         Route::post('/{sale}/complete', [SaleController::class, 'complete'])
-            ->whereNumber('sale')
-            ->middleware('permission:sales.post')
-            ->name('complete');
+            ->whereNumber('sale')->middleware('permission:sales.post')->name('complete');
+        Route::post('/{sale}/refund',   [SaleController::class, 'refund'])
+            ->whereNumber('sale')->middleware('permission:sales.post')->name('refund');
+        Route::post('/{sale}/cancel',   [SaleController::class, 'cancel'])
+            ->whereNumber('sale')->middleware('permission:sales.edit')->name('cancel');
 
-        Route::post('/{sale}/refund', [SaleController::class, 'refund'])
-            ->whereNumber('sale')
-            ->middleware('permission:sales.post')
-            ->name('refund');
-
-        Route::post('/{sale}/cancel', [SaleController::class, 'cancel'])
-            ->whereNumber('sale')
-            ->middleware('permission:sales.edit')
-            ->name('cancel');
-
+        // ── Payments ──
         Route::post('/{sale}/payments', [SaleController::class, 'addPayment'])
-            ->whereNumber('sale')
-            ->middleware('permission:sales.edit')
-            ->name('payments.store');
-
+            ->whereNumber('sale')->middleware('permission:sales.edit')->name('payments.store');
         Route::delete('/{sale}/payments/{payment}', [SaleController::class, 'removePayment'])
             ->whereNumber('sale')->whereNumber('payment')
-            ->middleware('permission:sales.edit')
-            ->name('payments.destroy');
+            ->middleware('permission:sales.edit')->name('payments.destroy');
     });
 
-    Route::resource('sales', SaleController::class)
-        ->whereNumber('sale')
+    Route::resource('sales', SaleController::class)->whereNumber('sale')
         ->middleware([
             'index'   => 'permission:sales.view',
             'show'    => 'permission:sales.view',
@@ -476,22 +368,13 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('stock')->name('stock.')->group(function () {
         Route::get('/', [StockController::class, 'index'])
-            ->middleware('permission:stock.view')
-            ->name('index');
-
+            ->middleware('permission:stock.view')->name('index');
         Route::get('/data', [StockController::class, 'data'])
-            ->middleware('permission:stock.view')
-            ->name('data');
-
+            ->middleware('permission:stock.view')->name('data');
         Route::get('/product/{product}', [StockController::class, 'product'])
-            ->whereNumber('product')
-            ->middleware('permission:stock.view')
-            ->name('product');
-
+            ->whereNumber('product')->middleware('permission:stock.view')->name('product');
         Route::get('/piece/{purchaseProduct}', [StockController::class, 'piece'])
-            ->whereNumber('purchaseProduct')
-            ->middleware('permission:stock.view')
-            ->name('piece');
+            ->whereNumber('purchaseProduct')->middleware('permission:stock.view')->name('piece');
     });
 
     /*
@@ -501,29 +384,16 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('stock-transfers')->name('stock-transfers.')->group(function () {
         Route::get('/data', [StockTransferController::class, 'data'])
-            ->middleware('permission:stock-transfers.view')
-            ->name('data');
-
+            ->middleware('permission:stock-transfers.view')->name('data');
         Route::get('/lookup-barcode', [StockTransferController::class, 'lookupByBarcode'])
-            ->middleware('permission:stock-transfers.create')
-            ->name('lookup-barcode');
-
+            ->middleware('permission:stock-transfers.create')->name('lookup-barcode');
         Route::post('/{stockTransfer}/post', [StockTransferController::class, 'post'])
-            ->whereNumber('stockTransfer')
-            ->middleware('permission:stock-transfers.post')
-            ->name('post');
-
+            ->whereNumber('stockTransfer')->middleware('permission:stock-transfers.post')->name('post');
         Route::post('/{stockTransfer}/receive', [StockTransferController::class, 'receive'])
-            ->whereNumber('stockTransfer')
-            ->middleware('permission:stock-transfers.post')
-            ->name('receive');
-
+            ->whereNumber('stockTransfer')->middleware('permission:stock-transfers.post')->name('receive');
         Route::post('/{stockTransfer}/cancel', [StockTransferController::class, 'cancel'])
-            ->whereNumber('stockTransfer')
-            ->middleware('permission:stock-transfers.edit')
-            ->name('cancel');
+            ->whereNumber('stockTransfer')->middleware('permission:stock-transfers.edit')->name('cancel');
     });
-
     Route::resource('stock-transfers', StockTransferController::class)
         ->whereNumber('stockTransfer')
         ->parameters(['stock-transfers' => 'stockTransfer'])
@@ -544,17 +414,11 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('banners')->name('banners.')->group(function () {
         Route::get('/data', [BannerController::class, 'data'])
-            ->middleware('permission:banners.view')
-            ->name('data');
-
+            ->middleware('permission:banners.view')->name('data');
         Route::patch('/{banner}/toggle-status', [BannerController::class, 'toggleStatus'])
-            ->whereNumber('banner')
-            ->middleware('permission:banners.edit')
-            ->name('toggle-status');
+            ->whereNumber('banner')->middleware('permission:banners.edit')->name('toggle-status');
     });
-
-    Route::resource('banners', BannerController::class)
-        ->whereNumber('banner')
+    Route::resource('banners', BannerController::class)->whereNumber('banner')
         ->middleware([
             'index'   => 'permission:banners.view',
             'show'    => 'permission:banners.view',
@@ -572,17 +436,11 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('users')->name('users.')->group(function () {
         Route::get('/data', [UserController::class, 'data'])
-            ->middleware('permission:users.view')
-            ->name('data');
-
+            ->middleware('permission:users.view')->name('data');
         Route::patch('/{user}/toggle-status', [UserController::class, 'toggleStatus'])
-            ->whereNumber('user')
-            ->middleware('permission:users.edit')
-            ->name('toggle-status');
+            ->whereNumber('user')->middleware('permission:users.edit')->name('toggle-status');
     });
-
-    Route::resource('users', UserController::class)
-        ->whereNumber('user')
+    Route::resource('users', UserController::class)->whereNumber('user')
         ->middleware([
             'index'   => 'permission:users.view',
             'show'    => 'permission:users.view',
@@ -600,12 +458,9 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('roles')->name('roles.')->group(function () {
         Route::get('/data', [RoleController::class, 'data'])
-            ->middleware('permission:roles.view')
-            ->name('data');
+            ->middleware('permission:roles.view')->name('data');
     });
-
-    Route::resource('roles', RoleController::class)
-        ->whereNumber('role')
+    Route::resource('roles', RoleController::class)->whereNumber('role')
         ->middleware([
             'index'   => 'permission:roles.view',
             'show'    => 'permission:roles.view',
@@ -623,10 +478,8 @@ Route::middleware('auth')->group(function () {
     */
     Route::prefix('permissions')->name('permissions.')->group(function () {
         Route::get('/data', [PermissionController::class, 'data'])
-            ->middleware('role:admin')
-            ->name('data');
+            ->middleware('role:admin')->name('data');
     });
-
     Route::resource('permissions', PermissionController::class)
         ->whereNumber('permission')
         ->middleware('role:admin');

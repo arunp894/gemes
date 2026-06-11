@@ -5,16 +5,6 @@ namespace Database\Seeders;
 use App\Models\Permission;
 use Illuminate\Database\Seeder;
 
-/**
- * Seeds the canonical permission catalogue.
- *
- * Slug convention: "module.action".
- * Modules align with sidebar sections and controller groupings so the
- * role-edit UI can render checkboxes grouped by module.
- *
- * Idempotent: re-running the seeder upserts on `slug` and leaves
- * existing role assignments alone.
- */
 class PermissionSeeder extends Seeder
 {
     public function run(): void
@@ -82,6 +72,7 @@ class PermissionSeeder extends Seeder
             ['slug' => 'sales.edit',               'name' => 'Edit Sales',               'module' => 'sales'],
             ['slug' => 'sales.delete',             'name' => 'Delete Sales',             'module' => 'sales'],
             ['slug' => 'sales.post',               'name' => 'Post / Complete Sales',    'module' => 'sales'],
+            ['slug' => 'sales.import',             'name' => 'Import Sales (Bulk Upload)', 'module' => 'sales'],
 
             // ----- Stock (read-only inventory reports) -----
             ['slug' => 'stock.view',               'name' => 'View Stock Reports',       'module' => 'stock'],
@@ -100,7 +91,7 @@ class PermissionSeeder extends Seeder
             ['slug' => 'banners.edit',             'name' => 'Edit Banners',              'module' => 'banners'],
             ['slug' => 'banners.delete',           'name' => 'Delete Banners',            'module' => 'banners'],
 
-            // ----- Barcodes (sub-feature of products, but distinct enough to gate separately) -----
+            // ----- Barcodes -----
             ['slug' => 'barcodes.view',            'name' => 'View Barcodes',            'module' => 'barcodes'],
             ['slug' => 'barcodes.print',           'name' => 'Print Barcode Labels',     'module' => 'barcodes'],
 
@@ -122,10 +113,7 @@ class PermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $row) {
-            Permission::updateOrCreate(
-                ['slug' => $row['slug']],
-                $row,
-            );
+            Permission::updateOrCreate(['slug' => $row['slug']], $row);
         }
     }
 }

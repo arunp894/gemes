@@ -90,6 +90,41 @@ class CartController extends Controller
     }
 
     /* ---------------------------------------------------------------
+     |  Update Quantity
+     | --------------------------------------------------------------- */
+
+    public function updateQty(Request $request): JsonResponse|RedirectResponse
+    {
+        $request->validate([
+            'product_id' => ['required', 'integer'],
+            'qty'        => ['required', 'integer', 'min:1', 'max:99'],
+        ]);
+
+        $cart = $this->getCart();
+
+        if (! isset($cart[$request->product_id])) {
+            return $this->respond($request, false, 'Item not in cart.', count($cart));
+        }
+
+        $cart[$request->product_id]['qty']      = (int) $request->qty;
+        $cart[$request->product_id]['subtotal'] = $cart[$request->product_id]['price'] * (int) $request->qty;
+
+        $this->saveCart($cart);
+
+        $item  = $cart[$request->product_id];
+        $total = $this->cartTotal($cart);
+
+        return response()->json([
+            'success'          => true,
+            'qty'              => $item['qty'],
+            'item_subtotal'    => $this->settings->formatPrice($item['subtotal']),
+            'cart_total'       => $this->settings->formatPrice($total),
+            'cart_total_raw'   => $total,
+            'count'            => count($cart),
+        ]);
+    }
+
+    /* ---------------------------------------------------------------
      |  Remove from Cart
      | --------------------------------------------------------------- */
 

@@ -42,40 +42,13 @@ class SaleService
     /**
      * Create a new sale from the validated request payload.
      *
-     * Expected payload shape (see StoreSaleRequest):
-     * [
-     *   'sale_date'        => 'YYYY-MM-DD',
-     *   'customer_id'      => int,
-     *   'location_id'      => int,
-     *   'salesperson_id'   => int|null,
-     *   'tax_type'         => 'none'|'cgst_sgst'|'igst',
-     *   'shipping_charge'  => float,
-     *   'note'             => string|null,
-     *   'status'           => 'draft'|'posted'|'completed',
-     *   'lines' => [
-     *     [
-     *       'product_id'          => int,
-     *       'purchase_product_id' => int|null,
-     *       'barcode'             => string|null,
-     *       'qty'                 => int,
-     *       'unit_price'          => float,
-     *       'tax_percent'         => float,
-     *       'discount_percent'    => float,
-     *       'notes'               => string|null,
-     *     ],
-     *     ...
-     *   ],
-     *   'payments' => [
-     *     [
-     *       'payment_date'     => 'YYYY-MM-DD',
-     *       'amount'           => float,
-     *       'payment_method'   => string,
-     *       'reference_number' => string|null,
-     *       'notes'            => string|null,
-     *     ],
-     *     ...
-     *   ],
-     * ]
+     * Extra keys accepted when called from SaleImportService:
+     *   'external_ref'      => string|null
+     *   'external_order_id' => string|null
+     *   'import_batch_id'   => string|null  (UUID)
+     *
+     * These are stamped inside the same transaction so traceability
+     * columns are always set atomically with the sale record.
      */
     public function create(array $data): Sale
     {
@@ -94,6 +67,18 @@ class SaleService
             $sale->tax_type        = $data['tax_type']        ?? Sale::TAX_NONE;
             $sale->shipping_charge = (float) ($data['shipping_charge'] ?? 0);
             $sale->note            = $data['note']            ?? null;
+
+            // Import traceability — only set when called from SaleImportService.
+            // Ignored for regular terminal sales (keys simply absent).
+            if (array_key_exists('external_ref', $data)) {
+                $sale->external_ref = $data['external_ref'] ?: null;
+            }
+            if (array_key_exists('external_order_id', $data)) {
+                $sale->external_order_id = $data['external_order_id'] ?: null;
+            }
+            if (array_key_exists('import_batch_id', $data)) {
+                $sale->import_batch_id = $data['import_batch_id'] ?: null;
+            }
 
             // Start as DRAFT so we can build lines + payments first,
             // then run the stock check, THEN transition to the intended
@@ -215,7 +200,6 @@ class SaleService
         }
 
         return DB::transaction(function () use ($sale) {
-            // Restore stock first, then flip status.
             $this->stock->reverseSalePosting($sale, StockMovement::REASON_SALE_RETURN);
             $sale->status = Sale::STATUS_REFUNDED;
             $sale->save();
@@ -230,8 +214,6 @@ class SaleService
         }
 
         return DB::transaction(function () use ($sale) {
-            // If the sale had been posted, return stock with a 'sale_cancel'
-            // reason. Draft sales never wrote movements — nothing to reverse.
             if ($sale->isPosted()) {
                 $this->stock->reverseSalePosting($sale, StockMovement::REASON_SALE_CANCEL);
             }
@@ -244,7 +226,6 @@ class SaleService
     public function delete(Sale $sale): void
     {
         DB::transaction(function () use ($sale) {
-            // SoftDeletes doesn't cascade automatically — walk the tree.
             $sale->lines()->each(fn (SaleLine $l) => $l->delete());
             $sale->payments()->each(fn (SalePayment $p) => $p->delete());
             $sale->delete();
@@ -253,9 +234,6 @@ class SaleService
 
     /* ─── Payment helpers (public for the show page) ──────── */
 
-    /**
-     * Append a single payment to an existing sale and refresh totals.
-     */
     public function addPayment(Sale $sale, array $data): SalePayment
     {
         return DB::transaction(function () use ($sale, $data) {
@@ -267,9 +245,7 @@ class SaleService
                 'notes'            => $data['notes']            ?? null,
             ]);
             $sale->payments()->save($payment);
-
             $this->recalculatePayments($sale);
-
             return $payment->refresh();
         });
     }
@@ -287,11 +263,6 @@ class SaleService
 
     /* ─── Internals ────────────────────────────────────────── */
 
-    /**
-     * Persist all sale lines. Server recomputes money math from the raw
-     * inputs (qty, unit_price, *percent fields) so client tampering can't
-     * change recorded totals.
-     */
     private function syncLines(Sale $sale, array $lines): void
     {
         foreach ($lines as $row) {
@@ -309,9 +280,7 @@ class SaleService
             $taxAmount      = round($taxableBase * $taxPercent / 100, 2);
             $total          = round($taxableBase + $taxAmount, 2);
 
-            // Snapshot cost from the linked PurchaseProduct (if any) so
-            // historical margin reports stay accurate forever.
-            $costPrice = 0.0;
+            $costPrice         = 0.0;
             $purchaseProductId = $row['purchase_product_id'] ?? null;
             if ($purchaseProductId) {
                 $pp = PurchaseProduct::find($purchaseProductId);
@@ -340,10 +309,6 @@ class SaleService
         }
     }
 
-    /**
-     * Persist payment rows. When $replace is true (the standard create/
-     * update flow) all existing payments on the sale are wiped first.
-     */
     private function syncPayments(Sale $sale, array $payments, bool $replace = false): void
     {
         if ($replace) {
@@ -352,7 +317,6 @@ class SaleService
 
         foreach ($payments as $row) {
             $amount = (float) ($row['amount'] ?? 0);
-            // Skip zero-amount entries entirely — they'd just clutter audit.
             if (abs($amount) < 0.001) {
                 continue;
             }
@@ -367,10 +331,6 @@ class SaleService
         }
     }
 
-    /**
-     * Recompute header totals from line rows + payment rows. The ONLY
-     * place subtotal/tax/discount/grand/paid/balance are written.
-     */
     private function recalculate(Sale $sale): void
     {
         $subtotal = 0.0;
@@ -395,10 +355,6 @@ class SaleService
         $this->recalculatePayments($sale);
     }
 
-    /**
-     * Re-derive paid_amount + balance_due + payment_status from
-     * sale_payments. Safe to call any time payments change.
-     */
     private function recalculatePayments(Sale $sale): void
     {
         $paid  = (float) $sale->payments()->sum('amount');
@@ -406,7 +362,6 @@ class SaleService
 
         $balance = round(max(0, $grand - $paid), 2);
 
-        // 0.01 tolerance — float math.
         if ($paid <= 0.0001) {
             $status = Sale::PAY_UNPAID;
         } elseif ($paid + 0.0001 >= $grand) {

@@ -30,9 +30,7 @@
 
                     <li class="side-nav-item {{ request()->routeIs('categories.*') ? 'active' : '' }}">
                         <a href="{{ route('categories.index') }}" class="side-nav-link">
-
                             <span class="menu-text"> Categories</span>
-                            {{-- <span class="badge bg-success text-white">4</span> --}}
                         </a>
                     </li>
 
@@ -40,7 +38,6 @@
                         <a href="{{ \Illuminate\Support\Facades\Route::has('products.index')
                     ? route('products.index')
                     : url('/products') }}" class="side-nav-link">
-
                             <span class="menu-text">
                                 Products
                             </span>
@@ -108,7 +105,7 @@
     SALES MENU
 ========================= --}}
 
-        @if (auth()->check() && auth()->user()->hasAnyPermission(['sales.view', 'customers.view']))
+        @if (auth()->check() && auth()->user()->hasAnyPermission(['sales.view', 'sales.create', 'sales.import', 'customers.view']))
         <li class="side-nav-item {{ request()->routeIs('sales.*') || request()->routeIs('customers.*') ? 'menuitem-active' : '' }}">
 
             <a data-bs-toggle="collapse" href="#salesMenu"
@@ -144,6 +141,16 @@
                     <li class="side-nav-item {{ request()->routeIs('sales.index') || request()->routeIs('sales.show') || request()->routeIs('sales.edit') ? 'active' : '' }}">
                         <a href="{{ route('sales.index') }}" class="side-nav-link">
                             <span class="menu-text">Invoices</span>
+                        </a>
+                    </li>
+                    @endpermission
+
+                    @permission('sales.import')
+                    <li class="side-nav-item {{ request()->routeIs('sales.import*') ? 'active' : '' }}">
+                        <a href="{{ route('sales.import') }}" class="side-nav-link">
+                            <span class="menu-text">
+                                <i class="ti ti-file-upload fs-sm text-info me-1"></i> Import
+                            </span>
                         </a>
                     </li>
                     @endpermission
@@ -349,35 +356,26 @@
 
                 <ul class="sub-menu">
 
-                    {{-- Users --}}
                     @permission('users.view')
                     <li class="side-nav-item {{ request()->routeIs('users.*') ? 'active' : '' }}">
                         <a href="{{ route('users.index') }}" class="side-nav-link">
-                            <span class="menu-text">
-                                Users
-                            </span>
+                            <span class="menu-text">Users</span>
                         </a>
                     </li>
                     @endpermission
 
-                    {{-- Roles --}}
                     @permission('roles.view')
                     <li class="side-nav-item {{ request()->routeIs('roles.*') ? 'active' : '' }}">
                         <a href="{{ route('roles.index') }}" class="side-nav-link">
-                            <span class="menu-text">
-                                Roles
-                            </span>
+                            <span class="menu-text">Roles</span>
                         </a>
                     </li>
                     @endpermission
 
-                    {{-- Permissions --}}
                     @role('admin')
                     <li class="side-nav-item {{ request()->routeIs('permissions.*') ? 'active' : '' }}">
                         <a href="{{ route('permissions.index') }}" class="side-nav-link">
-                            <span class="menu-text">
-                                Permissions
-                            </span>
+                            <span class="menu-text">Permissions</span>
                         </a>
                     </li>
                     @endrole
