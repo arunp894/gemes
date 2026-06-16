@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\BarcodeHistoryController;
 use App\Http\Controllers\BannerController;
 use App\Http\Controllers\CustomerAccountController;
 use App\Http\Controllers\CustomerAuthController;
@@ -408,6 +409,16 @@ Route::middleware('auth')->group(function () {
             'update'  => 'permission:stock-transfers.edit',
             'destroy' => 'permission:stock-transfers.delete',
         ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Barcode History / Product Lookup
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('barcode-history')->name('barcode-history.')->middleware('permission:stock.view')->group(function () {
+        Route::get('/',        [BarcodeHistoryController::class, 'index'])->name('index');
+        Route::get('/lookup',  [BarcodeHistoryController::class, 'lookup'])->name('lookup');
+    });
 
     /*
     |--------------------------------------------------------------------------

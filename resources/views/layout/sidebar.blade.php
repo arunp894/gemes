@@ -173,10 +173,10 @@
 ========================= --}}
 
         @if (auth()->check() && auth()->user()->hasAnyPermission(['stock.view', 'stock-transfers.view']))
-        <li class="side-nav-item {{ request()->routeIs('stock.*') || request()->routeIs('stock-transfers.*') ? 'menuitem-active' : '' }}">
+        <li class="side-nav-item {{ request()->routeIs('stock.*') || request()->routeIs('stock-transfers.*') || request()->routeIs('barcode-history.*') ? 'menuitem-active' : '' }}">
 
             <a data-bs-toggle="collapse" href="#inventoryMenu"
-                aria-expanded="{{ request()->routeIs('stock.*') || request()->routeIs('stock-transfers.*') ? 'true' : 'false' }}"
+                aria-expanded="{{ request()->routeIs('stock.*') || request()->routeIs('stock-transfers.*') || request()->routeIs('barcode-history.*') ? 'true' : 'false' }}"
                 aria-controls="inventoryMenu" class="side-nav-link">
 
                 <span class="menu-icon">
@@ -189,7 +189,7 @@
                 <span class="menu-arrow"></span>
             </a>
 
-            <div class="collapse {{ request()->routeIs('stock.*') || request()->routeIs('stock-transfers.*') ? 'show' : '' }}"
+            <div class="collapse {{ request()->routeIs('stock.*') || request()->routeIs('stock-transfers.*') || request()->routeIs('barcode-history.*') ? 'show' : '' }}"
                 id="inventoryMenu">
 
                 <ul class="sub-menu">
@@ -206,6 +206,16 @@
                     <li class="side-nav-item {{ request()->routeIs('stock-transfers.*') ? 'active' : '' }}">
                         <a href="{{ route('stock-transfers.index') }}" class="side-nav-link">
                             <span class="menu-text">Transfers</span>
+                        </a>
+                    </li>
+                    @endpermission
+
+                    @permission('stock.view')
+                    <li class="side-nav-item {{ request()->routeIs('barcode-history.*') ? 'active' : '' }}">
+                        <a href="{{ route('barcode-history.index') }}" class="side-nav-link">
+                            <span class="menu-text">
+                                <i class="ti ti-barcode fs-sm text-info me-1"></i> Barcode History
+                            </span>
                         </a>
                     </li>
                     @endpermission

@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Location;
 use App\Models\Product;
+use App\Models\Purchase;
 use App\Models\PurchaseProduct;
+use App\Models\Sale;
 use App\Models\StockMovement;
+use App\Models\StockTransfer;
+use Illuminate\Support\Collection;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -84,7 +88,9 @@ class StockController extends Controller
             )
             ->addColumn('action', function ($row) {
                 $url = route('stock.product', ['product' => $row->product_id]);
-                return '<a href="' . $url . '?location_id=' . (int) $row->location_id . '" class="btn btn-default btn-icon btn-sm" title="Ledger"><i class="ti ti-history fs-lg"></i></a>';
+                $urlLoc = $url . '?location_id=' . (int) $row->location_id;
+                return '<a href="' . $urlLoc . '" class="btn btn-soft-primary btn-sm d-inline-flex align-items-center gap-1" title="View Ledger">'
+                    . '<i class="ti ti-history fs-sm"></i> Ledger</a>';
             })
             ->filterColumn('product_label', function ($q, $keyword) {
                 $like = "%{$keyword}%";
@@ -121,14 +127,42 @@ class StockController extends Controller
             $rows[] = ['movement' => $m, 'balance_after' => $balances[$key]];
         }
 
+        // KPI summary computed from the (optionally location-filtered) movements.
+        $summary = [
+            'total_in'    => (int) $movements->where('direction', 'in')->sum('qty'),
+            'total_out'   => (int) $movements->where('direction', 'out')->sum('qty'),
+            'count'       => $movements->count(),
+            'sold_qty'    => (int) $movements->where('reason', StockMovement::REASON_SALE)->sum('qty'),
+            'purchased_qty' => (int) $movements->where('reason', StockMovement::REASON_PURCHASE)->sum('qty'),
+        ];
+        $summary['balance'] = $summary['total_in'] - $summary['total_out'];
+
+        // Counts per category for filter tab badges.
+        $summary['cat_purchase']   = $movements->whereIn('reason', [
+            StockMovement::REASON_PURCHASE, StockMovement::REASON_PURCHASE_CANCEL,
+        ])->count();
+        $summary['cat_sale']       = $movements->whereIn('reason', [
+            StockMovement::REASON_SALE, StockMovement::REASON_SALE_RETURN,
+            StockMovement::REASON_SALE_CANCEL, StockMovement::REASON_SALE_EDIT_REVERSE,
+        ])->count();
+        $summary['cat_transfer']   = $movements->whereIn('reason', [
+            StockMovement::REASON_TRANSFER_OUT, StockMovement::REASON_TRANSFER_IN,
+            StockMovement::REASON_TRANSFER_CANCEL_OUT,
+        ])->count();
+        $summary['cat_adjustment'] = $movements->whereIn('reason', [
+            StockMovement::REASON_ADJUSTMENT_IN, StockMovement::REASON_ADJUSTMENT_OUT,
+            StockMovement::REASON_OPENING,
+        ])->count();
+
         // Total on-hand (across all pieces) for the header.
         $onHand = $locationId
             ? $this->stock->onHandForProduct($product->id, $locationId)
-            : null;
+            : $this->stock->onHandForProductGlobal($product->id);
 
-        $locations = Location::active()->orderBy('name')->get(['id', 'name', 'location_code']);
+        $locations    = Location::active()->orderBy('name')->get(['id', 'name', 'location_code']);
+        $sourceLabels = $this->buildSourceLabels($movements);
 
-        return view('stock.product', compact('product', 'rows', 'onHand', 'locations', 'locationId'));
+        return view('stock.product', compact('product', 'rows', 'summary', 'onHand', 'locations', 'locationId', 'sourceLabels'));
     }
 
     /* ─── Per-piece ledger ────────────────────────────────── */
@@ -153,8 +187,42 @@ class StockController extends Controller
             $rows[] = ['movement' => $m, 'balance_after' => $balances[$key]];
         }
 
-        $byLocation = $this->stock->onHandForPieceByLocation($purchaseProduct->id);
+        $byLocation   = $this->stock->onHandForPieceByLocation($purchaseProduct->id);
+        $sourceLabels = $this->buildSourceLabels($movements);
 
-        return view('stock.piece', compact('purchaseProduct', 'rows', 'byLocation'));
+        return view('stock.piece', compact('purchaseProduct', 'rows', 'byLocation', 'sourceLabels'));
+    }
+
+    /* ─── Helpers ─────────────────────────────────────────── */
+
+    /**
+     * Build lookup arrays [source_type => [id => document_number]] so
+     * ledger views can render clickable links without N+1 queries.
+     */
+    private function buildSourceLabels(Collection $movements): array
+    {
+        $purchaseIds = $movements
+            ->where('source_type', StockMovement::SOURCE_PURCHASE)
+            ->pluck('source_id')->unique()->filter()->values();
+
+        $saleIds = $movements
+            ->where('source_type', StockMovement::SOURCE_SALE)
+            ->pluck('source_id')->unique()->filter()->values();
+
+        $transferIds = $movements
+            ->where('source_type', StockMovement::SOURCE_STOCK_TRANSFER)
+            ->pluck('source_id')->unique()->filter()->values();
+
+        return [
+            'purchase'       => $purchaseIds->isNotEmpty()
+                ? Purchase::withTrashed()->whereIn('id', $purchaseIds)->pluck('invoice_number', 'id')
+                : collect(),
+            'sale'           => $saleIds->isNotEmpty()
+                ? Sale::withTrashed()->whereIn('id', $saleIds)->pluck('sale_number', 'id')
+                : collect(),
+            'stock_transfer' => $transferIds->isNotEmpty()
+                ? StockTransfer::withTrashed()->whereIn('id', $transferIds)->pluck('transfer_number', 'id')
+                : collect(),
+        ];
     }
 }

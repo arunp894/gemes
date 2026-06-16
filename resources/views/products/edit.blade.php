@@ -27,6 +27,11 @@
                 @include('products._partials._core_fields')
                 @include('products._partials._gemstone_fields')
                 @include('products._partials._barcode_panel')
+                
+            </div>
+
+            <div class="col-lg-4">
+                @include('products._partials._website_visibility')
                 <div class="card">
                     <div class="card-body">
                         <div v-if="serverError" class="alert alert-danger">@{{ serverError }}</div>
@@ -43,11 +48,6 @@
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <div class="col-lg-4">
-                @include('products._partials._website_visibility')
-
             </div>
         </div>
     </form>
