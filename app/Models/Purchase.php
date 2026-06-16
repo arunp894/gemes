@@ -213,4 +213,77 @@ class Purchase extends Model
             default             => ['cgst' => 0, 'sgst' => 0, 'igst' => 0],
         };
     }
+
+    /* ─── Edit eligibility ─────────────────────────────────── */
+
+    /**
+     * IDs of every PurchaseProduct (inventory unit) row that belongs to
+     * this purchase, across all of its lines.
+     */
+    public function purchaseProductIds(): array
+    {
+        return PurchaseProduct::query()
+            ->whereIn('purchase_line_id', $this->lines()->pluck('id'))
+            ->pluck('id')
+            ->all();
+    }
+
+    /**
+     * Has any piece of stock that originated from this purchase already
+     * been consumed by a sale? Editing a purchase whose stock has moved
+     * would desync the inventory ledger, so this is a hard block.
+     */
+    public function hasSoldStock(): bool
+    {
+        $ids = $this->purchaseProductIds();
+        if (empty($ids)) {
+            return false;
+        }
+
+        return StockMovement::query()
+            ->whereIn('purchase_product_id', $ids)
+            ->where('reason', StockMovement::REASON_SALE)
+            ->exists();
+    }
+
+    /**
+     * Last moment this purchase can still be edited: purchase date
+     * (falling back to created_at) plus the configurable edit window.
+     */
+    public function editWindowEndsAt(int $editDays): Carbon
+    {
+        $reference = $this->purchase_date ?? $this->created_at ?? now();
+
+        return Carbon::parse($reference)->startOfDay()->addDays($editDays)->endOfDay();
+    }
+
+    public function isEditWindowExpired(int $editDays): bool
+    {
+        return now()->greaterThan($this->editWindowEndsAt($editDays));
+    }
+
+    /**
+     * Single entry point for the "can this purchase still be edited?"
+     * decision. Returns null when editing is allowed, or a human-readable
+     * reason (suitable for a flash message / alert) when it is not.
+     *
+     * $editDays is read from the `purchase_edit_days` app setting.
+     */
+    public function editBlockReason(int $editDays): ?string
+    {
+        if ($this->isCancelled()) {
+            return 'Cancelled purchases cannot be edited.';
+        }
+
+        if ($this->hasSoldStock()) {
+            return 'This purchase cannot be edited because stock from it has already been sold.';
+        }
+
+        if ($this->isEditWindowExpired($editDays)) {
+            $unit = $editDays === 1 ? 'day' : 'days';
+            return "This purchase cannot be edited because it is older than {$editDays} {$unit}.";
+        }
+
+        return null;
+    }
 }

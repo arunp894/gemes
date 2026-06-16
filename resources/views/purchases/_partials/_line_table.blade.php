@@ -1,15 +1,17 @@
 {{-- Inline multi-row product table.
 
-     Layout strategy:
+     Layout strategy (driven by `line.rows.length`, not `line.type`):
        - Each LINE renders a "parent" <tr> with the product name, type pill,
-         and outer package qty.
-       - For piece-type products, the parent row also carries the single
-         qty / price inputs (one inline row total).
-       - For unit/carton products, the parent row's qty cell shows the
-         outer-pack qty input ("2 Cartons"), and CHILD <tr>s are emitted
-         directly below the parent INSIDE THE SAME <tbody>, one per inner
-         inventory unit (e.g. one per Box). Child rows use a faint left
-         indent so the hierarchy is obvious without nested tables.
+         and Pack Qty input. Pack Qty == desired inventory-row count for
+         BOTH Piece and Box lines (rebuildRows() keeps line.rows in sync).
+       - When a line has exactly ONE row, the parent row also carries that
+         row's qty / carat / barcode / rack / price inputs inline.
+       - When a line has MORE THAN ONE row, the parent row instead shows
+         aggregate readouts (Total pieces / Inventory rows / Line total)
+         with a chevron to expand/collapse. When expanded, CHILD <tr>s are
+         emitted directly below the parent INSIDE THE SAME <tbody>, one per
+         inventory row. Child rows use a faint left indent so the hierarchy
+         is obvious without nested tables.
 --}}
 
 <div class="card">
@@ -47,7 +49,7 @@
 
                         <td class="text-muted small">
     <div class="d-flex align-items-center gap-1">
-        <button v-if="line.type === 'box'" type="button"
+        <button v-if="line.rows.length > 1" type="button"
                 class="btn btn-sm btn-link p-0 text-muted lh-1"
                 @click="toggleExpand(li)"
                 :title="line._expanded ? 'Collapse rows' : 'Expand rows'">
@@ -82,15 +84,16 @@
                                        v-model.number="line.package_qty"
                                        @change="rebuildRows(li)"
                                        @keydown.enter.prevent="focusFirstRow(li)">
-                                <span class="input-group-text" v-if="line.type !== 'piece'">
-                                    @{{ line._product.packaging.outer_pack_name || 'ctn' }}
+                                <span class="input-group-text">
+                                    @{{ line.type === 'piece' ? 'pcs' : (line._product.packaging.outer_pack_name || 'ctn') }}
                                 </span>
                             </div>
                         </td>
 
-                        {{-- For piece-type products, the parent row IS the only row.
-                             We hoist row[0]'s inputs straight into the parent. --}}
-                        <template v-if="line.type === 'piece' && line._expanded">
+                        {{-- Single-row lines (most Piece lines, or a Box line with
+                             Pack Qty = 1): hoist row[0]'s inputs straight into the
+                             parent row. --}}
+                        <template v-if="line.rows.length === 1">
                             <td>
                                 <input type="number" min="0" class="form-control form-control-sm"
                                        v-model.number="line.rows[0].qty">
@@ -130,11 +133,12 @@
                             </td>
                         </template>
 
-                        {{-- For carton/unit, the parent row shows aggregate readouts. --}}
+                        {{-- Multi-row lines (Pack Qty > 1, either type): aggregate
+                             readouts + expand/collapse toggle for the child rows. --}}
                         <template v-else>
-                            <td colspan="9" class="bg-light bg-opacity-25" 
-    :style="line.type === 'box' ? 'cursor: pointer;' : ''"
-    @click="line.type === 'box' && toggleExpand(li)">
+                            <td colspan="6" class="bg-light bg-opacity-25"
+    style="cursor: pointer;"
+    @click="toggleExpand(li)">
                                 <div class="d-flex flex-wrap gap-3 small">
                                     <span><span class="text-muted">Total pieces:</span>
                                         <strong>@{{ totalPieces(line) }}</strong></span>
@@ -153,8 +157,8 @@
 
                     </tr>
 
-                    {{-- ═══════ INLINE CHILD ROWS (only for carton/unit) ═══════ --}}
-                    <template v-if="line.type !== 'piece'">
+                    {{-- ═══════ INLINE CHILD ROWS (multi-row lines, when expanded) ═══════ --}}
+                    <template v-if="line.rows.length > 1 && line._expanded">
                         <tr v-for="(row, ri) in line.rows"
                             :key="'l-' + li + '-r-' + ri"
                             class="line-child"
@@ -164,7 +168,7 @@
 
                             <td class="ps-4 small text-muted bg-light bg-opacity-25">
                                 <i class="ti ti-corner-down-right me-1"></i>
-                                @{{ line._product.packaging.inner_pack_name || 'Box' }} #@{{ ri + 1 }}
+                                @{{ line.type === 'piece' ? 'Piece' : (line._product.packaging.inner_pack_name || 'Box') }} #@{{ ri + 1 }}
                             </td>
 
                             <td class="bg-light bg-opacity-25"></td>
@@ -211,7 +215,7 @@
                 </template>
 
                 <tr v-if="form.lines.length === 0">
-                    <td colspan="14" class="text-center text-muted py-4">
+                    <td colspan="11" class="text-center text-muted py-4">
                         <i class="ti ti-barcode fs-22 d-block mb-1 text-muted"></i>
                         Scan a barcode or search for a product to begin.
                     </td>

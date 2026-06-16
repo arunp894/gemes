@@ -191,6 +191,8 @@ Route::middleware('auth')->group(function () {
     Route::prefix('suppliers')->name('suppliers.')->group(function () {
         Route::get('/data', [SupplierController::class, 'data'])
             ->middleware('permission:suppliers.view')->name('data');
+        Route::get('/{supplier}/purchases-data', [SupplierController::class, 'purchasesData'])
+            ->whereNumber('supplier')->middleware('permission:suppliers.view')->name('purchases-data');
         Route::patch('/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])
             ->whereNumber('supplier')->middleware('permission:suppliers.edit')->name('toggle-status');
     });

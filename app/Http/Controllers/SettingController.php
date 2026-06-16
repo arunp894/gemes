@@ -60,6 +60,16 @@ class SettingController extends Controller
             'paypal_webhook_id' => $data['paypal_webhook_id'] ?? '',
         ], 'paypal');
 
+        // Save purchases group
+        $this->settings->save([
+            'purchase_edit_days' => $data['purchase_edit_days'] ?? 10,
+        ], 'purchases');
+
+        // Save sales group
+        $this->settings->save([
+            'sale_edit_days' => $data['sale_edit_days'] ?? 2,
+        ], 'sales');
+
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,

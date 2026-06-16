@@ -12,6 +12,7 @@ use App\Models\Rack;
 use App\Models\Supplier;
 use App\Repositories\PurchaseRepository;
 use App\Services\PurchaseService;
+use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,17 @@ class PurchaseController extends Controller
     public function __construct(
         private PurchaseService    $service,
         private PurchaseRepository $repo,
+        private SettingService     $settings,
     ) {}
+
+    /**
+     * Number of days after the purchase date during which a purchase
+     * remains editable. Configurable via Settings → Purchases.
+     */
+    private function purchaseEditDays(): int
+    {
+        return (int) $this->settings->get('purchase_edit_days', 10);
+    }
 
     /* ─── List ─────────────────────────────────────────────── */
 
@@ -132,14 +143,19 @@ class PurchaseController extends Controller
 
     public function show(Purchase $purchase): View
     {
+        $purchase = $this->repo->find($purchase->id);
+
         return view('purchases.show', [
-            'purchase' => $this->repo->find($purchase->id),
+            'purchase'        => $purchase,
+            'editBlockReason' => $purchase->editBlockReason($this->purchaseEditDays()),
         ]);
     }
 
-    public function edit(Purchase $purchase): View
+    public function edit(Purchase $purchase): View|RedirectResponse
     {
-        abort_unless($purchase->isDraft(), 403, 'Only draft purchases can be edited.');
+        if ($reason = $purchase->editBlockReason($this->purchaseEditDays())) {
+            return redirect()->route('purchases.show', $purchase)->with('error', $reason);
+        }
 
         return view('purchases.edit', [
             'purchase'  => $this->repo->find($purchase->id),
@@ -152,7 +168,15 @@ class PurchaseController extends Controller
 
     public function update(UpdatePurchaseRequest $request, Purchase $purchase): JsonResponse
     {
-        $purchase = $this->service->update($purchase, $request->validated());
+        if ($reason = $purchase->editBlockReason($this->purchaseEditDays())) {
+            return response()->json(['message' => $reason], 422);
+        }
+
+        try {
+            $purchase = $this->service->update($purchase, $request->validated());
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
 
         return response()->json([
             'message'  => 'Purchase updated successfully.',

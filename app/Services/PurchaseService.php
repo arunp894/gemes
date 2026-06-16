@@ -108,16 +108,26 @@ class PurchaseService
     }
 
     /**
-     * Update an existing purchase. Lines are reconciled by full replace
-     * (simpler than diffing, safe because purchase_products has no FK
-     * dependents). Posted purchases are immutable except for `note` and
-     * `paid_amount`; the request validator already enforces this.
+     * Update an existing purchase. Behaviour depends on status:
+     *
+     *   - Draft:   full line-item replace (existing behaviour).
+     *   - Posted:  full line-item replace too, but the inventory ledger
+     *              must be kept in sync — see updatePostedLines(). Only
+     *              reachable when Purchase::editBlockReason() is null
+     *              (no sales against this purchase's stock yet, and
+     *              within the configurable edit window).
+     *   - Other (cancelled): lightweight note/paid_amount only, as a
+     *              defensive fallback — the controller's editBlockReason()
+     *              gate normally prevents reaching here at all.
      */
     public function update(Purchase $purchase, array $data): Purchase
     {
         return DB::transaction(function () use ($purchase, $data) {
 
-            // Allow editing only when the purchase is still a draft.
+            if ($purchase->isPosted()) {
+                return $this->updatePostedLines($purchase, $data);
+            }
+
             if (! $purchase->isDraft()) {
                 $purchase->note        = $data['note']        ?? $purchase->note;
                 $purchase->paid_amount = $data['paid_amount'] ?? $purchase->paid_amount;
@@ -132,7 +142,8 @@ class PurchaseService
             $purchase->note          = $data['note']          ?? $purchase->note;
             $purchase->paid_amount   = (float) ($data['paid_amount'] ?? 0);
 
-            // Hard reset of children — cheapest correct strategy.
+            // Hard reset of children — cheapest correct strategy. Safe for
+            // drafts: no stock movements exist yet to reference these rows.
             $purchase->lines()->each(function (PurchaseLine $l) {
                 $l->rows()->forceDelete();
                 $l->forceDelete();
@@ -145,6 +156,128 @@ class PurchaseService
 
             return $this->repo->refresh($purchase);
         });
+    }
+
+    /**
+     * Edit a POSTED purchase's lines while keeping the stock ledger in
+     * sync. Only reachable when editBlockReason() is null, which already
+     * guarantees no sale has consumed any of this purchase's stock — so
+     * every currently-posted piece's on-hand balance equals exactly its
+     * original IN quantity (modulo transfers, checked below).
+     *
+     * Strategy (ledger is append-only, ON DELETE RESTRICT on
+     * stock_movements.purchase_product_id, so old rows can't be hard
+     * deleted):
+     *   1. Verify none of the currently-posted pieces have moved away
+     *      from the purchase's location (e.g. via a stock transfer).
+     *   2. Emit OUT "purchase_cancel" movements reversing every current
+     *      piece at the OLD location.
+     *   3. Soft-delete the old lines/rows (kept for ledger history —
+     *      they remain valid FK targets for the movements above).
+     *   4. Update header fields and rebuild lines/rows from the new
+     *      payload via syncLines() + recalculate().
+     *   5. Emit fresh IN "purchase" movements for the new rows at the
+     *      (possibly updated) location.
+     */
+    private function updatePostedLines(Purchase $purchase, array $data): Purchase
+    {
+        $oldLocationId = (int) $purchase->location_id;
+        if (! $oldLocationId) {
+            throw new InvalidArgumentException('Cannot edit this purchase: it has no location set.');
+        }
+
+        $purchase->load('lines.rows');
+
+        // 1. Pre-flight — none of this purchase's pieces may have moved
+        //    away from the posting location (e.g. a stock transfer).
+        foreach ($purchase->lines as $line) {
+            foreach ($line->rows as $row) {
+                $qty = (int) $row->qty;
+                if ($qty <= 0) {
+                    continue;
+                }
+
+                $onHand = $this->stock->onHandForPiece($row->id, $oldLocationId);
+                if ($onHand < $qty) {
+                    throw new InvalidArgumentException(
+                        "Cannot edit this purchase: stock for one of its items has already moved "
+                        . "(on hand {$onHand}, expected {$qty}). Reverse the downstream movement first."
+                    );
+                }
+            }
+        }
+
+        // 2. Reverse every current piece at the old location.
+        foreach ($purchase->lines as $line) {
+            foreach ($line->rows as $row) {
+                $qty = (int) $row->qty;
+                if ($qty <= 0) {
+                    continue;
+                }
+
+                $this->stock->record([
+                    'purchase_product_id' => $row->id,
+                    'product_id'          => $line->product_id,
+                    'location_id'         => $oldLocationId,
+                    'direction'           => StockMovement::DIRECTION_OUT,
+                    'qty'                 => $qty,
+                    'reason'              => StockMovement::REASON_PURCHASE_CANCEL,
+                    'source_type'         => StockMovement::SOURCE_PURCHASE,
+                    'source_id'           => $purchase->id,
+                    'source_line_id'      => $line->id,
+                    'rack_id'             => $row->rack_id,
+                    'notes'               => 'Reversed for edit of purchase ' . $purchase->invoice_number,
+                ]);
+            }
+        }
+
+        // 3. Soft-delete the old lines/rows — kept for ledger history, but
+        //    excluded from $purchase->lines() / recalculate() going forward.
+        foreach ($purchase->lines as $line) {
+            $line->rows()->delete();
+            $line->delete();
+        }
+
+        // 4. Header fields + rebuild lines from the new payload.
+        $purchase->purchase_date = $data['purchase_date'] ?? $purchase->purchase_date;
+        $purchase->location_id   = $data['location_id']   ?? $purchase->location_id;
+        $purchase->tax_type      = $data['tax_type']      ?? $purchase->tax_type;
+        $purchase->note          = $data['note']          ?? $purchase->note;
+        $purchase->paid_amount   = (float) ($data['paid_amount'] ?? $purchase->paid_amount);
+        $purchase->save();
+
+        $this->syncLines($purchase, $data['lines'] ?? []);
+        $this->recalculate($purchase);
+
+        // 5. Post fresh IN movements for the new rows at the (possibly
+        //    updated) location.
+        $newLocationId = (int) ($purchase->location_id ?: $oldLocationId);
+        $purchase->load('lines.rows');
+
+        foreach ($purchase->lines as $line) {
+            foreach ($line->rows as $row) {
+                $qty = (int) $row->qty;
+                if ($qty <= 0) {
+                    continue;
+                }
+
+                $this->stock->record([
+                    'purchase_product_id' => $row->id,
+                    'product_id'          => $line->product_id,
+                    'location_id'         => $newLocationId,
+                    'direction'           => StockMovement::DIRECTION_IN,
+                    'qty'                 => $qty,
+                    'reason'              => StockMovement::REASON_PURCHASE,
+                    'source_type'         => StockMovement::SOURCE_PURCHASE,
+                    'source_id'           => $purchase->id,
+                    'source_line_id'      => $line->id,
+                    'rack_id'             => $row->rack_id,
+                    'movement_date'       => optional($purchase->purchase_date)->toDateString() ?? now()->toDateString(),
+                ]);
+            }
+        }
+
+        return $this->repo->refresh($purchase);
     }
 
     /**

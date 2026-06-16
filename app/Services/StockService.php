@@ -364,25 +364,46 @@ class StockService
     /**
      * Reverse a previously-posted purchase by emitting OUT counter-
      * movements. Used when a posted purchase is cancelled.
+     *
+     * Scoped to the purchase's CURRENTLY ACTIVE pieces only
+     * (Purchase::purchaseProductIds()) — if the purchase was edited after
+     * posting, superseded pieces were already reversed at edit time
+     * (PurchaseService::updatePostedLines()) and must be left alone here.
      */
     public function reversePurchasePosting(Purchase $purchase): void
     {
-        // Idempotency — already reversed?
-        if ($this->hasMovementsFromSource(StockMovement::SOURCE_PURCHASE, $purchase->id, StockMovement::REASON_PURCHASE_CANCEL)) {
+        $activePieceIds = $purchase->purchaseProductIds();
+        if (empty($activePieceIds)) {
             return;
         }
 
-        // Find the original IN rows by source so we know exactly what to
-        // counter. Don't re-derive from purchase_products — if the rows
-        // were edited between post and cancel, we'd corrupt the ledger.
+        // Find the original IN rows for the active pieces so we know
+        // exactly what to counter. Don't re-derive from purchase_products
+        // — if the rows were edited between post and cancel, we'd corrupt
+        // the ledger.
         $originals = StockMovement::query()
             ->where('source_type', StockMovement::SOURCE_PURCHASE)
             ->where('source_id', $purchase->id)
             ->where('reason', StockMovement::REASON_PURCHASE)
+            ->whereIn('purchase_product_id', $activePieceIds)
             ->get();
 
         if ($originals->isEmpty()) {
             return; // Nothing to reverse.
+        }
+
+        // Idempotency — have all of these active pieces already been
+        // reversed (e.g. a retried cancel)?
+        $reversedCount = StockMovement::query()
+            ->where('source_type', StockMovement::SOURCE_PURCHASE)
+            ->where('source_id', $purchase->id)
+            ->where('reason', StockMovement::REASON_PURCHASE_CANCEL)
+            ->whereIn('purchase_product_id', $originals->pluck('purchase_product_id')->unique())
+            ->distinct()
+            ->count('purchase_product_id');
+
+        if ($reversedCount >= $originals->pluck('purchase_product_id')->unique()->count()) {
+            return;
         }
 
         DB::transaction(function () use ($originals, $purchase) {
@@ -498,67 +519,93 @@ class StockService
             throw new RuntimeException('Cannot post sale: ' . implode(' ', $errors));
         }
 
-        DB::transaction(function () use ($sale) {
-            $sale->load('lines');
+        DB::transaction(fn () => $this->bookSaleLinesOut($sale));
+    }
 
-            foreach ($sale->lines as $line) {
-                $qty = (int) $line->qty;
-                if ($qty <= 0) {
-                    continue;
-                }
+    /**
+     * Re-book a sale's OUT movements after an in-window edit. Unlike
+     * recordSalePosting() this skips the source-level idempotency guard:
+     * the edit flow has already reversed the previous OUT movements
+     * (see reverseSaleForEdit), so the rebuilt lines must be booked fresh
+     * even though earlier REASON_SALE rows still exist for this sale.
+     *
+     * Availability is re-checked against the just-restored global pool.
+     */
+    public function recordSalePostingForEdit(Sale $sale): void
+    {
+        $errors = $this->checkSaleAvailability($sale);
+        if (! empty($errors)) {
+            throw new RuntimeException('Cannot save sale: ' . implode(' ', $errors));
+        }
 
-                if ($line->purchase_product_id) {
-                    // Exact piece specified — consume it from wherever it's held.
-                    $this->bookPieceOut(
-                        (int) $line->purchase_product_id,
-                        (int) $line->product_id,
-                        $qty,
-                        $sale,
-                        (int) $line->id
-                    );
-                    continue;
-                }
+        DB::transaction(fn () => $this->bookSaleLinesOut($sale));
+    }
 
-                // No specific piece — FIFO-allocate across available pieces
-                // of this product from the global pool. Snapshot the chosen
-                // first piece back onto the SaleLine so refunds reverse it.
-                $available = $this->availablePiecesForProductGlobal((int) $line->product_id);
-                $remaining = $qty;
-                $firstPpId = null;
+    /**
+     * Book OUT movements for every current (active) line of a sale.
+     * Shared core of recordSalePosting() and recordSalePostingForEdit().
+     */
+    private function bookSaleLinesOut(Sale $sale): void
+    {
+        $sale->load('lines');
 
-                foreach ($available as $ppId => $bal) {
-                    if ($remaining <= 0) break;
-                    $take = min((int) $bal, $remaining);
-                    if ($take <= 0) continue;
-
-                    $this->bookPieceOut($ppId, (int) $line->product_id, $take, $sale, (int) $line->id);
-
-                    if ($firstPpId === null) {
-                        $firstPpId = $ppId;
-                    }
-                    $remaining -= $take;
-                }
-
-                if ($remaining > 0) {
-                    // Should be unreachable given the availability check
-                    // above; bail loudly if math drifts.
-                    throw new RuntimeException(
-                        "FIFO allocation underflow on sale line #{$line->id}: {$remaining} units unfilled."
-                    );
-                }
-
-                // Tag the line with the first piece consumed so the show
-                // page has something useful to display and the reversal
-                // can find a starting point. Cost snapshot from the piece.
-                if ($firstPpId !== null) {
-                    $firstPiece = PurchaseProduct::find($firstPpId);
-                    SaleLine::where('id', $line->id)->update([
-                        'purchase_product_id' => $firstPpId,
-                        'cost_price'          => $firstPiece ? $firstPiece->price : $line->cost_price,
-                    ]);
-                }
+        foreach ($sale->lines as $line) {
+            $qty = (int) $line->qty;
+            if ($qty <= 0) {
+                continue;
             }
-        });
+
+            if ($line->purchase_product_id) {
+                // Exact piece specified — consume it from wherever it's held.
+                $this->bookPieceOut(
+                    (int) $line->purchase_product_id,
+                    (int) $line->product_id,
+                    $qty,
+                    $sale,
+                    (int) $line->id
+                );
+                continue;
+            }
+
+            // No specific piece — FIFO-allocate across available pieces
+            // of this product from the global pool. Snapshot the chosen
+            // first piece back onto the SaleLine so refunds reverse it.
+            $available = $this->availablePiecesForProductGlobal((int) $line->product_id);
+            $remaining = $qty;
+            $firstPpId = null;
+
+            foreach ($available as $ppId => $bal) {
+                if ($remaining <= 0) break;
+                $take = min((int) $bal, $remaining);
+                if ($take <= 0) continue;
+
+                $this->bookPieceOut($ppId, (int) $line->product_id, $take, $sale, (int) $line->id);
+
+                if ($firstPpId === null) {
+                    $firstPpId = $ppId;
+                }
+                $remaining -= $take;
+            }
+
+            if ($remaining > 0) {
+                // Should be unreachable given the availability check
+                // above; bail loudly if math drifts.
+                throw new RuntimeException(
+                    "FIFO allocation underflow on sale line #{$line->id}: {$remaining} units unfilled."
+                );
+            }
+
+            // Tag the line with the first piece consumed so the show
+            // page has something useful to display and the reversal
+            // can find a starting point. Cost snapshot from the piece.
+            if ($firstPpId !== null) {
+                $firstPiece = PurchaseProduct::find($firstPpId);
+                SaleLine::where('id', $line->id)->update([
+                    'purchase_product_id' => $firstPpId,
+                    'cost_price'          => $firstPiece ? $firstPiece->price : $line->cost_price,
+                ]);
+            }
+        }
     }
 
     /**
@@ -608,8 +655,59 @@ class StockService
     }
 
     /**
+     * Reverse the OUT movements for a specific set of (about-to-be-removed)
+     * sale lines during an in-window edit, returning their stock to the
+     * global pool via compensating IN rows (REASON_SALE_EDIT_REVERSE).
+     *
+     * Called by SaleService::update() BEFORE the old lines are soft-deleted
+     * and rebuilt, so recordSalePostingForEdit() then books the new lines
+     * against a correctly-restored pool. Because the reversal is scoped to
+     * the old line IDs and the new OUT rows reference the new line IDs, a
+     * later refund/cancel (which reverses only the sale's *active* lines)
+     * never double-counts the superseded movements.
+     */
+    public function reverseSaleForEdit(Sale $sale, array $lineIds): void
+    {
+        if (empty($lineIds)) {
+            return;
+        }
+
+        $originals = StockMovement::query()
+            ->where('source_type', StockMovement::SOURCE_SALE)
+            ->where('source_id', $sale->id)
+            ->where('reason', StockMovement::REASON_SALE)
+            ->whereIn('source_line_id', $lineIds)
+            ->get();
+
+        if ($originals->isEmpty()) {
+            return;
+        }
+
+        DB::transaction(function () use ($originals, $sale) {
+            foreach ($originals as $orig) {
+                $this->record([
+                    'purchase_product_id' => $orig->purchase_product_id,
+                    'product_id'          => $orig->product_id,
+                    'location_id'         => $orig->location_id,
+                    'direction'           => StockMovement::DIRECTION_IN,
+                    'qty'                 => $orig->qty,
+                    'reason'              => StockMovement::REASON_SALE_EDIT_REVERSE,
+                    'source_type'         => StockMovement::SOURCE_SALE,
+                    'source_id'           => $sale->id,
+                    'source_line_id'      => $orig->source_line_id,
+                    'notes'               => 'Reversed for edit of sale ' . $sale->sale_number,
+                ]);
+            }
+        });
+    }
+
+    /**
      * Reverse a posted sale's OUT movements by inserting matching INs.
      * Reason indicates whether the trigger was a refund or a cancellation.
+     *
+     * Scoped to the sale's CURRENTLY ACTIVE lines only — if the sale was
+     * edited after posting, the superseded lines were already reversed at
+     * edit time (reverseSaleForEdit) and must be left alone here.
      */
     public function reverseSalePosting(Sale $sale, string $reason): void
     {
@@ -627,6 +725,7 @@ class StockService
             ->where('source_type', StockMovement::SOURCE_SALE)
             ->where('source_id', $sale->id)
             ->where('reason', StockMovement::REASON_SALE)
+            ->whereIn('source_line_id', $sale->lines()->pluck('id'))
             ->get();
 
         if ($originals->isEmpty()) {

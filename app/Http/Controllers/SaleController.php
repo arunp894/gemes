@@ -16,8 +16,10 @@ use App\Models\SalePayment;
 use App\Models\User;
 use App\Repositories\SaleRepository;
 use App\Services\SaleService;
+use App\Services\SettingService;
 use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -30,7 +32,17 @@ class SaleController extends Controller
         private SaleService    $service,
         private SaleRepository $repo,
         private StockService   $stock,
+        private SettingService $settings,
     ) {}
+
+    /**
+     * Days after the sale date during which a sale remains editable.
+     * Configurable via Settings → Sales.
+     */
+    private function saleEditDays(): int
+    {
+        return (int) $this->settings->get('sale_edit_days', 2);
+    }
 
     /* ─── List ─────────────────────────────────────────────── */
 
@@ -41,6 +53,7 @@ class SaleController extends Controller
 
     public function data(Request $request): JsonResponse
     {
+        $editDays = $this->saleEditDays();
         $q = $this->repo->query();
 
         if ($status = $request->query('status')) {
@@ -102,14 +115,14 @@ class SaleController extends Controller
                 fn(Sale $s) =>
                 '<span class="badge ' . $s->statusBadgeClass() . ' fs-xxs">' . e($s->statusLabel()) . '</span>'
             )
-            ->addColumn('actions', function (Sale $s) {
+            ->addColumn('actions', function (Sale $s) use ($editDays) {
                 $canEdit   = auth()->user()?->hasPermission('sales.edit')   ?? false;
                 $canDelete = auth()->user()?->hasPermission('sales.delete') ?? false;
                 $canPost   = auth()->user()?->hasPermission('sales.post')   ?? false;
 
                 $html  = '<div class="d-flex gap-1 justify-content-center">';
                 $html .= '<a href="' . route('sales.show', $s) . '" class="btn btn-default btn-icon btn-sm" title="View"><i class="ti ti-eye fs-lg"></i></a>';
-                if ($canEdit && $s->isEditable()) {
+                if ($canEdit && $s->editBlockReason($editDays) === null) {
                     $html .= '<a href="' . route('sales.edit', $s) . '" class="btn btn-default btn-icon btn-sm" title="Edit"><i class="ti ti-edit fs-lg"></i></a>';
                 }
                 if ($canPost && $s->isDraft()) {
@@ -147,7 +160,7 @@ class SaleController extends Controller
         // Default channel for the POS terminal → 'pos'
         $channels       = Channel::active()->ordered()->get(['id', 'name', 'code', 'icon']);
         $defaultChannel = $channels->firstWhere('code', Channel::CODE_POS)
-                       ?? $channels->first();
+            ?? $channels->first();
 
         return view('sales.create', [
             'userLocations'        => $userLocations,
@@ -186,15 +199,19 @@ class SaleController extends Controller
 
     public function show(Sale $sale): View
     {
+        $sale = $this->repo->find($sale->id);
         return view('sales.show', [
-            'sale'           => $this->repo->find($sale->id),
-            'paymentMethods' => SalePayment::METHODS,
+            'sale'            => $sale,
+            'paymentMethods'  => SalePayment::METHODS,
+            'editBlockReason' => $sale->editBlockReason($this->saleEditDays()),
         ]);
     }
 
-    public function edit(Sale $sale): View
+    public function edit(Sale $sale): View|RedirectResponse
     {
-        abort_unless($sale->isEditable(), 403, 'Only draft sales can be edited.');
+        if ($reason = $sale->editBlockReason($this->saleEditDays())) {
+            return redirect()->route('sales.show', $sale)->with('error', $reason);
+        }
 
         /** @var User $user */
         $user          = auth()->user();
@@ -220,6 +237,10 @@ class SaleController extends Controller
 
     public function update(UpdateSaleRequest $request, Sale $sale): JsonResponse
     {
+        if ($reason = $sale->editBlockReason($this->saleEditDays())) {
+            return response()->json(['ok' => false, 'message' => $reason], 422);
+        }
+
         try {
             $sale = $this->service->update($sale, $request->validated());
 

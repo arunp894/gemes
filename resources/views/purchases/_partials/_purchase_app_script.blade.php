@@ -109,7 +109,7 @@ const perRowQty = 1;
                 } : {},
             },
             _highlight:    false,
-            _expanded: false,
+            _expanded: (l.rows || []).length > 1,
             product_id:    l.product_id,
             type:          l.type,
             package_name:  l.package_name,
@@ -224,9 +224,6 @@ const perRowQty = 1;
                 return line.rows.reduce((acc, r) => acc + this.rowNet(r), 0);
             },
             totalPieces(line) {
-                if (line.type === 'piece') {
-                    return line.rows.reduce((acc, r) => acc + (parseInt(r.qty, 10) || 0), 0);
-                }
                 return line.rows.reduce((acc, r) => acc + (parseInt(r.qty, 10) || 0), 0);
             },
 
@@ -340,13 +337,25 @@ const perRowQty = 1;
             rebuildRows(lineIdx) {
                 const line = this.form.lines[lineIdx];
                 const pkg  = line._product.packaging || {};
-                if (line.type === 'piece') return;
 
-                const outerN     = parseInt(pkg.outer_pack_contains, 10) || 1;
                 const innerN     = parseInt(pkg.inner_pack_contains, 10) || 1;
                 const packageQty = parseInt(line.package_qty, 10) || 1;
 
-                const expected = (line.type === 'box') ? packageQty : 1;
+                // Piece lines are ALWAYS a single inventory row (the
+                // parent row carries the inputs inline — no child rows).
+                // Only Box lines fan out into one child row per Pack Qty.
+                if (line.type === 'piece') {
+                    line.package_qty   = 1;
+                    line.package_name  = 'Piece';
+                    line.unit_contains = null;
+                } else {
+                    line.package_name  = pkg.inner_pack_name || 'Box';
+                    line.unit_contains = innerN;
+                }
+
+                // Pack Qty == desired inventory-row count for Box lines;
+                // Piece lines are pinned to exactly one row.
+                const expected = (line.type === 'piece') ? 1 : packageQty;
 
                 // Grow or shrink to `expected` rows, preserving existing data.
                 if (line.rows.length < expected) {
@@ -370,6 +379,13 @@ const perRowQty = 1;
                     }
                 } else if (line.rows.length > expected) {
                     line.rows.splice(expected);
+                }
+
+                // When a line ends up with more than one row, show them
+                // expanded by default so the change is immediately visible
+                // and editable.
+                if (line.rows.length > 1) {
+                    line._expanded = true;
                 }
             },
             focusFirstRow(li) {

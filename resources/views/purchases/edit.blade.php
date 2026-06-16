@@ -21,6 +21,17 @@
         </div>
     </div>
 
+    @if ($purchase->isPosted())
+        <div class="alert alert-info d-flex align-items-start gap-2">
+            <i class="ti ti-info-circle fs-lg mt-1"></i>
+            <div>
+                <strong>This purchase is already posted.</strong> Saving will adjust the stock ledger
+                accordingly &mdash; the current items are reversed and the new items are posted in their place.
+                This is only possible because no stock from this purchase has been sold yet.
+            </div>
+        </div>
+    @endif
+
     <form id="purchaseForm" novalidate @submit.prevent="submit(false)" :class="{ 'was-validated': wasValidated }">
         <div class="row g-3">
             <div class="col-xl-9">

@@ -22,12 +22,15 @@
         </div>
     </div>
 
-    @if (! $sale->isEditable())
-        <div class="alert alert-warning">
-            <i class="ti ti-alert-triangle me-1"></i>
-            Only draft sales can be edited. Use status actions on the show page for posted/completed sales.
+    @unless ($sale->isDraft())
+        <div class="alert alert-info d-flex gap-2 align-items-start">
+            <i class="ti ti-info-circle fs-18 mt-1 flex-shrink-0"></i>
+            <div>
+                You're editing a <strong>{{ $sale->statusLabel() }}</strong> sale. Inventory will be re-synced to match your
+                changes. The <strong>sale date</strong>, <strong>sale number</strong> and <strong>customer</strong> are locked.
+            </div>
         </div>
-    @endif
+    @endunless
 
     <form id="saleForm" novalidate @submit.prevent="submit('draft')" :class="{ 'was-validated': wasValidated }">
 
@@ -38,7 +41,7 @@
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">Sale Date</label>
-                                <input type="date" class="form-control" v-model="form.sale_date">
+                                <input type="date" class="form-control bg-light" v-model="form.sale_date" readonly title="Sale date is locked">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Sale #</label>
@@ -191,33 +194,13 @@
 
             <div class="col-xl-4">
                 <div class="card">
-                    <div class="card-header border-light"><h5 class="card-title mb-0">Customer</h5></div>
+                    <div class="card-header border-light d-flex align-items-center justify-content-between">
+                        <h5 class="card-title mb-0">Customer</h5>
+                        <span class="badge badge-soft-secondary"><i class="ti ti-lock me-1"></i>Locked</span>
+                    </div>
                     <div class="card-body">
-                        <div v-if="!selectedCustomer" class="position-relative">
-                            <input type="text" class="form-control" v-model="customerSearch"
-                                placeholder="Search name / phone / code…"
-                                @input="onCustomerSearchInput" @focus="onCustomerSearchInput">
-                            <ul v-if="customerResults.length" class="list-group position-absolute w-100 mt-1 shadow-sm"
-                                style="z-index: 1050; max-height: 280px; overflow-y: auto;">
-                                <li v-for="c in customerResults" :key="c.id"
-                                    class="list-group-item list-group-item-action"
-                                    @mousedown.prevent="selectCustomer(c)" style="cursor: pointer;">
-                                    <div class="fw-semibold">@{{ c.display_name }}</div>
-                                    <small class="text-muted">@{{ c.customer_code }}<span v-if="c.phone"> · @{{ c.phone }}</span></small>
-                                </li>
-                            </ul>
-                        </div>
-                        <div v-else>
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <div class="fw-semibold">@{{ selectedCustomer.display_name }}</div>
-                                    <small class="text-muted">@{{ selectedCustomer.customer_code }}</small>
-                                </div>
-                                <button type="button" class="btn btn-default btn-icon btn-sm" @click="clearCustomer">
-                                    <i class="ti ti-x"></i>
-                                </button>
-                            </div>
-                        </div>
+                        <div class="fw-semibold">@{{ selectedCustomer ? selectedCustomer.display_name : '—' }}</div>
+                        <small class="text-muted">@{{ selectedCustomer ? selectedCustomer.customer_code : '' }}</small>
                     </div>
                 </div>
 
@@ -254,6 +237,28 @@
 </div>
 @endsection
 
+@php
+    $saleLines = $sale->lines->map(fn ($l) => [
+        'product_id'          => $l->product_id,
+        'product_title'       => optional($l->product)->title,
+        'product_sku'         => optional($l->product)->sku,
+        'purchase_product_id' => $l->purchase_product_id,
+        'barcode'             => $l->barcode,
+        'qty'                 => $l->qty,
+        'unit_price'          => (float) $l->unit_price,
+        'cost_price'          => (float) $l->cost_price,
+        'tax_percent'         => (float) $l->tax_percent,
+        'discount_percent'    => (float) $l->discount_percent,
+    ]);
+    $saleCustomer = $sale->customer ? [
+        'id'            => $sale->customer->id,
+        'customer_code' => $sale->customer->customer_code,
+        'display_name'  => $sale->customer->display_name,
+        'phone'         => $sale->customer->phone,
+        'email'         => $sale->customer->email,
+    ] : null;
+@endphp
+
 @push('scripts')
 <script>
 $(function () {
@@ -273,13 +278,7 @@ $(function () {
 
             customerSearch: '',
             customerResults: [],
-            selectedCustomer: @json($sale->customer ? [
-                'id'            => $sale->customer->id,
-                'customer_code' => $sale->customer->customer_code,
-                'display_name'  => $sale->customer->display_name,
-                'phone'         => $sale->customer->phone,
-                'email'         => $sale->customer->email,
-            ] : null),
+            selectedCustomer: @json($saleCustomer),
             _customerTimer: null,
 
             scannerMessage: '',
@@ -296,18 +295,7 @@ $(function () {
                 tax_type:            @json($sale->tax_type),
                 shipping_charge:     @json((float) $sale->shipping_charge),
                 note:                @json($sale->note),
-                lines: @json($sale->lines->map(fn ($l) => [
-                    'product_id'          => $l->product_id,
-                    'product_title'       => optional($l->product)->title,
-                    'product_sku'         => optional($l->product)->sku,
-                    'purchase_product_id' => $l->purchase_product_id,
-                    'barcode'             => $l->barcode,
-                    'qty'                 => $l->qty,
-                    'unit_price'          => (float) $l->unit_price,
-                    'cost_price'          => (float) $l->cost_price,
-                    'tax_percent'         => (float) $l->tax_percent,
-                    'discount_percent'    => (float) $l->discount_percent,
-                ])),
+                lines:    @json($saleLines),
                 payments: [],
             },
             errors: {},

@@ -40,6 +40,7 @@ class StockMovement extends Model
     public const REASON_SALE                = 'sale';
     public const REASON_SALE_RETURN         = 'sale_return';
     public const REASON_SALE_CANCEL         = 'sale_cancel';
+    public const REASON_SALE_EDIT_REVERSE   = 'sale_edit_reverse';
     public const REASON_TRANSFER_OUT        = 'transfer_out';
     public const REASON_TRANSFER_IN         = 'transfer_in';
     public const REASON_TRANSFER_CANCEL_OUT = 'transfer_cancel_out';
@@ -53,6 +54,7 @@ class StockMovement extends Model
         self::REASON_SALE                => 'Sale',
         self::REASON_SALE_RETURN         => 'Sale Return',
         self::REASON_SALE_CANCEL         => 'Sale Cancelled',
+        self::REASON_SALE_EDIT_REVERSE   => 'Sale Edited (stock returned)',
         self::REASON_TRANSFER_OUT        => 'Transfer Out',
         self::REASON_TRANSFER_IN         => 'Transfer In',
         self::REASON_TRANSFER_CANCEL_OUT => 'Transfer Cancelled',
@@ -209,6 +211,7 @@ class StockMovement extends Model
             self::REASON_ADJUSTMENT_IN,
             self::REASON_SALE_RETURN,
             self::REASON_SALE_CANCEL,
+            self::REASON_SALE_EDIT_REVERSE,
             self::REASON_OPENING            => 'badge-soft-success',
 
             self::REASON_SALE,

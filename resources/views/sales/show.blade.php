@@ -23,13 +23,24 @@
     </div>
 
     {{-- Actions bar --}}
+    @if (session('error'))
+        <div class="alert alert-warning alert-dismissible fade show">
+            <i class="ti ti-alert-triangle me-1"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <div class="card">
         <div class="card-body d-flex flex-wrap gap-2">
             @permission('sales.edit')
-                @if ($sale->isEditable())
+                @if (! $editBlockReason)
                     <a href="{{ route('sales.edit', $sale) }}" class="btn btn-primary">
                         <i class="ti ti-edit me-1"></i> Edit
                     </a>
+                @else
+                    <button class="btn btn-soft-secondary" disabled title="{{ $editBlockReason }}">
+                        <i class="ti ti-edit-off me-1"></i> Edit
+                    </button>
                 @endif
             @endpermission
 
@@ -304,6 +315,42 @@
                     </dl>
                 </div>
             </div>
+
+            {{-- Edit History --}}
+            @if ($sale->editLogs->isNotEmpty())
+            <div class="card">
+                <div class="card-header border-light d-flex align-items-center gap-2">
+                    <i class="ti ti-history text-muted"></i>
+                    <h5 class="card-title mb-0">Edit History</h5>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        @foreach ($sale->editLogs as $log)
+                            <li class="list-group-item px-3 py-2">
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-semibold small">{{ $log->editor->name ?? 'Unknown user' }}</span>
+                                    <small class="text-muted">{{ optional($log->created_at)->format('d M Y, h:i A') }}</small>
+                                </div>
+                                @if (!empty($log->changes))
+                                    <ul class="list-unstyled mb-0 mt-1 small text-muted">
+                                        @foreach ($log->changes as $field => $diff)
+                                            <li>
+                                                <code>{{ $field }}</code>:
+                                                <span class="text-decoration-line-through">{{ \Illuminate\Support\Str::limit((string) ($diff['from'] ?? '—'), 30) }}</span>
+                                                <i class="ti ti-arrow-right mx-1"></i>
+                                                <span>{{ \Illuminate\Support\Str::limit((string) ($diff['to'] ?? '—'), 30) }}</span>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <small class="text-muted">No field changes recorded.</small>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+            @endif
         </div>
     </div>
 </div>

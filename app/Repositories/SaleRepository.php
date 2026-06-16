@@ -41,6 +41,7 @@ class SaleRepository
             'payments.creator:id,name',
             'creator:id,name',
             'updater:id,name',
+            'editLogs.editor:id,name',
         ])->find($id);
     }
 

@@ -18,8 +18,11 @@ class UpdatePurchaseRequest extends FormRequest
         /** @var Purchase $purchase */
         $purchase = $this->route('purchase');
 
-        // Posted/cancelled purchases can only edit the lightweight fields.
-        if ($purchase && ! $purchase->isDraft()) {
+        // Cancelled purchases only reach validation defensively — the
+        // controller's editBlockReason() gate normally redirects/blocks
+        // before this. Drafts and editable Posted purchases (no sales yet,
+        // within the edit window) both get the full line-item ruleset.
+        if ($purchase && $purchase->isCancelled()) {
             return [
                 'note'        => ['nullable', 'string'],
                 'paid_amount' => ['nullable', 'numeric', 'min:0'],

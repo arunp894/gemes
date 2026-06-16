@@ -32,6 +32,12 @@ class SaveSettingsRequest extends FormRequest
             'paypal_client_id'  => ['nullable', 'string', 'max:255'],
             'paypal_secret'     => ['nullable', 'string', 'max:255'],
             'paypal_webhook_id' => ['nullable', 'string', 'max:255'],
+
+            // Purchases
+            'purchase_edit_days' => ['nullable', 'integer', 'min:0', 'max:365'],
+
+            // Sales
+            'sale_edit_days'     => ['nullable', 'integer', 'min:0', 'max:365'],
         ];
     }
 }

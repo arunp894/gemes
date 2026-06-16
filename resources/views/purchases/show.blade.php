@@ -15,7 +15,7 @@
         </div>
         <div class="text-end d-flex gap-1 align-items-center">
             @permission('purchases.edit')
-                @if ($purchase->isDraft())
+                @if (! $editBlockReason)
                     <a href="{{ route('purchases.edit', $purchase) }}" class="btn btn-soft-primary btn-sm">
                         <i class="ti ti-edit me-1"></i> Edit
                     </a>
@@ -35,6 +35,29 @@
             </a>
         </div>
     </div>
+
+    @if (session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @if (session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
+    @permission('purchases.edit')
+        @if ($editBlockReason && ! $purchase->isCancelled())
+            <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
+                <i class="ti ti-lock fs-lg"></i>
+                <div><strong>Editing locked:</strong> {{ $editBlockReason }}</div>
+            </div>
+        @endif
+    @endpermission
 
     <div class="row g-3">
 
@@ -186,16 +209,18 @@
 @push('scripts')
 <script>
 (function () {
-    const btn = document.getElementById('postBtn');
-    if (!btn) return;
-    btn.addEventListener('click', function () {
-        if (!confirm('Post this purchase? Posted purchases cannot be edited.')) return;
-        const csrf = document.querySelector('meta[name="csrf-token"]').content;
-        fetch(`/purchases/${btn.dataset.id}/post`, {
-            method: 'PATCH',
-            headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-        }).then(r => r.json()).then(() => window.location.reload());
-    });
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+
+    const postBtn = document.getElementById('postBtn');
+    if (postBtn) {
+        postBtn.addEventListener('click', function () {
+            if (!confirm('Post this purchase?')) return;
+            fetch(`/purchases/${postBtn.dataset.id}/post`, {
+                method: 'PATCH',
+                headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+            }).then(r => r.json()).then(() => window.location.reload());
+        });
+    }
 })();
 </script>
 @endpush

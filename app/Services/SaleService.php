@@ -7,6 +7,7 @@ use App\Models\Location;
 use App\Models\Product;
 use App\Models\PurchaseProduct;
 use App\Models\Sale;
+use App\Models\SaleEditLog;
 use App\Models\SaleLine;
 use App\Models\SalePayment;
 use App\Models\StockMovement;
@@ -107,44 +108,154 @@ class SaleService
     }
 
     /**
-     * Update an existing sale. Drafts can be fully re-saved; non-drafts
-     * only let through `note` and `shipping_charge` changes (the request
-     * validator should already enforce this).
+     * Update an existing sale.
+     *
+     *   - Draft   : full line-item re-save; no stock impact.
+     *   - Posted  : full line-item re-save WITH ledger sync — the old OUT
+     *               movements are reversed and fresh ones booked for the
+     *               rebuilt lines (see updatePostedLines). Only reachable
+     *               within the configurable edit window; the controller
+     *               gates this via Sale::editBlockReason().
+     *   - Other   : defensive note/shipping-only fallback (the controller
+     *               gate normally prevents reaching here at all).
+     *
+     * sale_date, sale_number and customer_id are NEVER changed by an edit —
+     * they're locked once the sale exists. Existing payments are preserved.
+     *
+     * Every successful edit writes a SaleEditLog row (who / when / diff).
      */
     public function update(Sale $sale, array $data): Sale
     {
         return DB::transaction(function () use ($sale, $data) {
+            $before = $this->editSnapshot($sale);
 
-            if (! $sale->isEditable()) {
+            if ($sale->isPosted() || $sale->isCompleted()) {
+                $this->updatePostedLines($sale, $data);
+            } elseif ($sale->isDraft()) {
+                $this->updateDraftLines($sale, $data);
+            } else {
+                // Defensive: refunded / cancelled — note + shipping only.
                 $sale->note            = $data['note']            ?? $sale->note;
                 $sale->shipping_charge = (float) ($data['shipping_charge'] ?? $sale->shipping_charge);
                 $sale->save();
                 $this->recalculate($sale);
-                return $this->repo->refresh($sale);
             }
 
-            $sale->sale_date       = $data['sale_date']       ?? $sale->sale_date;
-            $sale->customer_id     = $data['customer_id']     ?? $sale->customer_id;
-            $sale->location_id     = $data['location_id']     ?? $sale->location_id;
-            $sale->channel_id      = array_key_exists('channel_id', $data) ? $data['channel_id'] : $sale->channel_id;
-            $sale->salesperson_id  = $data['salesperson_id']  ?? $sale->salesperson_id;
-            $sale->tax_type        = $data['tax_type']        ?? $sale->tax_type;
-            $sale->shipping_charge = (float) ($data['shipping_charge'] ?? 0);
-            $sale->note            = $data['note']            ?? null;
-
-            // Hard reset of children — simplest correct strategy.
-            $sale->lines()->each(function (SaleLine $l) {
-                $l->forceDelete();
-            });
-
-            $sale->save();
-
-            $this->syncLines($sale, $data['lines'] ?? []);
-            $this->syncPayments($sale, $data['payments'] ?? [], replace: true);
-            $this->recalculate($sale);
+            $this->logEdit($sale, $before);
 
             return $this->repo->refresh($sale);
         });
+    }
+
+    /**
+     * Draft re-save: rebuild lines from scratch (safe — drafts have no
+     * stock movements). sale_date and customer stay locked.
+     */
+    private function updateDraftLines(Sale $sale, array $data): void
+    {
+        $sale->location_id     = $data['location_id']     ?? $sale->location_id;
+        $sale->channel_id      = array_key_exists('channel_id', $data) ? $data['channel_id'] : $sale->channel_id;
+        $sale->salesperson_id  = $data['salesperson_id']  ?? $sale->salesperson_id;
+        $sale->tax_type        = $data['tax_type']        ?? $sale->tax_type;
+        $sale->shipping_charge = (float) ($data['shipping_charge'] ?? 0);
+        $sale->note            = $data['note']            ?? null;
+
+        // Hard reset of children — simplest correct strategy for drafts.
+        $sale->lines()->each(fn(SaleLine $l) => $l->forceDelete());
+        $sale->save();
+
+        $this->syncLines($sale, $data['lines'] ?? []);
+        // Only touch payments if the caller actually sent them, so the edit
+        // form (which omits payments) never wipes existing ones.
+        if (array_key_exists('payments', $data)) {
+            $this->syncPayments($sale, $data['payments'], replace: true);
+        }
+        $this->recalculate($sale);
+    }
+
+    /**
+     * Posted re-save with stock-ledger sync. Mirrors PurchaseService::
+     * updatePostedLines() in spirit: reverse the current OUT movements,
+     * soft-delete the old lines (kept as ledger FK targets), rebuild from
+     * the new payload, then book fresh OUT movements for the new lines.
+     *
+     * Payments are preserved; sale_date and customer stay locked. If the
+     * rebuilt lines can't be covered by stock, recordSalePostingForEdit()
+     * throws and the whole transaction rolls back.
+     */
+    private function updatePostedLines(Sale $sale, array $data): void
+    {
+        $sale->load('lines');
+        $oldLineIds = $sale->lines->pluck('id')->all();
+
+        // 1. Return the old stock to the pool.
+        $this->stock->reverseSaleForEdit($sale, $oldLineIds);
+
+        // 2. Soft-delete the old lines (movements still reference them).
+        $sale->lines()->each(fn(SaleLine $l) => $l->delete());
+
+        // 3. Header fields (sale_date + customer intentionally locked).
+        $sale->location_id     = $data['location_id']     ?? $sale->location_id;
+        $sale->channel_id      = array_key_exists('channel_id', $data) ? $data['channel_id'] : $sale->channel_id;
+        $sale->salesperson_id  = $data['salesperson_id']  ?? $sale->salesperson_id;
+        $sale->tax_type        = $data['tax_type']        ?? $sale->tax_type;
+        $sale->shipping_charge = (float) ($data['shipping_charge'] ?? 0);
+        $sale->note            = $data['note']            ?? null;
+        $sale->save();
+
+        // 4. Rebuild lines + totals (balance recomputed vs existing payments).
+        $this->syncLines($sale, $data['lines'] ?? []);
+        $this->recalculate($sale);
+
+        // A completed sale that now carries an outstanding balance (e.g. the
+        // edit raised the total above what was paid) can no longer be
+        // "completed" — step it back to posted so the status stays truthful.
+        if ($sale->isCompleted() && (float) $sale->balance_due > 0.0001) {
+            $sale->status = Sale::STATUS_POSTED;
+            $sale->save();
+        }
+
+        // 5. Book fresh OUT movements for the new lines.
+        $this->stock->recordSalePostingForEdit($sale);
+    }
+
+    /* ─── Edit logging ────────────────────────── */
+
+    private function editSnapshot(Sale $sale): array
+    {
+        $sale->loadMissing('lines');
+
+        return [
+            'tax_type'        => $sale->tax_type,
+            'location_id'     => $sale->location_id,
+            'channel_id'      => $sale->channel_id,
+            'salesperson_id'  => $sale->salesperson_id,
+            'shipping_charge' => (float) $sale->shipping_charge,
+            'note'            => $sale->note,
+            'grand_total'     => (float) $sale->grand_total,
+            'line_count'      => $sale->lines->count(),
+        ];
+    }
+
+    private function logEdit(Sale $sale, array $before): void
+    {
+        $after = $this->editSnapshot($sale->fresh());
+
+        $changes = [];
+        foreach ($before as $field => $oldValue) {
+            $newValue = $after[$field] ?? null;
+            if ($oldValue !== $newValue) {
+                $changes[$field] = ['from' => $oldValue, 'to' => $newValue];
+            }
+        }
+
+        SaleEditLog::create([
+            'sale_id'    => $sale->id,
+            'user_id'    => auth()->id(),
+            'action'     => 'updated',
+            'changes'    => $changes ?: null,
+            'ip_address' => request()->ip(),
+        ]);
     }
 
     /* ─── Status transitions ──────────────────────────────── */
@@ -226,8 +337,8 @@ class SaleService
     public function delete(Sale $sale): void
     {
         DB::transaction(function () use ($sale) {
-            $sale->lines()->each(fn (SaleLine $l) => $l->delete());
-            $sale->payments()->each(fn (SalePayment $p) => $p->delete());
+            $sale->lines()->each(fn(SaleLine $l) => $l->delete());
+            $sale->payments()->each(fn(SalePayment $p) => $p->delete());
             $sale->delete();
         });
     }
@@ -312,7 +423,7 @@ class SaleService
     private function syncPayments(Sale $sale, array $payments, bool $replace = false): void
     {
         if ($replace) {
-            $sale->payments()->each(fn (SalePayment $p) => $p->forceDelete());
+            $sale->payments()->each(fn(SalePayment $p) => $p->forceDelete());
         }
 
         foreach ($payments as $row) {

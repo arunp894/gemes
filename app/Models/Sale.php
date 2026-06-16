@@ -153,11 +153,26 @@ class Sale extends Model
 
     /* ─── Scopes ───────────────────────────────────────────── */
 
-    public function scopeDraft($query)     { return $query->where('status', self::STATUS_DRAFT); }
-    public function scopePosted($query)    { return $query->where('status', self::STATUS_POSTED); }
-    public function scopeCompleted($query) { return $query->where('status', self::STATUS_COMPLETED); }
-    public function scopeRefunded($query)  { return $query->where('status', self::STATUS_REFUNDED); }
-    public function scopeCancelled($query) { return $query->where('status', self::STATUS_CANCELLED); }
+    public function scopeDraft($query)
+    {
+        return $query->where('status', self::STATUS_DRAFT);
+    }
+    public function scopePosted($query)
+    {
+        return $query->where('status', self::STATUS_POSTED);
+    }
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', self::STATUS_COMPLETED);
+    }
+    public function scopeRefunded($query)
+    {
+        return $query->where('status', self::STATUS_REFUNDED);
+    }
+    public function scopeCancelled($query)
+    {
+        return $query->where('status', self::STATUS_CANCELLED);
+    }
 
     public function scopeBetween($query, $from, $to)
     {
@@ -217,17 +232,92 @@ class Sale extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    public function editLogs(): HasMany
+    {
+        return $this->hasMany(SaleEditLog::class)->latest();
+    }
+
     /* ─── Status helpers ───────────────────────────────────── */
 
-    public function isDraft():     bool { return $this->status === self::STATUS_DRAFT; }
-    public function isPosted():    bool { return $this->status === self::STATUS_POSTED; }
-    public function isCompleted(): bool { return $this->status === self::STATUS_COMPLETED; }
-    public function isRefunded():  bool { return $this->status === self::STATUS_REFUNDED; }
-    public function isCancelled(): bool { return $this->status === self::STATUS_CANCELLED; }
+    public function isDraft(): bool
+    {
+        return $this->status === self::STATUS_DRAFT;
+    }
+    public function isPosted(): bool
+    {
+        return $this->status === self::STATUS_POSTED;
+    }
+    public function isCompleted(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED;
+    }
+    public function isRefunded(): bool
+    {
+        return $this->status === self::STATUS_REFUNDED;
+    }
+    public function isCancelled(): bool
+    {
+        return $this->status === self::STATUS_CANCELLED;
+    }
 
     public function isEditable(): bool
     {
         return $this->isDraft();
+    }
+
+    /* ─── Edit eligibility (configurable window) ───────────── */
+
+    /**
+     * Last moment this sale can still be edited: sale date (falling back
+     * to created_at) plus the configurable edit window, end-of-day.
+     */
+    public function editWindowEndsAt(int $editDays): Carbon
+    {
+        $reference = $this->sale_date ?? $this->created_at ?? now();
+
+        return Carbon::parse($reference)->startOfDay()->addDays($editDays)->endOfDay();
+    }
+
+    public function isEditWindowExpired(int $editDays): bool
+    {
+        return now()->greaterThan($this->editWindowEndsAt($editDays));
+    }
+
+    /**
+     * Single entry point for the "can this sale still be edited?" decision.
+     * Returns null when editing is allowed, or a human-readable reason
+     * (suitable for a flash message / alert) when it is not.
+     *
+     * Rules:
+     *   - Drafts are always editable (no stock impact, sale not yet "made").
+     *   - Posted sales are editable only within the configurable window;
+     *     SaleService re-syncs the stock ledger on save.
+     *   - Completed / refunded / cancelled sales are locked.
+     *
+     * $editDays is read from the `sale_edit_days` app setting.
+     */
+    public function editBlockReason(int $editDays): ?string
+    {
+        if ($this->isDraft()) {
+            return null;
+        }
+
+        // if ($this->isCompleted()) {
+        //     return 'Completed sales cannot be edited.';
+        // }
+        if ($this->isRefunded()) {
+            return 'Refunded sales cannot be edited.';
+        }
+        if ($this->isCancelled()) {
+            return 'Cancelled sales cannot be edited.';
+        }
+
+        if ($this->isEditWindowExpired($editDays)) {
+            $unit = $editDays === 1 ? 'day' : 'days';
+            return "This sale can no longer be edited - it is older than {$editDays} {$unit}.";
+        }
+
+        return null;
     }
 
     public function isImported(): bool

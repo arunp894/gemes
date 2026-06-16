@@ -40,6 +40,12 @@
               <button class="nav-link active text-start" id="general-tab" data-bs-toggle="pill" data-bs-target="#general" type="button">
                 <i class="ti ti-world me-2"></i> General
               </button>
+              <button class="nav-link text-start" id="purchases-tab" data-bs-toggle="pill" data-bs-target="#purchases" type="button">
+                <i class="ti ti-shopping-cart me-2"></i> Purchases
+              </button>
+              <button class="nav-link text-start" id="sales-tab" data-bs-toggle="pill" data-bs-target="#sales" type="button">
+                <i class="ti ti-receipt me-2"></i> Sales
+              </button>
               <button class="nav-link text-start" id="paypal-tab" data-bs-toggle="pill" data-bs-target="#paypal" type="button">
                 <i class="ti ti-brand-paypal me-2"></i> PayPal
               </button>
@@ -156,6 +162,73 @@
                         </div>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {{-- ═══════════════════════ PURCHASES ══════════════════════ --}}
+          <div class="tab-pane fade" id="purchases" role="tabpanel">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="card-title mb-0"><i class="ti ti-shopping-cart me-2 text-muted"></i>Purchase Settings</h5>
+              </div>
+              <div class="card-body">
+
+                <h6 class="text-muted fw-semibold mb-3 text-uppercase small">Edit Window</h6>
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold">Purchase Edit Window (days)</label>
+                    <input type="number" name="purchase_edit_days" class="form-control @error('purchase_edit_days') is-invalid @enderror"
+                      value="{{ old('purchase_edit_days', $all['purchase_edit_days'] ?? 10) }}" min="0" max="365">
+                    <div class="form-text">
+                      A purchase can only be edited within this many days of its purchase date.
+                    </div>
+                    @error('purchase_edit_days')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                  </div>
+                </div>
+
+                <div class="alert alert-info border-0 d-flex gap-2 align-items-start mb-0">
+                  <i class="ti ti-info-circle fs-xl mt-1 flex-shrink-0"></i>
+                  <div>
+                    A purchase also becomes locked for editing as soon as any of its stock has been sold &mdash;
+                    regardless of this window &mdash; to keep the inventory ledger from going out of sync.
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          {{-- ═══════════════════════ SALES ═════════════════════════ --}}
+          <div class="tab-pane fade" id="sales" role="tabpanel">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="card-title mb-0"><i class="ti ti-receipt me-2 text-muted"></i>Sales Settings</h5>
+              </div>
+              <div class="card-body">
+
+                <h6 class="text-muted fw-semibold mb-3 text-uppercase small">Edit Window</h6>
+                <div class="row">
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold">Sale Edit Window (days)</label>
+                    <input type="number" name="sale_edit_days" class="form-control @error('sale_edit_days') is-invalid @enderror"
+                      value="{{ old('sale_edit_days', $all['sale_edit_days'] ?? 2) }}" min="0" max="365">
+                    <div class="form-text">
+                      A posted sale can only be edited within this many days of its sale date.
+                    </div>
+                    @error('sale_edit_days')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                  </div>
+                </div>
+
+                <div class="alert alert-info border-0 d-flex gap-2 align-items-start mb-0">
+                  <i class="ti ti-info-circle fs-xl mt-1 flex-shrink-0"></i>
+                  <div>
+                    Editing a posted sale automatically returns its stock to inventory and re-deducts it for the
+                    revised lines, keeping the ledger in sync. The sale date, sale number and customer can&rsquo;t be
+                    changed once a sale exists. Completed, refunded and cancelled sales are always locked.
                   </div>
                 </div>
 

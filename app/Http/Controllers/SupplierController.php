@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Requests\UpdateSupplierRequest;
+use App\Models\Purchase;
 use App\Models\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -196,7 +197,55 @@ class SupplierController extends Controller
     public function show(Supplier $supplier): View
     {
         $supplier->load(['creator', 'updater']);
-        return view('suppliers.show', compact('supplier'));
+
+        $purchaseStats = [
+            'count'  => $supplier->purchases()->count(),
+            'posted' => $supplier->purchases()->posted()->count(),
+            'total'  => (float) $supplier->purchases()->sum('grand_total'),
+            'due'    => (float) $supplier->purchases()->sum('due_amount'),
+        ];
+
+        return view('suppliers.show', compact('supplier', 'purchaseStats'));
+    }
+
+    /**
+     * DataTables AJAX endpoint — purchases belonging to this supplier.
+     * Powers the "Purchases" tab on the supplier profile page.
+     */
+    public function purchasesData(Request $request, Supplier $supplier): JsonResponse
+    {
+        $query = Purchase::query()
+            ->where('supplier_id', $supplier->id)
+            ->with(['location:id,name,location_code,type']);
+
+        if ($status = $request->query('status')) {
+            $query->where('status', $status);
+        }
+
+        return DataTables::eloquent($query)
+            ->addColumn('invoice_link', function (Purchase $p) {
+                return '<a href="' . route('purchases.show', $p) . '" class="link-reset fw-medium">'
+                    . e($p->invoice_number) . '</a>';
+            })
+            ->addColumn('location_label', function (Purchase $p) {
+                return $p->location
+                    ? '<span title="' . e($p->location->location_code) . '">' . e($p->location->name) . '</span>'
+                    : '<span class="text-muted">—</span>';
+            })
+            ->editColumn('purchase_date', fn (Purchase $p) => optional($p->purchase_date)->format('d M Y'))
+            ->editColumn('grand_total', fn (Purchase $p) => number_format((float) $p->grand_total, 2))
+            ->editColumn('paid_amount', fn (Purchase $p) => number_format((float) $p->paid_amount, 2))
+            ->editColumn('due_amount', fn (Purchase $p) => number_format((float) $p->due_amount, 2))
+            ->addColumn('status_badge', function (Purchase $p) {
+                return '<span class="badge ' . $p->statusBadgeClass() . '">' . $p->statusLabel() . '</span>';
+            })
+            ->addColumn('actions', function (Purchase $p) {
+                return '<div class="d-flex justify-content-center">'
+                    . '<a href="' . route('purchases.show', $p) . '" class="btn btn-sm btn-soft-secondary" title="View"><i class="ti ti-eye"></i></a>'
+                    . '</div>';
+            })
+            ->rawColumns(['invoice_link', 'location_label', 'status_badge', 'actions'])
+            ->toJson();
     }
 
     /**
