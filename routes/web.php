@@ -33,7 +33,7 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('store')->name('website.')->group(function () {
+Route::name('website.')->group(function () {
 
     Route::get('/',                   [WebsiteController::class, 'home'])->name('home');
     Route::get('/collections',        [WebsiteController::class, 'collections'])->name('collections');
@@ -77,6 +77,13 @@ Route::prefix('store')->name('website.')->group(function () {
             Route::patch('/change-password', [CustomerAccountController::class, 'changePassword'])->name('change-password');
         });
 });
+
+/*
+|--------------------------------------------------------------------------
+| Admin Panel — prefixed /admin
+|--------------------------------------------------------------------------
+*/
+Route::prefix('admin')->group(function () {
 
 /*
 |--------------------------------------------------------------------------
@@ -496,4 +503,6 @@ Route::middleware('auth')->group(function () {
     Route::resource('permissions', PermissionController::class)
         ->whereNumber('permission')
         ->middleware('role:admin');
+});
+
 });

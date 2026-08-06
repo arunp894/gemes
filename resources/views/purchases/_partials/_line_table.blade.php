@@ -32,7 +32,7 @@
                     <th style="width: 90px;">Qty</th>
                     <th style="width: 100px;">Carat</th>
                     <th style="width: 170px;">Barcode</th>
-                    <th style="width: 130px;">Rack</th>
+                    {{-- Rack column hidden --}}
                     <th style="width: 110px;">Price</th>
                     {{-- Tax % and Disc % hidden --}}
                     {{-- <th v-if="false" style="width: 130px;">Expiry</th> --}}
@@ -108,14 +108,7 @@
                                        v-model="line.rows[0].barcode"
                                        placeholder="optional">
                             </td>
-                            <td>
-                                <select class="form-select form-select-sm" v-model.number="line.rows[0].rack_id">
-                                    <option :value="null">—</option>
-                                    <option v-for="r in racks" :key="r.id" :value="r.id">
-                                        @{{ r.code }}
-                                    </option>
-                                </select>
-                            </td>
+                            {{-- Rack column hidden --}}
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
                                        v-model.number="line.rows[0].price">
@@ -136,7 +129,7 @@
                         {{-- Multi-row lines (Pack Qty > 1, either type): aggregate
                              readouts + expand/collapse toggle for the child rows. --}}
                         <template v-else>
-                            <td colspan="6" class="bg-light bg-opacity-25"
+                            <td colspan="5" class="bg-light bg-opacity-25"
     style="cursor: pointer;"
     @click="toggleExpand(li)">
                                 <div class="d-flex flex-wrap gap-3 small">
@@ -190,14 +183,7 @@
                                        placeholder="scan/type"
                                        @keydown.enter.prevent="focusNextRow(li, ri)">
                             </td>
-                            <td>
-                                <select class="form-select form-select-sm" v-model.number="row.rack_id">
-                                    <option :value="null">—</option>
-                                    <option v-for="r in racks" :key="r.id" :value="r.id">
-                                        @{{ r.code }}
-                                    </option>
-                                </select>
-                            </td>
+                            {{-- Rack column hidden --}}
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
                                        v-model.number="row.price">
@@ -215,7 +201,7 @@
                 </template>
 
                 <tr v-if="form.lines.length === 0">
-                    <td colspan="11" class="text-center text-muted py-4">
+                    <td colspan="10" class="text-center text-muted py-4">
                         <i class="ti ti-barcode fs-22 d-block mb-1 text-muted"></i>
                         Scan a barcode or search for a product to begin.
                     </td>
