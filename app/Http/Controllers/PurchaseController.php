@@ -375,4 +375,43 @@ class PurchaseController extends Controller
             'codes' => PurchaseProduct::previewLotCodes($supplier, $product, $count),
         ]);
     }
+
+    /* ─── Label printing ───────────────────────────── */
+
+    /**
+     * Printable barcode-label sheet for selected inventory rows on this
+     * purchase. Each label encodes the row's lot_code — always present
+     * and unique per physical unit, unlike `barcode`, which can repeat
+     * across a box of identical pieces (it identifies the product, not
+     * the piece). Read-only; writes nothing.
+     *
+     * Expects (GET, built client-side from the show page's row
+     * checkboxes + copies inputs):
+     *   items[N][id]     = purchase_product id
+     *   items[N][copies] = how many copies of that label to print
+     */
+    public function printLabels(Request $request, Purchase $purchase): View
+    {
+        $validIds = collect($purchase->purchaseProductIds());
+
+        $selections = collect($request->query('items', []))
+            ->filter(fn ($item) => isset($item['id']) && $validIds->contains((int) $item['id']))
+            ->mapWithKeys(fn ($item) => [
+                (int) $item['id'] => max(1, min(100, (int) ($item['copies'] ?? 1))),
+            ]);
+
+        $rows = PurchaseProduct::with('line.product')
+            ->whereIn('id', $selections->keys()->all())
+            ->get()
+            ->keyBy('id');
+
+        $labels = $selections->flatMap(
+            fn ($copies, $id) => $rows->has($id) ? array_fill(0, $copies, $rows[$id]) : []
+        )->values();
+
+        return view('purchases.labels', [
+            'purchase' => $purchase,
+            'labels'   => $labels,
+        ]);
+    }
 }

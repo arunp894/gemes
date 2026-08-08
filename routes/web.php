@@ -281,6 +281,8 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('purchase')->middleware('permission:purchases.post')->name('post');
         Route::patch('/{purchase}/cancel', [PurchaseController::class, 'cancel'])
             ->whereNumber('purchase')->middleware('permission:purchases.edit')->name('cancel');
+        Route::get('/{purchase}/print-labels', [PurchaseController::class, 'printLabels'])
+            ->whereNumber('purchase')->middleware('permission:purchases.view')->name('print-labels');
     });
     Route::resource('purchases', PurchaseController::class)->whereNumber('purchase')
         ->middleware([

@@ -84,6 +84,38 @@ class PurchaseProduct extends Model
         return $this->gross();
     }
 
+    /**
+     * Digit → letter cipher for printing a coded cost price on labels
+     * (standard jewellery-trade practice — staff can read the cost back
+     * off the tag, customers just see letters). Ten distinct letters,
+     * one per digit 0–9.
+     *
+     * @var array<string, string>
+     */
+    public const PRICE_CODE_MAP = [
+        '0' => 'S',
+        '1' => 'W',
+        '2' => 'O',
+        '3' => 'N',
+        '4' => 'D',
+        '5' => 'E',
+        '6' => 'R',
+        '7' => 'F',
+        '8' => 'U',
+        '9' => 'L',
+    ];
+
+    /**
+     * This row's price, rounded to the nearest whole rupee and run
+     * through PRICE_CODE_MAP. e.g. price 1234.56 -> "1235" -> "WOND".
+     */
+    public function priceCode(): string
+    {
+        $rounded = (string) (int) round((float) $this->price);
+
+        return strtr($rounded, self::PRICE_CODE_MAP);
+    }
+
     /* ─── Lot code generator ───────────────────────────────── */
 
     /**

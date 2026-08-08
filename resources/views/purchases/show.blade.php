@@ -92,10 +92,21 @@
                         </div>
                     </div>
 
+                    <div class="d-flex justify-content-end align-items-center gap-2 mb-2">
+                        <span class="text-muted small" id="labelSelectedCount">0 selected</span>
+                        <button type="button" class="btn btn-soft-primary btn-sm" id="printLabelsBtn" disabled>
+                            <i class="ti ti-tag me-1"></i> Print Labels
+                        </button>
+                    </div>
+                    <form id="printLabelsForm" method="GET" action="{{ route('purchases.print-labels', $purchase) }}" target="_blank" class="d-none"></form>
+
                     <div class="table-responsive">
                         <table class="table table-bordered align-middle mb-0">
                             <thead class="bg-light bg-opacity-25 text-uppercase fs-xxs">
                                 <tr>
+                                    <th style="width:36px;">
+                                        <input type="checkbox" class="form-check-input" id="labelSelectAll" title="Select all">
+                                    </th>
                                     <th>#</th>
                                     <th>Product</th>
                                     <th>Type</th>
@@ -108,12 +119,14 @@
                                     <th class="text-end">Price</th>
                                     {{-- Tax and Disc columns hidden --}}
                                     <th class="text-end">Net</th>
+                                    <th style="width:90px;">Copies</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($purchase->lines as $i => $line)
                                     {{-- Parent row --}}
                                     <tr class="table-light">
+                                        <td></td>
                                         <td class="fw-semibold">{{ $i + 1 }}</td>
                                         <td colspan="2">
                                             <div class="fw-semibold">{{ $line->product?->title }}</div>
@@ -125,11 +138,15 @@
                                         </td>
                                         <td colspan="5"></td>
                                         <td class="text-end fw-bold">{{ number_format((float) $line->total, 2) }}</td>
+                                        <td></td>
                                     </tr>
 
                                     {{-- Child rows (one per inventory unit) --}}
                                     @foreach ($line->rows as $ri => $row)
                                         <tr>
+                                            <td class="text-center">
+                                                <input type="checkbox" class="form-check-input js-label-row" value="{{ $row->id }}">
+                                            </td>
                                             <td></td>
                                             <td class="ps-4 text-muted small">
                                                 <i class="ti ti-corner-down-right me-1"></i>
@@ -144,6 +161,9 @@
                                             <td class="text-end">{{ number_format((float) $row->price, 2) }}</td>
                                             {{-- Tax and Disc columns hidden --}}
                                             <td class="text-end">{{ number_format($row->net(), 2) }}</td>
+                                            <td>
+                                                <input type="number" class="form-control form-control-sm js-label-copies" value="1" min="1" max="100" style="width:70px;">
+                                            </td>
                                         </tr>
                                     @endforeach
                                 @endforeach
@@ -221,6 +241,56 @@
                 method: 'PATCH',
                 headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
             }).then(r => r.json()).then(() => window.location.reload());
+        });
+    }
+
+    // Print labels: select rows + copies, submit to a new tab.
+    const rowChecks   = () => Array.from(document.querySelectorAll('.js-label-row'));
+    const selectAll   = document.getElementById('labelSelectAll');
+    const printBtn    = document.getElementById('printLabelsBtn');
+    const countLabel  = document.getElementById('labelSelectedCount');
+    const printForm   = document.getElementById('printLabelsForm');
+
+    function refreshLabelUI() {
+        const checked = rowChecks().filter(cb => cb.checked);
+        countLabel.textContent = checked.length + ' selected';
+        printBtn.disabled = checked.length === 0;
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            rowChecks().forEach(cb => { cb.checked = selectAll.checked; });
+            refreshLabelUI();
+        });
+    }
+
+    rowChecks().forEach(cb => cb.addEventListener('change', refreshLabelUI));
+
+    if (printBtn) {
+        printBtn.addEventListener('click', function () {
+            const checked = rowChecks().filter(cb => cb.checked);
+            if (checked.length === 0) return;
+
+            printForm.innerHTML = '';
+            checked.forEach(function (cb, idx) {
+                const tr = cb.closest('tr');
+                const copiesInput = tr ? tr.querySelector('.js-label-copies') : null;
+                const copies = copiesInput ? (parseInt(copiesInput.value, 10) || 1) : 1;
+
+                const idField = document.createElement('input');
+                idField.type = 'hidden';
+                idField.name = `items[${idx}][id]`;
+                idField.value = cb.value;
+                printForm.appendChild(idField);
+
+                const copiesField = document.createElement('input');
+                copiesField.type = 'hidden';
+                copiesField.name = `items[${idx}][copies]`;
+                copiesField.value = copies;
+                printForm.appendChild(copiesField);
+            });
+
+            printForm.submit();
         });
     }
 })();
