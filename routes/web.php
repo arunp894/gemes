@@ -275,6 +275,8 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:purchases.create')->name('search-products');
         Route::get('/preview-invoice-number', [PurchaseController::class, 'previewInvoiceNumber'])
             ->middleware('permission:purchases.create')->name('preview-invoice-number');
+        Route::get('/preview-lot-code', [PurchaseController::class, 'previewLotCode'])
+            ->middleware('permission:purchases.create')->name('preview-lot-code');
         Route::patch('/{purchase}/post', [PurchaseController::class, 'post'])
             ->whereNumber('purchase')->middleware('permission:purchases.post')->name('post');
         Route::patch('/{purchase}/cancel', [PurchaseController::class, 'cancel'])

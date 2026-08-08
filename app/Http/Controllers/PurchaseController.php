@@ -8,6 +8,7 @@ use App\Models\Barcode;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\Purchase;
+use App\Models\PurchaseProduct;
 use App\Models\Rack;
 use App\Models\Supplier;
 use App\Repositories\PurchaseRepository;
@@ -350,5 +351,28 @@ class PurchaseController extends Controller
         $next = Purchase::generateInvoiceNumber($supplier, \Carbon\Carbon::parse($date));
 
         return response()->json(['ok' => true, 'invoice_number' => $next]);
+    }
+
+    /**
+     * Preview the next lot code(s) for a supplier + product, optionally
+     * $count in a row (a Box line fans out into several inventory rows,
+     * each needing its own code). Read-only — the real codes are
+     * (re)generated inside the save transaction, same pattern as
+     * previewInvoiceNumber().
+     */
+    public function previewLotCode(Request $request): JsonResponse
+    {
+        $supplier = Supplier::find((int) $request->query('supplier_id'));
+        $product  = Product::find((int) $request->query('product_id'));
+        $count    = max(1, (int) $request->query('count', 1));
+
+        if (! $supplier || ! $product) {
+            return response()->json(['ok' => false, 'message' => 'Supplier or product not found.'], 404);
+        }
+
+        return response()->json([
+            'ok'    => true,
+            'codes' => PurchaseProduct::previewLotCodes($supplier, $product, $count),
+        ]);
     }
 }

@@ -4,15 +4,16 @@
        new Vue({ el: '#purchaseFormApp', data, methods })
 
      Configuration (interpolated via Blade above the script):
-       mode             create|edit
-       suppliersJson    JSON of supplier list   (id, name, company_name, supplier_code, invoice_prefix, gst_number)
-       racksJson        JSON of rack list       (id, code, name)
-       lookupUrl        GET endpoint: barcode -> product
-       searchUrl        GET endpoint: q -> products
-       previewUrl       GET endpoint: supplier_id, date -> next invoice number
-       submitUrl        POST/PUT endpoint for save
-       submitMethod     POST or PUT
-       existingPurchase null on create, hydrated Purchase model on edit
+       mode              create|edit
+       suppliersJson     JSON of supplier list   (id, name, company_name, supplier_code, invoice_prefix, gst_number)
+       racksJson         JSON of rack list       (id, code, name)
+       lookupUrl         GET endpoint: barcode -> product
+       searchUrl         GET endpoint: q -> products
+       previewUrl        GET endpoint: supplier_id, date -> next invoice number
+       lotCodePreviewUrl GET endpoint: supplier_id, product_id, count -> next lot code(s)
+       submitUrl         POST/PUT endpoint for save
+       submitMethod      POST or PUT
+       existingPurchase  null on create, hydrated Purchase model on edit
 --}}
 <script>
 (function () {
@@ -25,6 +26,7 @@
         lookupUrl:   @json($lookupUrl),
         searchUrl:   @json($searchUrl),
         previewUrl:  @json($previewUrl),
+        lotCodePreviewUrl: @json($lotCodePreviewUrl),
         submitUrl:   @json($submitUrl),
         submitMethod:@json($submitMethod),
         existing:    {!! $existingPurchase ? $existingPurchase->toJson() : 'null' !!},
@@ -47,6 +49,7 @@
             manufacture_date: null,
             remarks:          null,
             _focused:         false,
+            _lotCode:         null,
         };
     }
 
@@ -129,6 +132,7 @@ const perRowQty = 1;
                 manufacture_date: r.manufacture_date,
                 remarks:          r.remarks,
                 _focused:         false,
+                _lotCode:         r.lot_code || null,
             })),
         }));
     }
@@ -241,6 +245,14 @@ const perRowQty = 1;
 
             onSupplierChange() {
                 this.refreshInvoiceNumber();
+                // Every existing preview embeds the OLD supplier's initials
+                // (create mode only — supplier is locked/readonly on edit),
+                // so clear them all before refetching rather than only
+                // filling gaps.
+                this.form.lines.forEach(line => {
+                    line.rows.forEach(row => { row._lotCode = null; });
+                });
+                this.refreshAllLotCodePreviews();
             },
             refreshInvoiceNumber() {
                 if (!this.form.supplier_id || !this.form.purchase_date) return;
@@ -251,6 +263,34 @@ const perRowQty = 1;
                         if (j.ok) this.form.invoice_number_preview = j.invoice_number;
                     })
                     .catch(() => {});
+            },
+
+            /* ─── Lot code preview ────────────────────────────
+               Only fills rows that don't already have a code — real
+               (hydrated) codes from an existing purchase are left alone;
+               only newly added rows get a live preview. */
+            refreshLotCodePreview(lineIdx) {
+                const line = this.form.lines[lineIdx];
+                if (!line || !this.form.supplier_id || !line.product_id) return;
+
+                const missing = [];
+                line.rows.forEach((row, ri) => { if (!row._lotCode) missing.push(ri); });
+                if (missing.length === 0) return;
+
+                const url = `${CONFIG.lotCodePreviewUrl}?supplier_id=${this.form.supplier_id}`
+                    + `&product_id=${line.product_id}&count=${missing.length}`;
+                fetch(url, { headers: { 'Accept': 'application/json' } })
+                    .then(r => r.json())
+                    .then(j => {
+                        if (!j.ok || !Array.isArray(j.codes)) return;
+                        missing.forEach((ri, idx) => {
+                            if (line.rows[ri]) this.$set(line.rows[ri], '_lotCode', j.codes[idx] || null);
+                        });
+                    })
+                    .catch(() => {});
+            },
+            refreshAllLotCodePreviews() {
+                this.form.lines.forEach((_, li) => this.refreshLotCodePreview(li));
             },
 
             /* ─── Barcode scan ───────────────────────────────────── */
@@ -329,7 +369,9 @@ const perRowQty = 1;
                 this.form.lines.push(newLineFromProduct(product, scannedBarcode));
                 this.searchResults = [];
                 this.productSearch = '';
-                this.flashLine(this.form.lines.length - 1);
+                const newIdx = this.form.lines.length - 1;
+                this.flashLine(newIdx);
+                this.refreshLotCodePreview(newIdx);
             },
 
             /* ─── Row management ─────────────────────────────────── */
@@ -375,6 +417,7 @@ const perRowQty = 1;
                             manufacture_date: null,
                             remarks:          null,
                             _focused:         false,
+                            _lotCode:         null,
                         });
                     }
                 } else if (line.rows.length > expected) {
@@ -387,6 +430,8 @@ const perRowQty = 1;
                 if (line.rows.length > 1) {
                     line._expanded = true;
                 }
+
+                this.refreshLotCodePreview(lineIdx);
             },
             focusFirstRow(li) {
                 const refKey = `rowBarcode_${li}_0`;

@@ -144,6 +144,7 @@
     'lookupUrl'        => route('purchases.lookup-barcode'),
     'searchUrl'        => route('purchases.search-products'),
     'previewUrl'       => route('purchases.preview-invoice-number'),
+    'lotCodePreviewUrl'=> route('purchases.preview-lot-code'),
     'submitUrl'        => route('purchases.update', $purchase),
     'submitMethod'     => 'PUT',
     'existingPurchase' => $purchase,

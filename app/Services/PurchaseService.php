@@ -352,6 +352,9 @@ class PurchaseService
      */
     private function syncLines(Purchase $purchase, array $lines): void
     {
+        // Loaded once — feeds PurchaseProduct::generateLotCode() below.
+        $supplier = $purchase->supplier;
+
         foreach ($lines as $lineData) {
             /** @var Product $product */
             $product = Product::findOrFail($lineData['product_id']);
@@ -418,6 +421,7 @@ class PurchaseService
                     'qty'              => $qty,
                     'carat_weight'     => $caratWeight,
                     'barcode'          => $r['barcode']          ?? null,
+                    'lot_code'         => PurchaseProduct::generateLotCode($supplier, $product),
                     'rack_id'          => $r['rack_id']          ?? null,
                     'serial_number'    => $r['serial_number']    ?? null,
                     'price'            => $price,

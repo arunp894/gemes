@@ -32,6 +32,7 @@
                     <th style="width: 90px;">Qty</th>
                     <th style="width: 100px;">Carat</th>
                     <th style="width: 170px;">Barcode</th>
+                    <th style="width: 130px;">Lot Code</th>
                     {{-- Rack column hidden --}}
                     <th style="width: 110px;">Price</th>
                     {{-- Tax % and Disc % hidden --}}
@@ -108,6 +109,10 @@
                                        v-model="line.rows[0].barcode"
                                        placeholder="optional">
                             </td>
+                            <td>
+                                <input type="text" class="form-control form-control-sm bg-light" readonly
+                                       :placeholder="!form.supplier_id ? 'pick supplier first' : (line.rows[0]._lotCode || '—')">
+                            </td>
                             {{-- Rack column hidden --}}
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
@@ -129,7 +134,7 @@
                         {{-- Multi-row lines (Pack Qty > 1, either type): aggregate
                              readouts + expand/collapse toggle for the child rows. --}}
                         <template v-else>
-                            <td colspan="5" class="bg-light bg-opacity-25"
+                            <td colspan="6" class="bg-light bg-opacity-25"
     style="cursor: pointer;"
     @click="toggleExpand(li)">
                                 <div class="d-flex flex-wrap gap-3 small">
@@ -183,6 +188,10 @@
                                        placeholder="scan/type"
                                        @keydown.enter.prevent="focusNextRow(li, ri)">
                             </td>
+                            <td>
+                                <input type="text" class="form-control form-control-sm bg-light" readonly
+                                       :placeholder="!form.supplier_id ? 'pick supplier first' : (row._lotCode || '—')">
+                            </td>
                             {{-- Rack column hidden --}}
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
@@ -201,7 +210,7 @@
                 </template>
 
                 <tr v-if="form.lines.length === 0">
-                    <td colspan="10" class="text-center text-muted py-4">
+                    <td colspan="11" class="text-center text-muted py-4">
                         <i class="ti ti-barcode fs-22 d-block mb-1 text-muted"></i>
                         Scan a barcode or search for a product to begin.
                     </td>
