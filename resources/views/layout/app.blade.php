@@ -5,7 +5,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Sukina Gems</title>
+    <title>Sukaina Gems</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description"
         content="Paces is a modern, responsive admin dashboard available on ThemeForest. Ideal for building CRM, CMS, project management tools, and custom web applications with a clean UI, flexible layouts, and rich features." />
@@ -58,7 +58,7 @@
                     <span class="logo-sm"><img src="{{ asset('assets/images/logo-sm.png') }}" alt="small logo" /></span>
                 </span> --}}
                 <h5 class="mt-3 pro-username" style="text-align: center;color: white;">
-                    Sukina Gems
+                    Sukaina Gems
                 </h5>
             </a>
 

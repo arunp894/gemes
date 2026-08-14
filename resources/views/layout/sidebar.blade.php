@@ -81,7 +81,7 @@
                     </li>
 
                     @permission('racks.view')
-                    <li class="side-nav-item {{ request()->routeIs('racks.*') ? 'active' : '' }}">
+                    <li class="side-nav-item d-none {{ request()->routeIs('racks.*') ? 'active' : '' }}">
                         <a href="{{ route('racks.index') }}" class="side-nav-link">
                             <span class="menu-text">Racks</span>
                         </a>

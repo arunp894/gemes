@@ -101,7 +101,7 @@
                             </td>
                             <td>
                                 <input type="number" step="0.001" min="0" class="form-control form-control-sm"
-                                       v-model.number="line.rows[0].carat_weight"
+                                       v-model.number=""
                                        placeholder="ct">
                             </td>
                             <td>
