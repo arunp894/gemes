@@ -473,7 +473,7 @@ class Product extends Model implements HasMedia
 
     /**
      * Returns true if this product belongs to a gemstone-family category.
-     * Walks up the category hierarchy: a leaf subcategory inherits its
+     * Walks up the category hierarchy: a child category inherits its
      * top-level parent's `is_gemstone` flag; a top-level category checks
      * its own flag.
      */
@@ -501,8 +501,8 @@ class Product extends Model implements HasMedia
     }
 
     /**
-     * Returns the top-level category (the "Category" in the spec's
-     * Category → Subcategory → Product hierarchy).
+     * Returns the top-level category — walks up from this product's
+     * category to its top-level parent, if it has one.
      */
     public function getTopCategoryAttribute(): ?Category
     {

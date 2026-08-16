@@ -246,7 +246,7 @@
                 { data: 'checkbox',            name: 'checkbox',                  orderable: false, searchable: false, className: 'ps-3' },
                 { data: 'name',                name: 'categories.name' },
                 { data: 'code',                name: 'categories.code' },
-                { data: 'subcategories_count', name: 'subcategories_count',       orderable: false, searchable: false },
+                { data: 'children_count',      name: 'children_count',            orderable: false, searchable: false },
                 { data: 'display_order',       name: 'categories.display_order' },
                 { data: 'status_badge',        name: 'categories.status',         searchable: true },
                 { data: 'updated_at',          name: 'categories.updated_at' },

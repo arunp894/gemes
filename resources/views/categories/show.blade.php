@@ -79,7 +79,7 @@
                             <small class="text-muted d-block">
                                 @if ($category->parent) Sibling Subcategories @else Subcategories @endif
                             </small>
-                            <strong>{{ $category->subcategories_count ?? $category->subcategories()->count() }}</strong>
+                            <strong>{{ $category->children_count ?? $category->children()->count() }}</strong>
                         </div>
                         <div class="col-12">
                             <small class="text-muted d-block">Description</small>
@@ -90,7 +90,7 @@
             </div>
 
             {{-- Subcategories list (if any) --}}
-            @if (!$category->parent && $category->subcategories()->exists())
+            @if (!$category->parent && $category->children()->exists())
                 <div class="card">
                     <div class="card-header border-light justify-content-between">
                         <h5 class="header-title mb-0">Subcategories</h5>
@@ -109,7 +109,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($category->subcategories()->ordered()->get() as $sub)
+                                @foreach ($category->children()->ordered()->get() as $sub)
                                     <tr>
                                         <td class="ps-3">
                                             <a href="{{ route('categories.show', $sub) }}" class="link-reset fw-semibold">

@@ -140,9 +140,6 @@ class Category extends Model implements HasMedia
     /* -----------------------------------------------------------------
      |  Relationships
      | -----------------------------------------------------------------
-     |  NOTE: subcategories() and products() reference models that have
-     |  not been built yet. They are wired up so other code can call them
-     |  once those models exist. Counts on the index page use these.
      */
     public function parent(): BelongsTo
     {
@@ -150,11 +147,6 @@ class Category extends Model implements HasMedia
     }
 
     public function children(): HasMany
-    {
-        return $this->hasMany(self::class, 'parent_id');
-    }
-
-    public function subcategories(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id');
     }

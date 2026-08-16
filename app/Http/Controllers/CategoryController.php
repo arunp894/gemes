@@ -27,13 +27,13 @@ class CategoryController extends Controller
     /**
      * DataTables AJAX endpoint.
      * Returns ONLY top-level categories (parent_id IS NULL).
-     * Each row includes subcategories_count from the self-referential relation.
+     * Each row includes children_count from the self-referential relation.
      */
     public function data(Request $request): JsonResponse
     {
         $query = Category::query()
             ->topLevel()
-            ->withCount('subcategories');
+            ->withCount('children');
 
         return DataTables::of($query)
             ->addColumn('checkbox', function (Category $category) {
@@ -169,7 +169,7 @@ class CategoryController extends Controller
     public function show(Category $category): View
     {
         $category->load(['creator', 'updater', 'parent']);
-        $category->loadCount('subcategories');
+        $category->loadCount('children');
         return view('categories.show', compact('category'));
     }
 

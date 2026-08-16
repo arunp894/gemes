@@ -62,7 +62,7 @@ class CategorySeeder extends Seeder
             ]
         );
 
-        // ── Gemstones sub-categories ──────────────────────────────
+        // ── Gemstones child categories ────────────────────────────
         $subGems = [
             ['code' => 'GEMS-RBY',  'name' => 'Ruby',             'display_order' => 1],
             ['code' => 'GEMS-SPH',  'name' => 'Sapphire',         'display_order' => 2],
@@ -84,7 +84,7 @@ class CategorySeeder extends Seeder
             );
         }
 
-        // ── Rough Stones sub-categories ───────────────────────────
+        // ── Rough Stones child categories ─────────────────────────
         $subRough = [
             ['code' => 'ROUGH-RBY', 'name' => 'Ruby Rough',     'display_order' => 1],
             ['code' => 'ROUGH-SPH', 'name' => 'Sapphire Rough', 'display_order' => 2],
@@ -103,7 +103,7 @@ class CategorySeeder extends Seeder
             );
         }
 
-        // ── Accessories sub-categories ────────────────────────────
+        // ── Accessories child categories ──────────────────────────
         $subAccs = [
             ['code' => 'ACCS-TOOLS', 'name' => 'Jewellery Tools', 'display_order' => 1],
             ['code' => 'ACCS-PACK',  'name' => 'Packaging',       'display_order' => 2],
