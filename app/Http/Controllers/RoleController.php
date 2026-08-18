@@ -44,6 +44,7 @@ class RoleController extends Controller
             ->withCount(['users', 'permissions']);
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->editColumn('name', function (Role $role) {
                 $superBadge = $role->is_super
                     ? ' <span class="badge badge-soft-danger fs-xxs ms-1">Super</span>'

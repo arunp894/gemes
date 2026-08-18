@@ -81,6 +81,7 @@
                     <table id="salesTable" class="table table-custom table-centered table-hover w-100 mb-0">
                         <thead class="bg-light align-middle bg-opacity-25 thead-sm">
                             <tr class="text-uppercase fs-xxs">
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Sale #</th>
                                 <th>Date</th>
                                 <th>Customer</th>
@@ -130,7 +131,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[1, 'desc']],
+            order: [[2, 'desc']],
             ajax: {
                 url: '{{ route('sales.data') }}',
                 type: 'GET',
@@ -142,6 +143,7 @@
             dom: 'rt<"d-none datatables-tail"ip>',
             pageLength: 10,
             columns: [
+                { data: 'DT_RowIndex',     name: 'DT_RowIndex',        orderable: false, searchable: false, className: 'text-center' },
                 { data: 'sale_number',     name: 'sales.sale_number' },
                 { data: 'sale_date',       name: 'sales.sale_date' },
                 { data: 'customer_label',  name: 'customer_label', orderable: false },

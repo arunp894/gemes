@@ -37,6 +37,7 @@ class BlogController extends Controller
         $query = Blog::query();
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->editColumn('title', function (Blog $blog) {
                 $thumb = $blog->image_thumb_url
                     ? '<img src="' . e($blog->image_thumb_url) . '" alt="" class="rounded me-2" width="48" height="32" style="object-fit:cover;">'

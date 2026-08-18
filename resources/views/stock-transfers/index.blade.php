@@ -61,6 +61,7 @@
                     <table id="transfersTable" class="table table-custom table-centered table-hover w-100 mb-0">
                         <thead class="bg-light bg-opacity-25 thead-sm">
                             <tr class="text-uppercase fs-xxs">
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Transfer #</th>
                                 <th>Date</th>
                                 <th>From</th>
@@ -105,13 +106,14 @@ $(function () {
         processing: true,
         serverSide: true,
         responsive: false,
-        order: [[1, 'desc']],
+        order: [[2, 'desc']],
         ajax: {
             url: '{{ route('stock-transfers.data') }}',
             data: function (d) { d.status = $('#transferStatusFilter').val(); },
         },
         dom: 'rt<"d-none datatables-tail"ip>',
         columns: [
+            { data: 'DT_RowIndex',     name: 'DT_RowIndex',                    orderable: false, searchable: false, className: 'text-center' },
             { data: 'transfer_number', name: 'stock_transfers.transfer_number' },
             { data: 'transfer_date',   name: 'stock_transfers.transfer_date' },
             { data: 'from_label',      name: 'from_label', orderable: false, searchable: false },

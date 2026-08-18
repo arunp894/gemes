@@ -38,6 +38,7 @@ class RackController extends Controller
         }
 
         return DataTables::eloquent($q)
+            ->addIndexColumn()
             ->addColumn('status_badge', fn (Rack $r) =>
                 '<span class="badge ' . $r->statusBadgeClass() . '">' . $r->statusLabel() . '</span>'
             )

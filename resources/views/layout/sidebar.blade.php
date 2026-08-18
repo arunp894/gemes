@@ -30,7 +30,7 @@
 
                     <li class="side-nav-item {{ request()->routeIs('categories.*') ? 'active' : '' }}">
                         <a href="{{ route('categories.index') }}" class="side-nav-link">
-                            <span class="menu-text"> Categories</span>
+                            <span class="menu-text"> Stones</span>
                         </a>
                     </li>
 

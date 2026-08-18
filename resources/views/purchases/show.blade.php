@@ -206,7 +206,7 @@
 
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Subtotal</span>
-                        <span>{{ number_format((float) $purchase->subtotal, 2) }}</span>
+                        <span>{{ app(\App\Services\SettingService::class)->formatMoney($purchase->subtotal) }}</span>
                     </div>
                     {{-- Discount and Tax rows hidden (line totals are Carat × Price) --}}
 
@@ -214,17 +214,17 @@
 
                     <div class="d-flex justify-content-between mb-3">
                         <span class="fw-semibold">Grand Total</span>
-                        <span class="fw-bold fs-18 text-primary">{{ number_format((float) $purchase->grand_total, 2) }}</span>
+                        <span class="fw-bold fs-18 text-primary">{{ app(\App\Services\SettingService::class)->formatMoney($purchase->grand_total) }}</span>
                     </div>
 
                     <div class="d-flex justify-content-between mb-2 small">
                         <span class="text-muted">Paid</span>
-                        <span>{{ number_format((float) $purchase->paid_amount, 2) }}</span>
+                        <span>{{ app(\App\Services\SettingService::class)->formatMoney($purchase->paid_amount) }}</span>
                     </div>
                     <div class="d-flex justify-content-between mb-3 small">
                         <span class="text-muted">Due</span>
                         <span class="fw-semibold {{ $purchase->due_amount > 0 ? 'text-warning' : 'text-success' }}">
-                            {{ number_format((float) $purchase->due_amount, 2) }}
+                            {{ app(\App\Services\SettingService::class)->formatMoney($purchase->due_amount) }}
                         </span>
                     </div>
 

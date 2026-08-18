@@ -46,6 +46,7 @@ class UserController extends Controller
         $query = User::query()->with('roles:id,name,slug,is_super', 'locations:id,name,location_code');
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('checkbox', function (User $user) {
                 return '<input class="form-check-input form-check-input-light fs-14 product-item-check mt-0" '
                     . 'type="checkbox" value="' . $user->id . '" />';

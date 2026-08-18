@@ -188,33 +188,33 @@
                     @php $tb = $sale->tax_breakdown; @endphp
                     <dl class="row mb-0 small">
                         <dt class="col-7 text-muted">Subtotal</dt>
-                        <dd class="col-5 text-end">{{ number_format((float) $sale->subtotal, 2) }}</dd>
+                        <dd class="col-5 text-end">{{ app(\App\Services\SettingService::class)->formatMoney($sale->subtotal) }}</dd>
 
                         <dt class="col-7 text-muted">Discount</dt>
-                        <dd class="col-5 text-end">− {{ number_format((float) $sale->discount_total, 2) }}</dd>
+                        <dd class="col-5 text-end">− {{ app(\App\Services\SettingService::class)->formatMoney($sale->discount_total) }}</dd>
 
                         @if ($sale->tax_type === 'cgst_sgst')
                             <dt class="col-7 text-muted">CGST</dt>
-                            <dd class="col-5 text-end">+ {{ number_format($tb['cgst'], 2) }}</dd>
+                            <dd class="col-5 text-end">+ {{ app(\App\Services\SettingService::class)->formatMoney($tb['cgst']) }}</dd>
                             <dt class="col-7 text-muted">SGST</dt>
-                            <dd class="col-5 text-end">+ {{ number_format($tb['sgst'], 2) }}</dd>
+                            <dd class="col-5 text-end">+ {{ app(\App\Services\SettingService::class)->formatMoney($tb['sgst']) }}</dd>
                         @elseif ($sale->tax_type === 'igst')
                             <dt class="col-7 text-muted">IGST</dt>
-                            <dd class="col-5 text-end">+ {{ number_format($tb['igst'], 2) }}</dd>
+                            <dd class="col-5 text-end">+ {{ app(\App\Services\SettingService::class)->formatMoney($tb['igst']) }}</dd>
                         @endif
 
                         <dt class="col-7 text-muted">Shipping</dt>
-                        <dd class="col-5 text-end">+ {{ number_format((float) $sale->shipping_charge, 2) }}</dd>
+                        <dd class="col-5 text-end">+ {{ app(\App\Services\SettingService::class)->formatMoney($sale->shipping_charge) }}</dd>
 
                         <dt class="col-7 fw-bold pt-2 border-top mt-2">Grand Total</dt>
-                        <dd class="col-5 text-end fw-bold pt-2 border-top mt-2">{{ number_format((float) $sale->grand_total, 2) }}</dd>
+                        <dd class="col-5 text-end fw-bold pt-2 border-top mt-2">{{ app(\App\Services\SettingService::class)->formatMoney($sale->grand_total) }}</dd>
 
                         <dt class="col-7 text-muted">Paid</dt>
-                        <dd class="col-5 text-end">{{ number_format((float) $sale->paid_amount, 2) }}</dd>
+                        <dd class="col-5 text-end">{{ app(\App\Services\SettingService::class)->formatMoney($sale->paid_amount) }}</dd>
 
                         <dt class="col-7 fw-semibold {{ (float) $sale->balance_due > 0 ? 'text-danger' : '' }}">Balance Due</dt>
                         <dd class="col-5 text-end fw-semibold {{ (float) $sale->balance_due > 0 ? 'text-danger' : '' }}">
-                            {{ number_format((float) $sale->balance_due, 2) }}
+                            {{ app(\App\Services\SettingService::class)->formatMoney($sale->balance_due) }}
                         </dd>
                     </dl>
                 </div>

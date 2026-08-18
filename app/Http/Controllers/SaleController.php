@@ -76,6 +76,7 @@ class SaleController extends Controller
         }
 
         return DataTables::eloquent($q)
+            ->addIndexColumn()
             ->editColumn(
                 'sale_number',
                 fn(Sale $s) =>
@@ -102,9 +103,9 @@ class SaleController extends Controller
             ->editColumn(
                 'grand_total',
                 fn(Sale $s) =>
-                '<span class="fw-semibold">' . number_format((float) $s->grand_total, 2) . '</span>'
+                '<span class="fw-semibold">' . $this->settings->formatMoney($s->grand_total) . '</span>'
             )
-            ->editColumn('balance_due', fn(Sale $s) => number_format((float) $s->balance_due, 2))
+            ->editColumn('balance_due', fn(Sale $s) => $this->settings->formatMoney($s->balance_due))
             ->addColumn(
                 'payment_badge',
                 fn(Sale $s) =>

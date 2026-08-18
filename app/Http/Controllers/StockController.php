@@ -88,6 +88,7 @@ class StockController extends Controller
         }
 
         return DataTables::query($base)
+            ->addIndexColumn()
             ->editColumn('on_hand', fn ($row) =>
                 '<span class="fw-semibold ' . ((int) $row->on_hand <= 0 ? 'text-danger' : '') . '">'
                 . (int) $row->on_hand . '</span>'

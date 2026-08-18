@@ -64,6 +64,7 @@ class PurchaseController extends Controller
         }
 
         return DataTables::eloquent($q)
+            ->addIndexColumn()
             ->addColumn(
                 'supplier_label',
                 fn(Purchase $p) =>
@@ -84,12 +85,12 @@ class PurchaseController extends Controller
             ->editColumn(
                 'grand_total',
                 fn(Purchase $p) =>
-                number_format((float) $p->grand_total, 2)
+                $this->settings->formatMoney($p->grand_total)
             )
             ->editColumn(
                 'due_amount',
                 fn(Purchase $p) =>
-                number_format((float) $p->due_amount, 2)
+                $this->settings->formatMoney($p->due_amount)
             )
             ->addColumn(
                 'status_badge',
@@ -130,6 +131,7 @@ class PurchaseController extends Controller
             'categories' => Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
             'countriesOfOrigin' => CountryOfOrigin::active()->ordered()->get(['id', 'name']),
             'taxTypes'   => Purchase::TAX_TYPES,
+            'currencySymbol' => $this->settings->get('currency_symbol', '₹'),
         ]);
     }
 
@@ -170,6 +172,7 @@ class PurchaseController extends Controller
             'categories' => Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
             'countriesOfOrigin' => CountryOfOrigin::active()->ordered()->get(['id', 'name']),
             'taxTypes'   => Purchase::TAX_TYPES,
+            'currencySymbol' => $this->settings->get('currency_symbol', '₹'),
         ]);
     }
 

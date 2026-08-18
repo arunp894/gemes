@@ -90,6 +90,7 @@
                                     <input id="bannerSelectAll" class="form-check-input form-check-input-light fs-14 mt-0"
                                         type="checkbox" />
                                 </th>
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Banner</th>
                                 <th>Position</th>
                                 <th class="text-center">Live</th>
@@ -144,7 +145,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[6, 'asc']],
+            order: [[7, 'asc']],
             ajax: {
                 url: '{{ route('banners.data') }}',
                 type: 'GET',
@@ -153,6 +154,7 @@
             pageLength: 10,
             columns: [
                 { data: 'checkbox',        name: 'checkbox',         orderable: false, searchable: false, className: 'ps-3' },
+                { data: 'DT_RowIndex',     name: 'DT_RowIndex',      orderable: false, searchable: false, className: 'text-center' },
                 { data: 'title',           name: 'banners.title' },
                 { data: 'position_badge',  name: 'banners.position', searchable: true },
                 { data: 'live_badge',      name: 'live_badge',       orderable: false, searchable: false, className: 'text-center' },
@@ -192,11 +194,11 @@
         });
 
         $('#bannerPositionFilter').on('change', function () {
-            dt.column(2).search(this.value).draw();
+            dt.column(3).search(this.value).draw();
         });
 
         $('#bannerStatusFilter').on('change', function () {
-            dt.column(4).search(this.value).draw();
+            dt.column(5).search(this.value).draw();
         });
 
         $('#bannerSelectAll').on('change', function () {

@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateSupplierRequest;
 use App\Models\Category;
 use App\Models\Purchase;
 use App\Models\Supplier;
+use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,8 @@ use Yajra\DataTables\Facades\DataTables;
  */
 class SupplierController extends Controller
 {
+    public function __construct(private SettingService $settings) {}
+
     /**
      * Listing page.
      */
@@ -40,6 +43,7 @@ class SupplierController extends Controller
         $query = Supplier::query();
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('checkbox', function (Supplier $supplier) {
                 return '<input class="form-check-input form-check-input-light fs-14 product-item-check mt-0" '
                     . 'type="checkbox" value="' . $supplier->id . '" />';
@@ -84,7 +88,7 @@ class SupplierController extends Controller
                 return e(implode(', ', $parts));
             })
             ->editColumn('credit_limit', function (Supplier $supplier) {
-                return '<span class="fw-medium">' . number_format((float) $supplier->credit_limit, 2) . '</span>';
+                return '<span class="fw-medium">' . $this->settings->formatMoney($supplier->credit_limit) . '</span>';
             })
             ->addColumn('status_badge', function (Supplier $supplier) {
                 $class = $supplier->statusBadgeClass();
@@ -229,6 +233,7 @@ class SupplierController extends Controller
         }
 
         return DataTables::eloquent($query)
+            ->addIndexColumn()
             ->addColumn('invoice_link', function (Purchase $p) {
                 return '<a href="' . route('purchases.show', $p) . '" class="link-reset fw-medium">'
                     . e($p->invoice_number) . '</a>';
@@ -239,9 +244,9 @@ class SupplierController extends Controller
                     : '<span class="text-muted">—</span>';
             })
             ->editColumn('purchase_date', fn (Purchase $p) => optional($p->purchase_date)->format('d M Y'))
-            ->editColumn('grand_total', fn (Purchase $p) => number_format((float) $p->grand_total, 2))
-            ->editColumn('paid_amount', fn (Purchase $p) => number_format((float) $p->paid_amount, 2))
-            ->editColumn('due_amount', fn (Purchase $p) => number_format((float) $p->due_amount, 2))
+            ->editColumn('grand_total', fn (Purchase $p) => $this->settings->formatMoney($p->grand_total))
+            ->editColumn('paid_amount', fn (Purchase $p) => $this->settings->formatMoney($p->paid_amount))
+            ->editColumn('due_amount', fn (Purchase $p) => $this->settings->formatMoney($p->due_amount))
             ->addColumn('status_badge', function (Purchase $p) {
                 return '<span class="badge ' . $p->statusBadgeClass() . '">' . $p->statusLabel() . '</span>';
             })

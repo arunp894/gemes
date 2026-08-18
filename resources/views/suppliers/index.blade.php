@@ -80,6 +80,7 @@
                                     <input id="supplierSelectAll" class="form-check-input form-check-input-light fs-14 mt-0"
                                         type="checkbox" />
                                 </th>
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Code</th>
                                 <th>Supplier</th>
                                 <th>Contact</th>
@@ -134,7 +135,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[7, 'desc']],
+            order: [[8, 'desc']],
             ajax: {
                 url: '{{ route('suppliers.data') }}',
                 type: 'GET',
@@ -143,6 +144,7 @@
             pageLength: 10,
             columns: [
                 { data: 'checkbox',      name: 'checkbox',                orderable: false, searchable: false, className: 'ps-3' },
+                { data: 'DT_RowIndex',   name: 'DT_RowIndex',             orderable: false, searchable: false, className: 'text-center' },
                 { data: 'supplier_code', name: 'suppliers.supplier_code' },
                 { data: 'name',          name: 'suppliers.name' },
                 { data: 'contact',       name: 'contact',                 orderable: false, searchable: false },
@@ -182,7 +184,7 @@
         });
 
         $('#supplierStatusFilter').on('change', function () {
-            dt.column(6).search(this.value).draw();
+            dt.column(7).search(this.value).draw();
         });
 
         $('#supplierSelectAll').on('change', function () {

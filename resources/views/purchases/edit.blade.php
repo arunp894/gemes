@@ -241,5 +241,6 @@
     'submitUrl'        => route('purchases.update', $purchase),
     'submitMethod'     => 'PUT',
     'existingPurchase' => $purchase,
+    'currencySymbol'   => $currencySymbol,
 ])
 @endpush

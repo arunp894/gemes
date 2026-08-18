@@ -40,6 +40,7 @@ class LocationController extends Controller
         $query = Location::query()->with('manager:id,name');
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('checkbox', function (Location $location) {
                 return '<input class="form-check-input form-check-input-light fs-14 product-item-check mt-0" '
                     . 'type="checkbox" value="' . $location->id . '" />';

@@ -28,6 +28,7 @@
     // ── Configuration shipped from Blade ───────────────────────────
     const CONFIG = {
         mode:        @json($mode),
+        currencySymbol: @json($currencySymbol),
         suppliers:   {!! $suppliersJson !!},
         locations:   {!! $locationsJson !!},
         racks:       {!! $racksJson !!},
@@ -240,7 +241,7 @@
 
             formatMoney(v) {
                 const n = parseFloat(v) || 0;
-                return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return CONFIG.currencySymbol + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             },
             rowNet(r) {
                 const carat = parseFloat(r.carat_weight) || 0;

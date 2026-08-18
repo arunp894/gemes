@@ -191,7 +191,7 @@
                                     <div class="border rounded p-3">
                                         <small class="text-muted d-block">Opening Balance</small>
                                         <span class="fs-4 fw-bold">
-                                            ${{ number_format((float) $supplier->opening_balance, 2) }}
+                                            {{ app(\App\Services\SettingService::class)->formatMoney($supplier->opening_balance) }}
                                         </span>
                                     </div>
                                 </div>
@@ -199,7 +199,7 @@
                                     <div class="border rounded p-3">
                                         <small class="text-muted d-block">Credit Limit</small>
                                         <span class="fs-4 fw-bold">
-                                            ${{ number_format((float) $supplier->credit_limit, 2) }}
+                                            {{ app(\App\Services\SettingService::class)->formatMoney($supplier->credit_limit) }}
                                         </span>
                                     </div>
                                 </div>
@@ -239,7 +239,7 @@
                     <div class="card mb-0">
                         <div class="card-body">
                             <p class="text-muted mb-1 fs-xxs text-uppercase">Total Amount</p>
-                            <h4 class="mb-0">${{ number_format($purchaseStats['total'], 2) }}</h4>
+                            <h4 class="mb-0">{{ app(\App\Services\SettingService::class)->formatMoney($purchaseStats['total']) }}</h4>
                         </div>
                     </div>
                 </div>
@@ -248,7 +248,7 @@
                         <div class="card-body">
                             <p class="text-muted mb-1 fs-xxs text-uppercase">Due Amount</p>
                             <h4 class="mb-0 {{ $purchaseStats['due'] > 0 ? 'text-danger' : '' }}">
-                                ${{ number_format($purchaseStats['due'], 2) }}
+                                {{ app(\App\Services\SettingService::class)->formatMoney($purchaseStats['due']) }}
                             </h4>
                         </div>
                     </div>
@@ -293,6 +293,7 @@
                     <table id="supplierPurchasesTable" class="table table-custom table-centered table-hover w-100 mb-0">
                         <thead class="bg-light bg-opacity-25 thead-sm">
                             <tr class="text-uppercase fs-xxs">
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Invoice #</th>
                                 <th>Date</th>
                                 <th>Location</th>
@@ -363,8 +364,9 @@
                 },
                 dom: 'rt<"d-none datatables-tail"ip>',
                 pageLength: 10,
-                order: [[1, 'desc']],
+                order: [[2, 'desc']],
                 columns: [
+                    { data: 'DT_RowIndex',    name: 'DT_RowIndex',   orderable: false, searchable: false, className: 'text-center' },
                     { data: 'invoice_link',   name: 'invoice_number' },
                     { data: 'purchase_date',  name: 'purchase_date' },
                     { data: 'location_label', name: 'location.name', orderable: false },

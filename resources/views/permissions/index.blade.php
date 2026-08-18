@@ -75,7 +75,8 @@
                     <table id="permsTable" class="table table-custom table-centered table-hover w-100 mb-0">
                         <thead class="bg-light align-middle bg-opacity-25 thead-sm">
                             <tr class="text-uppercase fs-xxs">
-                                <th class="ps-3">Permission</th>
+                                <th class="ps-3 text-center" style="width: 1%;">S.No</th>
+                                <th>Permission</th>
                                 <th>Slug</th>
                                 <th>Module</th>
                                 <th>Roles</th>
@@ -127,7 +128,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[2, 'asc'], [0, 'asc']],
+            order: [[3, 'asc'], [1, 'asc']],
             ajax: {
                 url: '{{ route('permissions.data') }}',
                 type: 'GET',
@@ -135,7 +136,8 @@
             dom: 'rt<"d-none datatables-tail"ip>',
             pageLength: 25,
             columns: [
-                { data: 'name',              name: 'permissions.name',       className: 'ps-3' },
+                { data: 'DT_RowIndex',       name: 'DT_RowIndex',            orderable: false, searchable: false, className: 'text-center' },
+                { data: 'name',              name: 'permissions.name' },
                 { data: 'slug',              name: 'permissions.slug' },
                 { data: 'module',            name: 'permissions.module',     searchable: true },
                 { data: 'roles_count_badge', name: 'roles_count',            orderable: false, searchable: false },
@@ -171,7 +173,7 @@
         });
 
         $('#permModuleFilter').on('change', function () {
-            dt.column(2).search(this.value).draw();
+            dt.column(3).search(this.value).draw();
         });
 
         $('#permsTable tbody').on('click', '.js-delete', function () {

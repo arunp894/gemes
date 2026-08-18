@@ -257,5 +257,6 @@
     'submitUrl'       => route('purchases.store'),
     'submitMethod'    => 'POST',
     'existingPurchase'=> null,
+    'currencySymbol'  => $currencySymbol,
 ])
 @endpush

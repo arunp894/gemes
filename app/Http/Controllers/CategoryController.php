@@ -31,6 +31,7 @@ class CategoryController extends Controller
         $query = Category::query();
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('checkbox', function (Category $category) {
                 return '<input class="form-check-input form-check-input-light fs-14 product-item-check mt-0" '
                     . 'type="checkbox" value="' . $category->id . '" />';
@@ -142,7 +143,7 @@ class CategoryController extends Controller
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success'  => true,
-                'message'  => 'Category created successfully.',
+                'message'  => 'Stone created successfully.',
                 'redirect' => route('categories.index'),
                 'data'     => $category,
             ]);
@@ -150,7 +151,7 @@ class CategoryController extends Controller
 
         return redirect()
             ->route('categories.index')
-            ->with('success', 'Category created successfully.');
+            ->with('success', 'Stone created successfully.');
     }
 
     /**
@@ -202,7 +203,7 @@ class CategoryController extends Controller
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success'  => true,
-                'message'  => 'Category updated successfully.',
+                'message'  => 'Stone updated successfully.',
                 'redirect' => route('categories.index'),
                 'data'     => $category->fresh(),
             ]);
@@ -210,7 +211,7 @@ class CategoryController extends Controller
 
         return redirect()
             ->route('categories.index')
-            ->with('success', 'Category updated successfully.');
+            ->with('success', 'Stone updated successfully.');
     }
 
     /**
@@ -223,13 +224,13 @@ class CategoryController extends Controller
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Category deleted successfully.',
+                'message' => 'Stone deleted successfully.',
             ]);
         }
 
         return redirect()
             ->route('categories.index')
-            ->with('success', 'Category deleted successfully.');
+            ->with('success', 'Stone deleted successfully.');
     }
 
     /**

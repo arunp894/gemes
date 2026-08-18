@@ -28,6 +28,7 @@ class ChannelController extends Controller
         }
 
         return DataTables::eloquent($q)
+            ->addIndexColumn()
             ->addColumn('icon_preview', fn(Channel $c) =>
                 $c->icon ? '<i class="' . e($c->icon) . ' fs-lg me-1"></i>' : ''
             )

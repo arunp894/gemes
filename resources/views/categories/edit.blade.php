@@ -1,6 +1,6 @@
 @extends('layout.app')
 
-@section('title', 'Edit Category')
+@section('title', 'Edit Stone')
 
 @section('content')
 
@@ -8,12 +8,12 @@
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
-            <h4 class="page-main-title m-0">Edit Category</h4>
+            <h4 class="page-main-title m-0">Edit Stone</h4>
         </div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('categories.index') }}">Categories</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('categories.index') }}">Stones</a></li>
                 <li class="breadcrumb-item active">Edit</li>
             </ol>
         </div>
@@ -31,7 +31,7 @@
 
                         {{-- Name --}}
                         <div class="mb-3">
-                            <label for="name" class="form-label">Category Name <span class="text-danger">*</span></label>
+                            <label for="name" class="form-label">Stone Name <span class="text-danger">*</span></label>
                             <input
                                 type="text"
                                 class="form-control"
@@ -48,7 +48,7 @@
 
                         {{-- Code (read-only per spec) --}}
                         <div class="mb-3">
-                            <label for="code" class="form-label">Category Code</label>
+                            <label for="code" class="form-label">Stone Code</label>
                             <input
                                 type="text"
                                 class="form-control"
@@ -57,7 +57,7 @@
                                 readonly
                                 disabled>
                             <small class="text-muted">
-                                <i class="ti ti-lock me-1"></i>Category code cannot be changed after creation.
+                                <i class="ti ti-lock me-1"></i>Stone code cannot be changed after creation.
                             </small>
                         </div>
 
@@ -93,7 +93,7 @@
 
                         {{-- Image --}}
                         <div class="mb-3">
-                            <label class="form-label d-block">Category Image</label>
+                            <label class="form-label d-block">Stone Image</label>
 
                             <div v-if="currentImage && !removeImage && !imagePreview" class="mb-2 d-flex align-items-center gap-2">
                                 <img :src="currentImage" alt="Current"
@@ -129,16 +129,16 @@
 
                         {{-- Gemstone-Type flag --}}
                         <div class="mb-3">
-                            <label class="form-label d-block">Gemstone Category</label>
+                            <label class="form-label d-block">Gemstone Stone</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="is_gemstone"
                                     v-model="form.is_gemstone">
                                 <label class="form-check-label" for="is_gemstone">
-                                    Products under this category use gemstone fields (carat, treatment, certificate…)
+                                    Products under this stone use gemstone fields (carat, treatment, certificate…)
                                 </label>
                             </div>
                             <small class="text-muted">
-                                When ticked, products under this category show the Gemstone Details panel on the
+                                When ticked, products under this stone show the Gemstone Details panel on the
                                 product form and require carat / stone type / treatment.
                             </small>
                         </div>
@@ -161,7 +161,7 @@
                             <button type="submit" class="btn btn-primary" :disabled="submitting">
                                 <span v-if="submitting" class="spinner-border spinner-border-sm me-1" role="status"></span>
                                 <span v-if="!submitting"><i class="ti ti-device-floppy me-1"></i></span>
-                                Update Category
+                                Update Stone
                             </button>
                         </div>
                     </form>
@@ -215,7 +215,7 @@
                 this.touched[field] = true;
                 const value = this.form[field];
                 if (field === 'name') {
-                    if (!value || !value.trim()) this.$set(this.errors, 'name', 'Category name is required.');
+                    if (!value || !value.trim()) this.$set(this.errors, 'name', 'Stone name is required.');
                     else if (value.length > 150)  this.$set(this.errors, 'name', 'Maximum 150 characters.');
                     else this.$delete(this.errors, 'name');
                 }

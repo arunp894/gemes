@@ -30,6 +30,7 @@ class CustomerController extends Controller
         $query = Customer::query();
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('checkbox', function (Customer $c) {
                 return '<input class="form-check-input form-check-input-light fs-14 product-item-check mt-0" '
                     . 'type="checkbox" value="' . $c->id . '" />';

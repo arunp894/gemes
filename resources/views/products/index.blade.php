@@ -58,7 +58,7 @@
 
                         <div class="app-search">
                             <select id="productCategoryFilter" class="form-select form-control my-1 my-md-0">
-                                <option value="">All Categories</option>
+                                <option value="">All Stones</option>
                                 @foreach ($categories as $cat)
                                     <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                                 @endforeach
@@ -121,6 +121,7 @@
                                         class="form-check-input form-check-input-light fs-14 mt-0"
                                         type="checkbox" />
                                 </th>
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Product</th>
                                 <th>SKU</th>
                                 <th>Primary Barcode</th>
@@ -180,7 +181,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[6, 'desc']], // latest updated first
+            order: [[7, 'desc']], // latest updated first
             ajax: {
                 url: '{{ route('products.data') }}',
                 type: 'GET',
@@ -194,6 +195,7 @@
             pageLength: 10,
             columns: [
                 { data: 'checkbox',        name: 'checkbox',          orderable: false, searchable: false, className: 'ps-3' },
+                { data: 'DT_RowIndex',     name: 'DT_RowIndex',       orderable: false, searchable: false, className: 'text-center' },
                 { data: 'title',           name: 'products.title' },
                 { data: 'sku',             name: 'products.sku' },
                 { data: 'primary_barcode', name: 'primary_barcode',   orderable: false, searchable: false },

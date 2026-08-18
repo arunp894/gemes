@@ -69,6 +69,7 @@
                     <table id="blogsTable" class="table table-striped dt-responsive align-middle mb-0">
                         <thead class="bg-light align-middle bg-opacity-25 thead-sm">
                             <tr class="text-uppercase fs-xxs">
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Post</th>
                                 <th class="text-center">Status</th>
                                 <th>Published</th>
@@ -120,7 +121,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[3, 'desc']],
+            order: [[4, 'desc']],
             ajax: {
                 url: '{{ route('blogs.data') }}',
                 type: 'GET',
@@ -128,6 +129,7 @@
             dom: 'rt<"d-none datatables-tail"ip>',
             pageLength: 10,
             columns: [
+                { data: 'DT_RowIndex',   name: 'DT_RowIndex',        orderable: false, searchable: false, className: 'text-center' },
                 { data: 'title',         name: 'blogs.title' },
                 { data: 'status_badge',  name: 'blogs.status',       searchable: true, className: 'text-center' },
                 { data: 'published_at',  name: 'blogs.published_at' },
@@ -164,7 +166,7 @@
         });
 
         $('#blogStatusFilter').on('change', function () {
-            dt.column(1).search(this.value).draw();
+            dt.column(2).search(this.value).draw();
         });
 
         $('#blogsTable tbody').on('click', '.js-toggle-status', function () {

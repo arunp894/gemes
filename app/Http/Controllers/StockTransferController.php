@@ -50,6 +50,7 @@ class StockTransferController extends Controller
         }
 
         return DataTables::eloquent($q)
+            ->addIndexColumn()
             ->editColumn('transfer_number', fn (StockTransfer $t) =>
                 '<a href="' . route('stock-transfers.show', $t) . '" class="link-reset"><code>' . e($t->transfer_number) . '</code></a>'
             )

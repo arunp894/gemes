@@ -43,7 +43,7 @@
                     <table id="channelsTable" class="table table-custom table-centered table-hover w-100 mb-0">
                         <thead class="bg-light bg-opacity-25 thead-sm align-middle">
                             <tr class="text-uppercase fs-xxs">
-                                <th style="width: 4%;">#</th>
+                                <th style="width: 4%;">S.No</th>
                                 <th style="width: 4%;">Icon</th>
                                 <th>Name</th>
                                 <th>Code</th>
@@ -94,7 +94,7 @@ $(function () {
         dom: 'rt<"d-none datatables-tail"ip>',
         pageLength: 25,
         columns: [
-            { data: 'id',            name: 'id',            className: 'text-muted small' },
+            { data: 'DT_RowIndex',   name: 'DT_RowIndex',   orderable: false, searchable: false, className: 'text-muted small' },
             { data: 'icon_preview',  name: 'icon',          orderable: false, searchable: false, className: 'text-center' },
             { data: 'name',          name: 'name' },
             { data: 'code',          name: 'code',          render: (d) => '<code>' + d + '</code>' },

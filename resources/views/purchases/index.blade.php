@@ -66,6 +66,7 @@
                     <table id="purchasesTable" class="table table-custom table-centered table-hover w-100 mb-0">
                         <thead class="bg-light bg-opacity-25 thead-sm">
                             <tr class="text-uppercase fs-xxs">
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Invoice #</th>
                                 <th>Date</th>
                                 <th>Supplier</th>
@@ -104,6 +105,7 @@
         },
             dom: 'rt<"d-none datatables-tail"ip>',
         columns: [
+            { data: 'DT_RowIndex',     name: 'DT_RowIndex',   orderable: false, searchable: false, className: 'text-center' },
             { data: 'invoice_number',  name: 'invoice_number' },
             { data: 'purchase_date',   name: 'purchase_date' },
             { data: 'supplier_label',  name: 'supplier.name', orderable: false },
@@ -117,7 +119,7 @@
                 $('#rolesInfoSlot').append($('#rolesTable_info'));
                 $('#rolesPaginationSlot').append($('#rolesTable_paginate'));
             },
-        order: [[0, 'desc']],
+        order: [[1, 'desc']],
         pageLength: 10,
     });
 

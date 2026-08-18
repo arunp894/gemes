@@ -88,6 +88,7 @@
                                 <th class="ps-3" style="width: 1%;">
                                     <input id="customerSelectAll" class="form-check-input form-check-input-light fs-14 mt-0" type="checkbox" />
                                 </th>
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Code</th>
                                 <th>Customer</th>
                                 <th>Type</th>
@@ -136,12 +137,13 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[7, 'desc']],
+            order: [[8, 'desc']],
             ajax: { url: '{{ route('customers.data') }}', type: 'GET' },
             dom: 'rt<"d-none datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'checkbox',      name: 'checkbox',                  orderable: false, searchable: false, className: 'ps-3' },
+                { data: 'DT_RowIndex',   name: 'DT_RowIndex',               orderable: false, searchable: false, className: 'text-center' },
                 { data: 'customer_code', name: 'customers.customer_code' },
                 { data: 'name',          name: 'customers.name' },
                 { data: 'type_badge',    name: 'customers.customer_type',   searchable: true },
@@ -173,8 +175,8 @@
             searchTimer = setTimeout(() => dt.search(v).draw(), 250);
         });
         $('#customerPerPage').on('change', function () { dt.page.len(parseInt(this.value, 10)).draw(); });
-        $('#customerTypeFilter').on('change', function () { dt.column(3).search(this.value).draw(); });
-        $('#customerStatusFilter').on('change', function () { dt.column(6).search(this.value).draw(); });
+        $('#customerTypeFilter').on('change', function () { dt.column(4).search(this.value).draw(); });
+        $('#customerStatusFilter').on('change', function () { dt.column(7).search(this.value).draw(); });
         $('#customerSelectAll').on('change', function () {
             $('#customersTable tbody .product-item-check').prop('checked', this.checked);
         });

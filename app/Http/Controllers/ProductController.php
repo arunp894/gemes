@@ -68,6 +68,7 @@ class ProductController extends Controller
         }
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('checkbox', function (Product $product) {
                 return '<input class="form-check-input form-check-input-light fs-14 product-item-check mt-0" '
                     . 'type="checkbox" value="' . $product->id . '" />';

@@ -67,7 +67,8 @@
                     <table id="rolesTable" class="table table-custom table-centered table-hover w-100 mb-0">
                         <thead class="bg-light align-middle bg-opacity-25 thead-sm">
                             <tr class="text-uppercase fs-xxs">
-                                <th class="ps-3">Role</th>
+                                <th class="ps-3 text-center" style="width: 1%;">S.No</th>
+                                <th>Role</th>
                                 <th>Slug</th>
                                 <th>Users</th>
                                 <th>Permissions</th>
@@ -119,7 +120,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[0, 'asc']],
+            order: [[1, 'asc']],
             ajax: {
                 url: '{{ route('roles.data') }}',
                 type: 'GET',
@@ -127,7 +128,8 @@
             dom: 'rt<"d-none datatables-tail"ip>',
             pageLength: 10,
             columns: [
-                { data: 'name',                    name: 'roles.name',         className: 'ps-3' },
+                { data: 'DT_RowIndex',             name: 'DT_RowIndex',        orderable: false, searchable: false, className: 'text-center' },
+                { data: 'name',                    name: 'roles.name' },
                 { data: 'slug',                    name: 'roles.slug' },
                 { data: 'users_count_badge',       name: 'users_count',        orderable: false, searchable: false },
                 { data: 'permissions_count_badge', name: 'permissions_count',  orderable: false, searchable: false },

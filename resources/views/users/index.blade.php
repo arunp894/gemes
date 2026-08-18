@@ -80,6 +80,7 @@
                                     <input id="userSelectAll" class="form-check-input form-check-input-light fs-14 mt-0"
                                         type="checkbox" />
                                 </th>
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Name / Email</th>
                                 <th>Roles</th>
                                 <th>Status</th>
@@ -131,7 +132,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[4, 'desc']],
+            order: [[5, 'desc']],
             ajax: {
                 url: '{{ route('users.data') }}',
                 type: 'GET',
@@ -140,6 +141,7 @@
             pageLength: 10,
             columns: [
                 { data: 'checkbox',     name: 'checkbox',            orderable: false, searchable: false, className: 'ps-3' },
+                { data: 'DT_RowIndex',  name: 'DT_RowIndex',         orderable: false, searchable: false, className: 'text-center' },
                 { data: 'name',         name: 'users.name' },
                 { data: 'roles_badges', name: 'roles_badges',        orderable: false, searchable: false },
                 { data: 'status_badge', name: 'users.is_active',     searchable: true },
@@ -176,7 +178,7 @@
         });
 
         $('#userStatusFilter').on('change', function () {
-            dt.column(3).search(this.value).draw();
+            dt.column(4).search(this.value).draw();
         });
 
         $('#userSelectAll').on('change', function () {

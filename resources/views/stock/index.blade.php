@@ -24,8 +24,8 @@
 
             <div class="card" id="categoryRollupCard">
                 <div class="card-header border-light d-flex align-items-center justify-content-between">
-                    <h5 class="card-title mb-0">By Category</h5>
-                    <small class="text-muted">Click a category to filter the table below</small>
+                    <h5 class="card-title mb-0">By Stone</h5>
+                    <small class="text-muted">Click a stone to filter the table below</small>
                 </div>
                 <div class="card-body">
                     <div class="row g-2" id="categoryRollup">
@@ -58,7 +58,7 @@
 
                         <div class="app-search">
                             <select id="stockCategoryFilter" class="form-select form-control my-1 my-md-0">
-                                <option value="">All Categories</option>
+                                <option value="">All Stones</option>
                                 @foreach ($categories as $c)
                                     <option value="{{ $c->id }}">{{ $c->name }}</option>
                                 @endforeach
@@ -87,6 +87,7 @@
                     <table id="stockTable" class="table table-custom table-centered table-hover w-100 mb-0">
                         <thead class="bg-light align-middle bg-opacity-25 thead-sm">
                             <tr class="text-uppercase fs-xxs">
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Product</th>
                                 <th>Location</th>
                                 <th class="text-end">On Hand</th>
@@ -129,7 +130,7 @@ $(function () {
         processing: true,
         serverSide: true,
         responsive: false,
-        order: [[2, 'desc']],
+        order: [[3, 'desc']],
         ajax: {
             url: '{{ route('stock.data') }}',
             data: function (d) {
@@ -140,6 +141,7 @@ $(function () {
         dom: 'rt<"d-none datatables-tail"ip>',
         pageLength: 25,
         columns: [
+            { data: 'DT_RowIndex',    name: 'DT_RowIndex',     orderable: false, searchable: false, className: 'text-center' },
             { data: 'product_label',  name: 'products.title',  orderable: false },
             { data: 'location_label', name: 'locations.name',  orderable: false, searchable: false },
             { data: 'on_hand',        name: 'on_hand',         orderable: true,  searchable: false, className: 'text-end' },

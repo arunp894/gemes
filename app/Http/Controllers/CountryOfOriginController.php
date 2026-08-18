@@ -32,6 +32,7 @@ class CountryOfOriginController extends Controller
         }
 
         return DataTables::of($q)
+            ->addIndexColumn()
             ->editColumn('name', fn (CountryOfOrigin $o) =>
                 '<a href="' . route('country-origins.show', $o) . '" class="link-reset fw-medium">' . e($o->name) . '</a>'
             )

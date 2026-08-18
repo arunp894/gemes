@@ -74,6 +74,26 @@ class SettingService
             : $formatted . ' ' . $code;
     }
 
+    /**
+     * Back-office counterpart to formatPrice(): same currency_symbol /
+     * currency_position logic, but always keeps decimal places (default 2)
+     * instead of rounding to whole units, and never falls back to "Price on
+     * Request" — admin ledgers, invoices, and DataTables need a numeric
+     * value even for a zero/blank amount. Use this anywhere in the admin
+     * panel that currently does raw number_format() on a money value.
+     */
+    public function formatMoney(float|int|string|null $amount, int $decimals = 2): string
+    {
+        $symbol    = $this->get('currency_symbol', '₹');
+        $code      = $this->get('currency_code',   'USD');
+        $position  = $this->get('currency_position', 'before');
+        $formatted = number_format((float) ($amount ?? 0), $decimals);
+
+        return $position === 'before'
+            ? $symbol . $formatted
+            : $formatted . ' ' . $code;
+    }
+
     /* ---------------------------------------------------------------
      |  Write
      | --------------------------------------------------------------- */

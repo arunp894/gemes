@@ -1,6 +1,6 @@
 @extends('layout.app')
 
-@section('title', 'Categories')
+@section('title', 'Stones')
 
 @section('content')
 
@@ -9,7 +9,7 @@
     {{-- Page title --}}
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
-            <h4 class="page-main-title m-0">Categories</h4>
+            <h4 class="page-main-title m-0">Stones</h4>
         </div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
@@ -41,7 +41,7 @@
                     <div class="d-flex gap-2">
                         <div class="app-search">
                             <input id="categorySearch" type="search" class="form-control"
-                                placeholder="Search category..." />
+                                placeholder="Search stone..." />
                             <i class="ti ti-search app-search-icon text-muted"></i>
                         </div>
                     </div>
@@ -68,7 +68,7 @@
 
                         <a href="#!" class="btn btn-primary ms-1" data-bs-toggle="modal"
                             data-bs-target="#addCategoryModal">
-                            <i class="ti ti-plus fs-sm me-2"></i> Add Category
+                            <i class="ti ti-plus fs-sm me-2"></i> Add Stone
                         </a>
                     </div>
                 </div>
@@ -82,7 +82,8 @@
                                     <input id="categorySelectAll" class="form-check-input form-check-input-light fs-14 mt-0"
                                         type="checkbox" />
                                 </th>
-                                <th>Category Name</th>
+                                <th class="text-center" style="width: 1%;">S.No</th>
+                                <th>Stone Name</th>
                                 <th>Code</th>
                                 <th>Display Order</th>
                                 <th>Status</th>
@@ -111,7 +112,7 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="addCategoryModalLabel">
                         <i class="ti ti-plus me-1"></i>
-                        Add New Category
+                        Add New Stone
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -133,7 +134,7 @@
 
                             {{-- Name --}}
                             <div class="col-md-6">
-                                <label for="quick_name" class="form-label">Category Name <span class="text-danger">*</span></label>
+                                <label for="quick_name" class="form-label">Stone Name <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control"
                                     :class="{ 'is-invalid': errors.name }"
                                     id="quick_name" v-model="form.name" maxlength="150" required>
@@ -142,7 +143,7 @@
 
                             {{-- Code --}}
                             <div class="col-md-6">
-                                <label for="quick_code" class="form-label">Category Code <span class="text-danger">*</span></label>
+                                <label for="quick_code" class="form-label">Stone Code <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control text-uppercase"
                                     :class="{ 'is-invalid': errors.code }"
                                     id="quick_code" v-model="form.code" maxlength="50" required>
@@ -152,7 +153,7 @@
 
                             {{-- Image --}}
                             <div class="col-md-12">
-                                <label for="quick_image" class="form-label">Category Image</label>
+                                <label for="quick_image" class="form-label">Stone Image</label>
                                 <input type="file" class="form-control" :class="{ 'is-invalid': errors.image }"
                                     id="quick_image" accept="image/jpeg,image/png" @change="onImageChange">
                                 <div class="invalid-feedback">@{{ errors.image }}</div>
@@ -177,7 +178,7 @@
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary" :disabled="submitting">
                             <span v-if="submitting" class="spinner-border spinner-border-sm me-1"></span>
-                            Add Category
+                            Add Stone
                         </button>
                     </div>
                 </form>
@@ -221,7 +222,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[3, 'asc'], [1, 'asc']], // display_order asc, then name asc
+            order: [[4, 'asc'], [2, 'asc']], // display_order asc, then name asc
             ajax: {
                 url: '{{ route('categories.data') }}',
                 type: 'GET',
@@ -231,6 +232,7 @@
             pageLength: 10,
             columns: [
                 { data: 'checkbox',            name: 'checkbox',                  orderable: false, searchable: false, className: 'ps-3' },
+                { data: 'DT_RowIndex',         name: 'DT_RowIndex',               orderable: false, searchable: false, className: 'text-center' },
                 { data: 'name',                name: 'categories.name' },
                 { data: 'code',                name: 'categories.code' },
                 { data: 'display_order',       name: 'categories.display_order' },
@@ -239,11 +241,11 @@
                 { data: 'action',              name: 'action',                    orderable: false, searchable: false, className: 'text-center' },
             ],
             language: {
-                info: 'Showing _START_ to _END_ of _TOTAL_ categories',
-                infoEmpty: 'No categories found',
+                info: 'Showing _START_ to _END_ of _TOTAL_ stones',
+                infoEmpty: 'No stones found',
                 infoFiltered: ' (filtered from _MAX_ total)',
-                emptyTable: 'No categories yet. Click "Add Category" to get started.',
-                zeroRecords: 'No categories match your search.',
+                emptyTable: 'No stones yet. Click "Add Stone" to get started.',
+                zeroRecords: 'No stones match your search.',
                 processing: '<div class="spinner-border spinner-border-sm text-primary"></div>',
                 paginate: {
                     previous: '<i class="ti ti-chevron-left"></i>',
@@ -272,7 +274,7 @@
 
         // Status filter — column index 4 is the status_badge column
         $('#categoryStatusFilter').on('change', function () {
-            dt.column(4).search(this.value).draw();
+            dt.column(5).search(this.value).draw();
         });
 
         // ============= Select-all =============
@@ -296,19 +298,19 @@
         $('#categoriesTable tbody').on('click', '.js-delete', function () {
             const url  = $(this).data('url');
             const name = $(this).data('name');
-            if (!confirm('Delete category "' + name + '"? (This is a soft delete.)')) return;
+            if (!confirm('Delete stone "' + name + '"? (This is a soft delete.)')) return;
             $.ajax({
                 url: url,
                 type: 'DELETE',
                 headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                 success: function (res) {
                     if (res.success) dt.ajax.reload(null, false);
-                    else alert(res.message || 'Could not delete category.');
+                    else alert(res.message || 'Could not delete stone.');
                 },
                 error: function (xhr) {
                     const msg = (xhr.responseJSON && xhr.responseJSON.message)
                         ? xhr.responseJSON.message
-                        : 'Failed to delete category.';
+                        : 'Failed to delete stone.';
                     alert(msg);
                 },
             });

@@ -37,6 +37,7 @@ class BannerController extends Controller
         $query = Banner::query()->withoutTrashed();
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->addColumn('checkbox', function (Banner $banner) {
                 return '<input class="form-check-input form-check-input-light fs-14 banner-item-check mt-0"
                     type="checkbox" value="' . $banner->id . '" />';

@@ -90,6 +90,7 @@
                                     <input id="locationSelectAll" class="form-check-input form-check-input-light fs-14 mt-0"
                                         type="checkbox" />
                                 </th>
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Code</th>
                                 <th>Location</th>
                                 <th>Type</th>
@@ -144,7 +145,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[7, 'desc']],
+            order: [[8, 'desc']],
             ajax: {
                 url: '{{ route('locations.data') }}',
                 type: 'GET',
@@ -153,6 +154,7 @@
             pageLength: 10,
             columns: [
                 { data: 'checkbox',      name: 'checkbox',                  orderable: false, searchable: false, className: 'ps-3' },
+                { data: 'DT_RowIndex',   name: 'DT_RowIndex',               orderable: false, searchable: false, className: 'text-center' },
                 { data: 'location_code', name: 'locations.location_code' },
                 { data: 'name',          name: 'locations.name' },
                 { data: 'type_badge',    name: 'locations.type',            searchable: true },
@@ -192,11 +194,11 @@
         });
 
         $('#locationTypeFilter').on('change', function () {
-            dt.column(3).search(this.value).draw();
+            dt.column(4).search(this.value).draw();
         });
 
         $('#locationStatusFilter').on('change', function () {
-            dt.column(6).search(this.value).draw();
+            dt.column(7).search(this.value).draw();
         });
 
         $('#locationSelectAll').on('change', function () {

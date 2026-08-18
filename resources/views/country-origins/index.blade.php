@@ -68,6 +68,7 @@
                     <table id="originsTable" class="table table-striped dt-responsive align-middle mb-0">
                         <thead class="bg-light align-middle bg-opacity-25 thead-sm">
                             <tr class="text-uppercase fs-xxs">
+                                <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Name</th>
                                 <th class="text-center">Status</th>
                                 <th class="text-center">Order</th>
@@ -118,7 +119,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[2, 'asc']],
+            order: [[3, 'asc']],
             ajax: {
                 url: '{{ route('country-origins.data') }}',
                 type: 'GET',
@@ -126,6 +127,7 @@
             dom: 'rt<"d-none datatables-tail"ip>',
             pageLength: 10,
             columns: [
+                { data: 'DT_RowIndex',   name: 'DT_RowIndex',    orderable: false, searchable: false, className: 'text-center' },
                 { data: 'name',          name: 'countries_of_origin.name' },
                 { data: 'status',        name: 'countries_of_origin.status', className: 'text-center' },
                 { data: 'display_order', name: 'countries_of_origin.display_order', className: 'text-center' },
@@ -161,7 +163,7 @@
         });
 
         $('#originStatusFilter').on('change', function () {
-            dt.column(1).search(this.value).draw();
+            dt.column(2).search(this.value).draw();
         });
 
         $('#originsTable tbody').on('click', '.js-toggle-status', function () {

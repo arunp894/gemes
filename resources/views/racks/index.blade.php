@@ -44,6 +44,7 @@
             <table id="racksTable" class="table table-custom table-centered table-hover w-100 mb-0">
                 <thead class="bg-light bg-opacity-25 thead-sm">
                     <tr class="text-uppercase fs-xxs">
+                        <th class="text-center" style="width: 1%;">S.No</th>
                         <th>Code</th>
                         <th>Name</th>
                         <th>Location</th>
@@ -66,6 +67,7 @@
         responsive: true,
         ajax: { url: "{{ route('racks.data') }}" },
         columns: [
+            { data: 'DT_RowIndex',   name: 'DT_RowIndex',  orderable: false, searchable: false, className: 'text-center' },
             { data: 'code',          name: 'code' },
             { data: 'name',          name: 'name' },
             { data: 'location',      name: 'location' },
@@ -73,7 +75,7 @@
             { data: 'created_at',    name: 'created_at' },
             { data: 'actions',       orderable: false, searchable: false, className: 'text-center' },
         ],
-        order: [[0, 'asc']],
+        order: [[1, 'asc']],
     });
 
     $('#rackSearch').on('keyup', function () { table.search(this.value).draw(); });

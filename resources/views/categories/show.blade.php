@@ -1,6 +1,6 @@
 @extends('layout.app')
 
-@section('title', 'Category Details')
+@section('title', 'Stone Details')
 
 @section('content')
 
@@ -8,12 +8,12 @@
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
-            <h4 class="page-main-title m-0">Category Details</h4>
+            <h4 class="page-main-title m-0">Stone Details</h4>
         </div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('categories.index') }}">Categories</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('categories.index') }}">Stones</a></li>
                 <li class="breadcrumb-item active">{{ $category->name }}</li>
             </ol>
         </div>
@@ -68,7 +68,7 @@
         <div class="col-lg-4">
             <div class="card">
                 <div class="card-body text-center">
-                    <h5 class="header-title text-start mb-3">Category Image</h5>
+                    <h5 class="header-title text-start mb-3">Stone Image</h5>
                     @if ($category->image_url)
                         <img src="{{ $category->image_url }}" alt="{{ $category->name }}"
                              class="img-fluid rounded border" style="max-height:240px;">

@@ -1,6 +1,6 @@
 @extends('layout.app')
 
-@section('title', 'Add New Category')
+@section('title', 'Add New Stone')
 
 @section('content')
 
@@ -8,13 +8,13 @@
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
-            <h4 class="page-main-title m-0">Add New Category</h4>
+            <h4 class="page-main-title m-0">Add New Stone</h4>
         </div>
 
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('categories.index') }}">Categories</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('categories.index') }}">Stones</a></li>
                 <li class="breadcrumb-item active">Add New</li>
             </ol>
         </div>
@@ -24,7 +24,7 @@
         <div class="col-lg-8">
             <div class="card">
                 <div class="card-body">
-                    <h4 class="header-title mb-3">Category Details</h4>
+                    <h4 class="header-title mb-3">Stone Details</h4>
                     <p class="text-muted mb-4">Fields marked with <span class="text-danger">*</span> are required.</p>
 
                     <form id="categoryForm" class="needs-validation" novalidate @submit.prevent="submitForm($event)">
@@ -33,7 +33,7 @@
                         {{-- Name --}}
                         <div class="mb-3">
                             <label for="name" class="form-label">
-                                Category Name
+                                Stone Name
                                 <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control"
@@ -46,7 +46,7 @@
 
                         {{-- Code --}}
                         <div class="mb-3">
-                            <label for="code" class="form-label">Category Code <span class="text-danger">*</span></label>
+                            <label for="code" class="form-label">Stone Code <span class="text-danger">*</span></label>
                             <input type="text" class="form-control text-uppercase"
                                 :class="{ 'is-invalid': errors.code, 'is-valid': touched.code && !errors.code && form.code }"
                                 id="code" name="code" v-model="form.code" @input="validateField('code')"
@@ -76,7 +76,7 @@
 
                         {{-- Image --}}
                         <div class="mb-3">
-                            <label for="image" class="form-label">Category Image</label>
+                            <label for="image" class="form-label">Stone Image</label>
                             <input type="file" class="form-control" :class="{ 'is-invalid': errors.image }" id="image"
                                 name="image" accept="image/jpeg,image/png" @change="onImageChange">
                             <div class="invalid-feedback" v-if="errors.image">@{{ errors.image }}</div>
@@ -90,16 +90,16 @@
 
                         {{-- Gemstone-Type flag --}}
                         <div class="mb-3">
-                            <label class="form-label d-block">Gemstone Category</label>
+                            <label class="form-label d-block">Gemstone Stone</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="is_gemstone"
                                     v-model="form.is_gemstone">
                                 <label class="form-check-label" for="is_gemstone">
-                                    Products under this category use gemstone fields (carat, treatment, certificate…)
+                                    Products under this stone use gemstone fields (carat, treatment, certificate…)
                                 </label>
                             </div>
                             <small class="text-muted">
-                                Tick this if products in this category are gemstones or certified stones. The product
+                                Tick this if products in this stone are gemstones or certified stones. The product
                                 form will then show the Gemstone Details panel.
                             </small>
                         </div>
@@ -126,7 +126,7 @@
                             <button type="submit" class="btn btn-primary" :disabled="submitting">
                                 <span v-if="submitting" class="spinner-border spinner-border-sm me-1" role="status"></span>
                                 <span v-if="!submitting"><i class="ti ti-device-floppy me-1"></i></span>
-                                Save Category
+                                Save Stone
                             </button>
                         </div>
                     </form>
@@ -141,8 +141,8 @@
                     <ul class="text-muted small mb-0 ps-3">
                         <li>Names must be unique across the platform.</li>
                         <li>Codes cannot contain spaces; underscores are allowed.</li>
-                        <li>Inactive categories stay linked to existing products.</li>
-                        <li>Categories with linked products cannot be deleted &mdash; deactivate them instead.</li>
+                        <li>Inactive stones stay linked to existing products.</li>
+                        <li>Stones with linked products cannot be deleted &mdash; deactivate them instead.</li>
                     </ul>
                 </div>
             </div>
@@ -179,13 +179,13 @@
                 const value = this.form[field];
 
                 if (field === 'name') {
-                    if (!value || !value.trim()) this.$set(this.errors, 'name', 'Category name is required.');
+                    if (!value || !value.trim()) this.$set(this.errors, 'name', 'Stone name is required.');
                     else if (value.length > 150)  this.$set(this.errors, 'name', 'Maximum 150 characters.');
                     else this.$delete(this.errors, 'name');
                 }
 
                 if (field === 'code') {
-                    if (!value || !value.trim()) this.$set(this.errors, 'code', 'Category code is required.');
+                    if (!value || !value.trim()) this.$set(this.errors, 'code', 'Stone code is required.');
                     else if (!/^[A-Za-z0-9_]+$/.test(value)) this.$set(this.errors, 'code', 'Only letters, numbers, and underscores allowed.');
                     else if (value.length > 50)  this.$set(this.errors, 'code', 'Maximum 50 characters.');
                     else this.$delete(this.errors, 'code');

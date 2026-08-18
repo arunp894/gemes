@@ -46,6 +46,7 @@ class PermissionController extends Controller
         $query = Permission::query()->withCount('roles');
 
         return DataTables::of($query)
+            ->addIndexColumn()
             ->editColumn('name', function (Permission $permission) {
                 return '
                     <h5 class="mb-0 fs-base">
