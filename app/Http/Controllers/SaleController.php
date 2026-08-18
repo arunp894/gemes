@@ -343,9 +343,11 @@ class SaleController extends Controller
     /* ─── Terminal helpers (lookup + search) ──────────────── */
 
     /**
-     * Resolve a scanned barcode to (product + the exact PurchaseProduct
-     * with remaining stock, if any). Sales prefer matching the specific
-     * inventory row so cost + margin reporting are accurate.
+     * Resolve a scanned barcode OR lot code to (product + the exact
+     * PurchaseProduct with remaining stock, if any). Sales prefer
+     * matching the specific inventory row so cost + margin reporting
+     * are accurate — a lot code identifies exactly one such row, same
+     * as a purchase_products.barcode match, so both are tried together.
      *
      * Accepts optional ?location_id= so the terminal can show the
      * live on-hand balance at the sale's location.
@@ -358,13 +360,17 @@ class SaleController extends Controller
             return response()->json(['ok' => false, 'message' => 'No barcode provided.'], 422);
         }
 
-        // Strategy 1: exact match in purchase_products (the inventory row).
+        // Strategy 1: exact match in purchase_products, on either its own
+        // barcode or its lot code (SS-PPP-UUU) — both identify this exact
+        // physical piece, unlike the product-level Barcode table below.
         $pp = PurchaseProduct::with([
             'product:id,title,sku,website_price',
             'line.product:id,title,sku,website_price',
             'line.purchase:id,status',
         ])
-            ->where('barcode', $value)
+            ->where(function ($q) use ($value) {
+                $q->where('barcode', $value)->orWhere('lot_code', $value);
+            })
             ->whereNull('deleted_at')
             ->first();
 

@@ -44,6 +44,17 @@ class Purchase extends Model
         self::TAX_IGST,
     ];
 
+    /* ─── Payment status ───────────────────────────────────── */
+    public const PAY_UNPAID  = 'unpaid';
+    public const PAY_PARTIAL = 'partial';
+    public const PAY_PAID    = 'paid';
+
+    public const PAYMENT_STATUSES = [
+        self::PAY_UNPAID,
+        self::PAY_PARTIAL,
+        self::PAY_PAID,
+    ];
+
     public const NUMBER_PAD = 4;
 
     protected $fillable = [
@@ -58,6 +69,7 @@ class Purchase extends Model
         'grand_total',
         'paid_amount',
         'due_amount',
+        'payment_status',
         'note',
         'status',
         'created_by',
@@ -168,6 +180,11 @@ class Purchase extends Model
         );
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(PurchasePayment::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -197,6 +214,24 @@ class Purchase extends Model
     public function statusLabel(): string
     {
         return ucfirst($this->status);
+    }
+
+    public function paymentStatusLabel(): string
+    {
+        return match ($this->payment_status) {
+            self::PAY_PAID    => 'Paid',
+            self::PAY_PARTIAL => 'Partial',
+            default           => 'Unpaid',
+        };
+    }
+
+    public function paymentStatusBadgeClass(): string
+    {
+        return match ($this->payment_status) {
+            self::PAY_PAID    => 'badge-soft-success',
+            self::PAY_PARTIAL => 'badge-soft-warning',
+            default           => 'badge-soft-danger',
+        };
     }
 
     /**

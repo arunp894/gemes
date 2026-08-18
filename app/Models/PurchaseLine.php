@@ -47,6 +47,12 @@ class PurchaseLine extends Model
         // Optional seed for the created product(s)' listing price — staff
         // can leave this blank and set it later per product instead.
         'website_price',
+        // Line-level "list on website" toggle. Unlike website_price this
+        // isn't just a seed — syncLines() re-applies it to every product
+        // already created under this line on every edit too, same as
+        // carat_weight. See PurchaseService::syncLines() for why status
+        // is promoted to Active alongside it.
+        'website_enabled',
         'carat_weight',
         'stone_type',
         'colour_grade',
@@ -69,6 +75,7 @@ class PurchaseLine extends Model
         'unit_contains' => 'integer',
         'carat_weight'  => 'decimal:3',
         'website_price' => 'decimal:2',
+        'website_enabled' => 'boolean',
         'category_id'   => 'integer',
         'country_of_origin_id' => 'integer',
         'subtotal'      => 'decimal:2',

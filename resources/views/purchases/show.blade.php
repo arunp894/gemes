@@ -11,6 +11,7 @@
                 Purchase
                 <span class="badge bg-soft-primary text-primary ms-2">{{ $purchase->invoice_number }}</span>
                 <span class="badge {{ $purchase->statusBadgeClass() }} ms-1">{{ $purchase->statusLabel() }}</span>
+                <span class="badge {{ $purchase->paymentStatusBadgeClass() }} ms-1">{{ $purchase->paymentStatusLabel() }}</span>
             </h4>
         </div>
         <div class="text-end d-flex gap-1 align-items-center">
@@ -230,6 +231,68 @@
 
                 </div>
             </div>
+
+            {{-- Payments list + add-payment form --}}
+            <div class="card">
+                <div class="card-header border-light"><h5 class="card-title mb-0">Payments</h5></div>
+                <div class="card-body p-0">
+                    @if ($purchase->payments->isEmpty())
+                        <p class="text-muted small text-center py-3 mb-0">No payments recorded.</p>
+                    @else
+                        <ul class="list-group list-group-flush">
+                            @foreach ($purchase->payments as $p)
+                                <li class="list-group-item px-3 py-2">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <span class="badge {{ $p->methodBadgeClass() }} fs-xxs">{{ $p->methodLabel() }}</span>
+                                        @permission('purchases.edit')
+                                        @if (! $purchase->isCancelled())
+                                            <button type="button" class="btn btn-default btn-icon btn-sm text-danger js-remove-payment"
+                                                data-url="{{ route('purchases.payments.destroy', [$purchase, $p]) }}"
+                                                title="Remove">
+                                                <i class="ti ti-x"></i>
+                                            </button>
+                                        @endif
+                                        @endpermission
+                                    </div>
+                                    <div class="fw-semibold {{ $p->isRefund() ? 'text-danger' : '' }} mt-1">
+                                        {{ $p->isRefund() ? '−' : '' }}{{ number_format(abs((float) $p->amount), 2) }}
+                                    </div>
+                                    <small class="d-block text-muted">
+                                        {{ optional($p->payment_date)->format('d M Y') }}
+                                        @if ($p->reference_number) <br>Ref: {{ $p->reference_number }} @endif
+                                    </small>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+
+                @permission('purchases.edit')
+                @if ($purchase->isPosted())
+                <div class="card-footer border-top">
+                    <h6 class="text-muted text-uppercase small mb-2">Add Payment</h6>
+                    <form id="addPaymentForm">
+                        <select class="form-select form-select-sm mb-1" id="paymentMethod">
+                            @foreach ($paymentMethods as $key => $label)
+                                <option value="{{ $key }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <input type="number" step="0.01" class="form-control form-control-sm mb-1 text-end"
+                            id="paymentAmount" placeholder="Amount"
+                            value="{{ number_format((float) $purchase->due_amount, 2, '.', '') }}" required>
+                        <input type="date" class="form-control form-control-sm mb-1" id="paymentDate"
+                            value="{{ now()->toDateString() }}" required>
+                        <input type="text" class="form-control form-control-sm mb-2" id="paymentReference"
+                            placeholder="Reference (optional)">
+                        <button type="submit" class="btn btn-primary btn-sm w-100" id="paymentSubmitBtn">
+                            Save
+                        </button>
+                        <div id="paymentError" class="alert alert-danger mt-2 mb-0 py-2 small d-none"></div>
+                    </form>
+                </div>
+                @endif
+                @endpermission
+            </div>
         </div>
     </div>
 </div>
@@ -249,6 +312,64 @@
             }).then(r => r.json()).then(() => window.location.reload());
         });
     }
+
+    // Payments: add + remove
+    const addPaymentForm = document.getElementById('addPaymentForm');
+    if (addPaymentForm) {
+        addPaymentForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const btn    = document.getElementById('paymentSubmitBtn');
+            const errBox = document.getElementById('paymentError');
+            errBox.classList.add('d-none');
+            btn.disabled = true;
+
+            fetch('{{ route('purchases.payments.store', $purchase) }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrf,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    payment_date:     document.getElementById('paymentDate').value,
+                    amount:           Number(document.getElementById('paymentAmount').value),
+                    payment_method:   document.getElementById('paymentMethod').value,
+                    reference_number: document.getElementById('paymentReference').value || null,
+                }),
+            })
+            .then(async (r) => {
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) {
+                    errBox.textContent = data.message || 'Please check the amount and method.';
+                    errBox.classList.remove('d-none');
+                    btn.disabled = false;
+                    return;
+                }
+                window.location.reload();
+            })
+            .catch(() => {
+                errBox.textContent = 'Network error. Please try again.';
+                errBox.classList.remove('d-none');
+                btn.disabled = false;
+            });
+        });
+    }
+
+    document.querySelectorAll('.js-remove-payment').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (!confirm('Remove this payment?')) return;
+            fetch(this.dataset.url, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+            })
+            .then(async (r) => {
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) { alert(data.message || 'Failed.'); return; }
+                window.location.reload();
+            })
+            .catch(() => alert('Network error.'));
+        });
+    });
 
     // Print labels: select rows + copies, submit to a new tab.
     const rowChecks   = () => Array.from(document.querySelectorAll('.js-label-row'));

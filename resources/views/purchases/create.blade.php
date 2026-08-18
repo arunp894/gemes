@@ -116,7 +116,7 @@
                                 <div class="invalid-feedback">@{{ addErrors.title }}</div>
                             </div>
 
-                            <div class="col-md-2">
+                            <div class="col-md-1">
                                 <label class="form-label">Type</label>
                                 <select class="form-select" v-model="addForm.type" @change="onAddFormTypeChange">
                                     <option value="piece">Piece</option>
@@ -140,11 +140,23 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-2">
+                            <div class="col-md-1">
                                 <label class="form-label">Selling Price</label>
                                 <input type="number" step="0.01" min="0" class="form-control"
                                        v-model.number="addForm.website_price" placeholder="optional">
                                 <small class="text-muted">Set later if unsure.</small>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label d-block">Website</label>
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           id="addFormWebsiteEnabled" v-model="addForm.website_enabled">
+                                    <label class="form-check-label" for="addFormWebsiteEnabled">
+                                        @{{ addForm.website_enabled ? 'Enabled' : 'Disabled' }}
+                                    </label>
+                                </div>
+                                <small class="text-muted">Lists this item for sale online.</small>
                             </div>
 
                             {{-- Gemstone panel: shown only when the chosen category is flagged is_gemstone --}}

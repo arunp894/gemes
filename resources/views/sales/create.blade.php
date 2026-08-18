@@ -140,12 +140,12 @@
                         <div class="row g-2 align-items-end">
                             <div class="col-md-6">
                                 <label class="form-label">
-                                    Barcode
+                                    Barcode / Lot Code
                                     <small class="text-muted">Scan and press Enter to add to cart.</small>
                                 </label>
                                 <input ref="barcodeInput" type="text" class="form-control form-control-lg"
                                     v-model="barcodeInput"
-                                    placeholder="Scan or type barcode then Enter"
+                                    placeholder="Scan or type barcode / lot code then Enter"
                                     @keyup.enter.prevent="onBarcodeEnter" autofocus>
                             </div>
 

@@ -170,6 +170,122 @@ class StockController extends Controller
         return response()->json(['ok' => true, 'categories' => $rows]);
     }
 
+    /* ─── Sales report ────────────────────────────── */
+
+    /**
+     * KPI strip for the Sales Report tab: total qty sold, distinct
+     * products sold, and distinct sale invoices touched — respecting
+     * the same location/category filters as salesData(). Uses the same
+     * reason=sale definition as the "sold_qty" KPI already shown on the
+     * per-product ledger (product(), above) so the two screens agree.
+     */
+    public function salesSummary(Request $request): JsonResponse
+    {
+        $locationId = (int) $request->query('location_id', 0);
+        $categoryId = (int) $request->query('category_id', 0);
+
+        $q = DB::table('stock_movements')
+            ->join('products', 'products.id', '=', 'stock_movements.product_id')
+            ->where('stock_movements.reason', StockMovement::REASON_SALE)
+            ->whereNull('stock_movements.deleted_at');
+
+        if ($locationId) {
+            $q->where('stock_movements.location_id', $locationId);
+        }
+        if ($categoryId) {
+            $q->where('products.category_id', $categoryId);
+        }
+
+        $row = $q->selectRaw(
+            'SUM(stock_movements.qty) as qty_sold, '
+            . 'COUNT(DISTINCT stock_movements.product_id) as products_sold, '
+            . 'COUNT(DISTINCT stock_movements.source_id) as sales_count'
+        )->first();
+
+        return response()->json([
+            'ok'            => true,
+            'qty_sold'      => (int) ($row->qty_sold ?? 0),
+            'products_sold' => (int) ($row->products_sold ?? 0),
+            'sales_count'   => (int) ($row->sales_count ?? 0),
+        ]);
+    }
+
+    /**
+     * DataTables-friendly sold-qty-by-product-per-location feed — the
+     * Sales Report counterpart to data(). Same grouping shape as the
+     * on-hand table, but summed over OUT movements with reason=sale
+     * instead of the running in/out balance.
+     */
+    public function salesData(Request $request): JsonResponse
+    {
+        $locationId = (int) $request->query('location_id', 0);
+        $categoryId = (int) $request->query('category_id', 0);
+
+        $base = DB::table('stock_movements')
+            ->join('products',      'products.id',      '=', 'stock_movements.product_id')
+            ->join('locations',     'locations.id',      '=', 'stock_movements.location_id')
+            ->leftJoin('categories', 'categories.id',     '=', 'products.category_id')
+            ->where('stock_movements.reason', StockMovement::REASON_SALE)
+            ->whereNull('stock_movements.deleted_at')
+            ->groupBy(
+                'stock_movements.product_id', 'stock_movements.location_id',
+                'products.title', 'products.sku', 'products.category_id',
+                'categories.name', 'locations.name', 'locations.location_code'
+            )
+            ->select([
+                'stock_movements.product_id',
+                'stock_movements.location_id',
+                'products.title       as product_title',
+                'products.sku         as product_sku',
+                'products.category_id as category_id',
+                'categories.name      as category_name',
+                'locations.name       as location_name',
+                'locations.location_code',
+                DB::raw('SUM(stock_movements.qty) as qty_sold'),
+                DB::raw('COUNT(DISTINCT stock_movements.source_id) as sales_count'),
+                DB::raw('MAX(stock_movements.movement_date) as last_sale_date'),
+            ]);
+
+        if ($locationId) {
+            $base->where('stock_movements.location_id', $locationId);
+        }
+        if ($categoryId) {
+            $base->where('products.category_id', $categoryId);
+        }
+
+        return DataTables::query($base)
+            ->addIndexColumn()
+            ->editColumn('qty_sold', fn ($row) =>
+                '<span class="fw-semibold text-danger">' . (int) $row->qty_sold . '</span>'
+            )
+            ->editColumn('last_sale_date', fn ($row) =>
+                $row->last_sale_date ? date('d M Y', strtotime($row->last_sale_date)) : '—'
+            )
+            ->addColumn('product_label', fn ($row) =>
+                '<div class="fw-semibold">' . e($row->product_title) . '</div>'
+                . '<small class="text-muted">SKU: ' . e($row->product_sku)
+                . ($row->category_name ? ' &middot; ' . e($row->category_name) : '') . '</small>'
+            )
+            ->addColumn('location_label', fn ($row) =>
+                e($row->location_name) . ' <small class="text-muted">(' . e($row->location_code) . ')</small>'
+            )
+            ->addColumn('action', function ($row) {
+                $url = route('stock.product', ['product' => $row->product_id]);
+                $urlLoc = $url . '?location_id=' . (int) $row->location_id;
+                return '<a href="' . $urlLoc . '" class="btn btn-soft-danger btn-sm d-inline-flex align-items-center gap-1" title="View Sales in Ledger">'
+                    . '<i class="ti ti-receipt fs-sm"></i> Ledger</a>';
+            })
+            ->filterColumn('product_label', function ($q, $keyword) {
+                $like = "%{$keyword}%";
+                $q->where(function ($qq) use ($like) {
+                    $qq->where('products.title', 'like', $like)
+                        ->orWhere('products.sku', 'like', $like);
+                });
+            })
+            ->rawColumns(['qty_sold', 'product_label', 'location_label', 'action'])
+            ->toJson();
+    }
+
     /* ─── Per-product ledger ──────────────────────────────── */
 
     public function product(Product $product, Request $request): View

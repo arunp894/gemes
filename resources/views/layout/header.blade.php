@@ -2,27 +2,11 @@
             <div class="container-fluid topbar-menu">
                 <div class="d-flex align-items-center gap-2">
                     <!-- Topbar Brand Logo -->
-                    <div class="logo-topbar">
-                        <!-- Logo light -->
-                        <a href="index.html" class="logo-light">
-                            <span class="logo-lg">
-                                <img src="assets/images/logo.png" alt="logo" />
-                            </span>
-                            <span class="logo-sm">
-                                <img src="assets/images/logo-sm.png" alt="small logo" />
-                            </span>
-                        </a>
-
-                        <!-- Logo Dark -->
-                        <a href="index.html" class="logo-dark">
-                            <span class="logo-lg">
-                                <img src="assets/images/logo-black.png" alt="dark logo" />
-                            </span>
-                            <span class="logo-sm">
-                                <img src="assets/images/logo-sm.png" alt="small logo" />
-                            </span>
-                        </a>
-                    </div>
+                    <a href="{{ route('dashboard') }}" class="logo-topbar d-flex align-items-center gap-2 text-decoration-none d-none">
+                        <img src="{{ $settings->logoUrl() ?? asset('assets/images/logo.png') }}"
+                            alt="{{ $settings->get('site_name', 'Sukaina Gems') }}" style="height: 30px; width: auto;" />
+                        <span class="fw-semibold fs-lg text-body d-none d-sm-inline">{{ $settings->get('site_name', 'Sukaina Gems') }}</span>
+                    </a>
 
                     <!-- Sidebar Menu Toggle Button -->
                     <button class="sidenav-toggle-button btn btn-primary btn-icon">

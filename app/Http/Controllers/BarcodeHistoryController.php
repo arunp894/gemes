@@ -18,7 +18,7 @@ class BarcodeHistoryController extends Controller
     }
 
     /**
-     * AJAX: resolve a barcode and return the full product history as JSON.
+     * AJAX: resolve a barcode or lot code and return the full product history as JSON.
      *
      * GET /barcode-history/lookup?barcode=<value>
      */

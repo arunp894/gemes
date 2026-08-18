@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
+use App\Models\PurchasePayment;
 use App\Models\PurchaseProduct;
 use App\Models\StockMovement;
 use App\Models\Supplier;
@@ -57,8 +58,11 @@ class PurchaseService
      *   'purchase_date'  => 'YYYY-MM-DD',
      *   'tax_type'       => 'none'|'cgst_sgst'|'igst',
      *   'note'           => string|null,
-     *   'paid_amount'    => float,
      *   'status'         => 'draft'|'posted',
+     *   'payments'       => [                          // optional; multiple rows like SaleService
+     *     ['payment_date' => 'YYYY-MM-DD', 'amount' => float, 'payment_method' => string, 'reference_number' => string|null],
+     *     ...
+     *   ],
      *   'lines' => [
      *     [
      *       'category_id'        => int,
@@ -116,10 +120,10 @@ class PurchaseService
             // stock IN movements are written. Setting status='posted'
             // directly here would leave the ledger empty.
             $purchase->status         = Purchase::STATUS_DRAFT;
-            $purchase->paid_amount    = (float) ($data['paid_amount'] ?? 0);
             $purchase->save();
 
             $this->syncLines($purchase, $data['lines'] ?? []);
+            $this->syncPayments($purchase, $data['payments'] ?? [], replace: true);
             $this->recalculate($purchase);
 
             if ($intendedStatus === Purchase::STATUS_POSTED) {
@@ -139,9 +143,11 @@ class PurchaseService
      *              when Purchase::editBlockReason() is null (no sales
      *              against this purchase's stock yet, and within the
      *              configurable edit window).
-     *   - Other (cancelled): lightweight note/paid_amount only, as a
+     *   - Other (cancelled): lightweight note-only update, as a
      *              defensive fallback — the controller's editBlockReason()
-     *              gate normally prevents reaching here at all.
+     *              gate normally prevents reaching here at all. Payments
+     *              are never touched by this method; they're managed via
+     *              addPayment()/removePayment() from the show page.
      */
     public function update(Purchase $purchase, array $data): Purchase
     {
@@ -152,10 +158,9 @@ class PurchaseService
             }
 
             if (! $purchase->isDraft()) {
-                $purchase->note        = $data['note']        ?? $purchase->note;
-                $purchase->paid_amount = $data['paid_amount'] ?? $purchase->paid_amount;
-                $purchase->due_amount  = max(0, (float) $purchase->grand_total - (float) $purchase->paid_amount);
+                $purchase->note = $data['note'] ?? $purchase->note;
                 $purchase->save();
+                $this->recalculate($purchase);
                 return $this->repo->refresh($purchase);
             }
 
@@ -163,7 +168,6 @@ class PurchaseService
             $purchase->location_id   = $data['location_id']   ?? $purchase->location_id;
             $purchase->tax_type      = $data['tax_type']      ?? $purchase->tax_type;
             $purchase->note          = $data['note']          ?? $purchase->note;
-            $purchase->paid_amount   = (float) ($data['paid_amount'] ?? 0);
             $purchase->save();
 
             // NOTE: this used to hard-delete every line/row before
@@ -172,6 +176,12 @@ class PurchaseService
             // a description while the invoice itself was still being
             // finalised. syncLines() diffs instead of wiping.
             $this->syncLines($purchase, $data['lines'] ?? []);
+            // Only touch payments if the caller actually sent them, so
+            // the edit form (which omits payments) never wipes existing
+            // ones — mirrors SaleService::updateDraftLines().
+            if (array_key_exists('payments', $data)) {
+                $this->syncPayments($purchase, $data['payments'], replace: true);
+            }
             $this->recalculate($purchase);
 
             return $this->repo->refresh($purchase);
@@ -254,11 +264,13 @@ class PurchaseService
         }
 
         // 3. Header fields + diff-sync lines/rows from the new payload.
+        //    paid_amount is intentionally left untouched here — it's
+        //    derived from purchase_payments now (see recalculatePayments()),
+        //    managed from the purchase's detail page, not this form.
         $purchase->purchase_date = $data['purchase_date'] ?? $purchase->purchase_date;
         $purchase->location_id   = $data['location_id']   ?? $purchase->location_id;
         $purchase->tax_type      = $data['tax_type']      ?? $purchase->tax_type;
         $purchase->note          = $data['note']          ?? $purchase->note;
-        $purchase->paid_amount   = (float) ($data['paid_amount'] ?? $purchase->paid_amount);
         $purchase->save();
 
         $this->syncLines($purchase, $data['lines'] ?? []);
@@ -362,7 +374,37 @@ class PurchaseService
                 }
                 $l->delete();
             });
+            $purchase->payments()->each(fn (PurchasePayment $p) => $p->delete());
             $purchase->delete();
+        });
+    }
+
+    /* ─── Payment helpers (public for the show page) ─────── */
+
+    public function addPayment(Purchase $purchase, array $data): PurchasePayment
+    {
+        return DB::transaction(function () use ($purchase, $data) {
+            $payment = new PurchasePayment([
+                'payment_date'     => $data['payment_date']     ?? now()->toDateString(),
+                'amount'           => (float) ($data['amount']  ?? 0),
+                'payment_method'   => $data['payment_method']   ?? PurchasePayment::METHOD_CASH,
+                'reference_number' => $data['reference_number'] ?? null,
+                'notes'            => $data['notes']            ?? null,
+            ]);
+            $purchase->payments()->save($payment);
+            $this->recalculatePayments($purchase);
+            return $payment->refresh();
+        });
+    }
+
+    public function removePayment(PurchasePayment $payment): void
+    {
+        DB::transaction(function () use ($payment) {
+            $purchase = $payment->purchase;
+            $payment->delete();
+            if ($purchase) {
+                $this->recalculatePayments($purchase);
+            }
         });
     }
 
@@ -451,6 +493,10 @@ class PurchaseService
                 'website_price'     => isset($lineData['website_price']) && $lineData['website_price'] !== ''
                     ? (float) $lineData['website_price']
                     : null,
+                // Line-level toggle, applied to every product this line
+                // creates/owns below (see the "New ROW" and "Existing
+                // ROW" branches) — not just seeded once at creation.
+                'website_enabled'   => (bool) ($lineData['website_enabled'] ?? false),
                 'carat_weight'      => $caratDefault,
                 'stone_type'        => $lineData['stone_type']   ?? null,
                 'colour_grade'      => $lineData['colour_grade'] ?? null,
@@ -514,21 +560,35 @@ class PurchaseService
                     $existingRow->save();
                     $seenRowIds[] = $existingRow->id;
 
-                    // Carat weight and selling price are the two fields
-                    // genuinely meant to stay synced onto the product
-                    // after creation — re-weighing a stone or repricing one
-                    // item in a batch are both normal corrections during
-                    // a purchase edit.
+                    // Carat weight, selling price, and the website toggle
+                    // are the fields genuinely meant to stay synced onto
+                    // the product after creation — re-weighing a stone,
+                    // repricing one item in a batch, or flipping whether
+                    // this batch is listed are all normal corrections
+                    // during a purchase edit.
                     if ($existingRow->product_id) {
-                        $productUpdates = [];
-                        if ($caratWeight !== null) {
-                            $productUpdates['carat_weight'] = $caratWeight;
-                        }
-                        if ($websitePrice !== null) {
-                            $productUpdates['website_price'] = $websitePrice;
-                        }
-                        if ($productUpdates) {
-                            Product::where('id', $existingRow->product_id)->update($productUpdates);
+                        $lineProduct = Product::find($existingRow->product_id);
+                        if ($lineProduct) {
+                            if ($caratWeight !== null) {
+                                $lineProduct->carat_weight = $caratWeight;
+                            }
+                            if ($websitePrice !== null) {
+                                $lineProduct->website_price = $websitePrice;
+                            }
+                            // Pushed through the model (not a bulk update)
+                            // so booted()'s updating hook still stamps
+                            // website_enabled_at/disabled_at and clears
+                            // featured_product on disable — same as
+                            // flipping it from the Products screen. Status
+                            // is promoted to Active alongside enabling it,
+                            // mirroring the create-time rule above.
+                            $lineProduct->website_enabled = $line->website_enabled;
+                            if ($line->website_enabled) {
+                                $lineProduct->status = Product::STATUS_ACTIVE;
+                            }
+                            if ($lineProduct->isDirty()) {
+                                $lineProduct->save();
+                            }
                         }
                     }
                 } else {
@@ -540,7 +600,12 @@ class PurchaseService
                         'full_description'  => $line->full_description,
                         'country_of_origin_id' => $line->country_of_origin_id,
                         'notes_tags'        => $line->notes_tags,
-                        'status'            => Product::STATUS_DRAFT,
+                        // Storefront listing needs BOTH website_enabled
+                        // and an Active status (see WebsiteController) —
+                        // the line's toggle drives both together so an
+                        // enabled product is actually live, not stuck
+                        // Draft.
+                        'status'            => $line->website_enabled ? Product::STATUS_ACTIVE : Product::STATUS_DRAFT,
                         'pack_type'         => Product::PACK_TYPE_PIECE,
                         'website_price'     => $websitePrice,
                         'carat_weight'      => $caratWeight,
@@ -549,7 +614,7 @@ class PurchaseService
                         'clarity_grade'     => $line->clarity_grade,
                         'cut_shape'         => $line->cut_shape,
                         'treatment'         => $line->treatment,
-                        'website_enabled'   => false,
+                        'website_enabled'   => $line->website_enabled,
                         'featured_product'  => false,
                     ]);
 
@@ -677,7 +742,60 @@ class PurchaseService
         $purchase->discount_total = 0;
         $purchase->tax_total      = 0;
         $purchase->grand_total    = round($invoiceTotal, 2);
-        $purchase->due_amount     = round(max(0, $invoiceTotal - (float) $purchase->paid_amount), 2);
+        $purchase->save();
+
+        $this->recalculatePayments($purchase);
+    }
+
+    /**
+     * Persist an initial batch of payments for a purchase, mirroring
+     * SaleService::syncPayments(). Used by create() and by draft edits
+     * that explicitly send a `payments` key.
+     */
+    private function syncPayments(Purchase $purchase, array $payments, bool $replace = false): void
+    {
+        if ($replace) {
+            $purchase->payments()->each(fn (PurchasePayment $p) => $p->forceDelete());
+        }
+
+        foreach ($payments as $row) {
+            $amount = (float) ($row['amount'] ?? 0);
+            if (abs($amount) < 0.001) {
+                continue;
+            }
+
+            $purchase->payments()->save(new PurchasePayment([
+                'payment_date'     => $row['payment_date']     ?? $purchase->purchase_date->toDateString(),
+                'amount'           => $amount,
+                'payment_method'   => $row['payment_method']   ?? PurchasePayment::METHOD_CASH,
+                'reference_number' => $row['reference_number'] ?? null,
+                'notes'            => $row['notes']            ?? null,
+            ]));
+        }
+    }
+
+    /**
+     * Recompute paid_amount / due_amount / payment_status from the
+     * purchase_payments rows. Mirrors SaleService::recalculatePayments().
+     */
+    private function recalculatePayments(Purchase $purchase): void
+    {
+        $paid  = (float) $purchase->payments()->sum('amount');
+        $grand = (float) $purchase->grand_total;
+
+        $due = round(max(0, $grand - $paid), 2);
+
+        if ($paid <= 0.0001) {
+            $status = Purchase::PAY_UNPAID;
+        } elseif ($paid + 0.0001 >= $grand) {
+            $status = Purchase::PAY_PAID;
+        } else {
+            $status = Purchase::PAY_PARTIAL;
+        }
+
+        $purchase->paid_amount    = round($paid, 2);
+        $purchase->due_amount     = $due;
+        $purchase->payment_status = $status;
         $purchase->save();
     }
 }

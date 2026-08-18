@@ -401,7 +401,7 @@
                     fd.append('barcodes', JSON.stringify(barcodesPayload));
 
                     const url = this.mode === 'edit'
-                        ? '/products/' + this.productId
+                        ? `{{ route('products.store') }}/${this.productId ?? 0}`
                         : '{{ route('products.store') }}';
 
                     try {

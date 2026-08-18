@@ -55,6 +55,7 @@
             title:         '',
             country_of_origin_id: null,
             website_price: null,
+            website_enabled: false,
             carat_weight:  null,
             stone_type:    null,
             colour_grade:  '',
@@ -100,6 +101,7 @@
             country_of_origin_id: l.country_of_origin_id || null,
             notes_tags:         l.notes_tags,
             website_price:      (l.website_price !== null && l.website_price !== undefined) ? parseFloat(l.website_price) : null,
+            website_enabled:    !!l.website_enabled,
             carat_weight:       (l.carat_weight !== null && l.carat_weight !== undefined) ? parseFloat(l.carat_weight) : null,
             stone_type:         l.stone_type,
             colour_grade:       l.colour_grade || '',
@@ -163,13 +165,26 @@
                 purchase_date:          CONFIG.existing ? CONFIG.existing.purchase_date : new Date().toISOString().slice(0, 10),
                 invoice_number_preview: CONFIG.existing ? CONFIG.existing.invoice_number : '',
                 tax_type:               CONFIG.existing ? CONFIG.existing.tax_type : 'none',
-                paid_amount:            CONFIG.existing ? parseFloat(CONFIG.existing.paid_amount) || 0 : 0,
                 note:                   CONFIG.existing ? CONFIG.existing.note : '',
+                // Payments entered here are only submitted on create —
+                // editing an existing purchase never touches its payments
+                // (managed from the purchase's detail page instead).
+                payments:               [],
                 lines:                  CONFIG.existing ? hydrateLines(CONFIG.existing) : [],
             },
         },
 
         computed: {
+            // Edit mode: payments aren't editable from this form, so this
+            // reflects the purchase's last-known paid amount (managed from
+            // the detail page). Create mode: live sum of the payments
+            // being entered below.
+            paidAmount() {
+                if (CONFIG.existing) {
+                    return parseFloat(CONFIG.existing.paid_amount) || 0;
+                }
+                return this.form.payments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+            },
             totals() {
                 let subtotal = 0;
 
@@ -182,9 +197,10 @@
                 });
 
                 const grand = subtotal;
-                const due   = Math.max(0, grand - (parseFloat(this.form.paid_amount) || 0));
+                const paid  = this.paidAmount;
+                const due   = Math.max(0, grand - paid);
 
-                return { subtotal, discount: 0, tax: 0, grand, due };
+                return { subtotal, discount: 0, tax: 0, grand, paid, due };
             },
             totalRows() {
                 return this.form.lines.reduce((acc, l) => acc + l.rows.length, 0);
@@ -257,6 +273,20 @@
             categoryName(id) {
                 const c = this.categories.find(c => c.id === id);
                 return c ? c.name : '—';
+            },
+
+            /* Payments (create mode only) */
+
+            addPayment() {
+                this.form.payments.push({
+                    payment_date:     this.form.purchase_date,
+                    amount:           +Math.max(0, this.totals.due).toFixed(2),
+                    payment_method:   'cash',
+                    reference_number: '',
+                });
+            },
+            removePayment(idx) {
+                this.form.payments.splice(idx, 1);
             },
 
             /* ─── Supplier / invoice number ──────────────────────── */
@@ -408,6 +438,7 @@
                     country_of_origin_id: this.addForm.country_of_origin_id || null,
                     notes_tags:         null,
                     website_price:      (this.addForm.website_price !== null && this.addForm.website_price !== '') ? parseFloat(this.addForm.website_price) : null,
+                    website_enabled:    !!this.addForm.website_enabled,
                     carat_weight:       caratDefault,
                     stone_type:         this.addFormIsGemstone ? this.addForm.stone_type   : null,
                     colour_grade:       this.addFormIsGemstone ? (this.addForm.colour_grade || null) : null,
@@ -521,13 +552,12 @@
             /* ─── Submit ─────────────────────────────────────────── */
 
             buildPayload(post) {
-                return {
+                const payload = {
                     supplier_id:   this.form.supplier_id,
                     location_id:   this.form.location_id,
                     purchase_date: this.form.purchase_date,
                     tax_type:      this.form.tax_type,
                     note:          this.form.note,
-                    paid_amount:   this.form.paid_amount,
                     status:        post ? 'posted' : 'draft',
                     lines: this.form.lines.map(l => ({
                         id:                 l.id,
@@ -538,6 +568,7 @@
                         country_of_origin_id: l.country_of_origin_id,
                         notes_tags:         l.notes_tags,
                         website_price:      (l.website_price === '' || l.website_price === undefined) ? null : l.website_price,
+                        website_enabled:    !!l.website_enabled,
                         carat_weight:       (l.carat_weight === '' || l.carat_weight === undefined) ? null : l.carat_weight,
                         stone_type:         l.stone_type,
                         colour_grade:       l.colour_grade,
@@ -563,6 +594,22 @@
                         })),
                     })),
                 };
+
+                // Payments are only submitted on create — editing an
+                // existing purchase never touches its payments (see
+                // PurchaseService::update()).
+                if (!CONFIG.existing) {
+                    payload.payments = this.form.payments
+                        .filter(p => Math.abs(parseFloat(p.amount) || 0) > 0.001)
+                        .map(p => ({
+                            payment_date:     p.payment_date,
+                            amount:           Number(p.amount),
+                            payment_method:   p.payment_method,
+                            reference_number: p.reference_number || null,
+                        }));
+                }
+
+                return payload;
             },
             submit(post) {
                 this.wasValidated = true;

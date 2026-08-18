@@ -54,6 +54,12 @@
                             <option value="posted">Posted</option>
                             <option value="cancelled">Cancelled</option>
                         </select>
+                        <select id="purchasePaymentFilter" class="form-select form-control">
+                            <option value="">All Payments</option>
+                            <option value="unpaid">Unpaid</option>
+                            <option value="partial">Partial</option>
+                            <option value="paid">Paid</option>
+                        </select>
                         @permission('purchases.create')
                         <a href="{{ route('purchases.create') }}" class="btn btn-primary ms-1">
                             <i class="ti ti-plus fs-sm me-2"></i> Purchase
@@ -73,6 +79,7 @@
                                 <th>Location</th>
                                 <th class="text-end">Grand Total</th>
                                 <th class="text-end">Due</th>
+                                <th>Payment</th>
                                 <th>Status</th>
                                 <th class="text-center" style="width: 1%;">Actions</th>
                             </tr>
@@ -101,6 +108,7 @@
             url: "{{ route('purchases.data') }}",
             data: function (d) {
                 d.status = $('#purchaseStatusFilter').val();
+                d.payment_status = $('#purchasePaymentFilter').val();
             }
         },
             dom: 'rt<"d-none datatables-tail"ip>',
@@ -112,6 +120,7 @@
             { data: 'location_label',  name: 'location.name', orderable: false },
             { data: 'grand_total',     name: 'grand_total',  className: 'text-end' },
             { data: 'due_amount',      name: 'due_amount',   className: 'text-end' },
+            { data: 'payment_badge',   name: 'payment_status', orderable: false, searchable: false },
             { data: 'status_badge',    name: 'status' },
             { data: 'actions',         orderable: false, searchable: false, className: 'text-center' },
         ],
@@ -126,7 +135,7 @@
     $('#purchaseSearch').on('keyup', function () {
         table.search(this.value).draw();
     });
-    $('#purchaseStatusFilter').on('change', () => table.draw());
+    $('#purchaseStatusFilter, #purchasePaymentFilter').on('change', () => table.draw());
     $('#purchasePerPage').on('change', function () {
         table.page.len(parseInt(this.value, 10)).draw();
     });

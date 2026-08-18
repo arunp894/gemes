@@ -58,5 +58,18 @@ class AppServiceProvider extends ServiceProvider
             $settings = app(SettingService::class);
             $view->with('settings', $settings);
         });
+
+        // ----- Share $settings with the admin panel + auth pages -----
+        // A '*' composer, not a named list: Blade's @extends() only
+        // resolves the PARENT view (layout.app) after the CHILD view's
+        // own @section blocks have already executed. A composer scoped
+        // to 'layout.app' therefore never reaches $settings usages
+        // inside child views themselves (e.g. settings/index.blade.php's
+        // own markup) — only inside layout.app's own body/includes.
+        // '*' catches every view, admin and storefront alike; cheap,
+        // since it's just handing out the already-resolved singleton.
+        View::composer('*', function ($view) {
+            $view->with('settings', app(SettingService::class));
+        });
     }
 }

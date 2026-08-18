@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Setting;
 use App\Services\SettingService;
 use App\Http\Requests\SaveSettingsRequest;
 use Illuminate\Http\JsonResponse;
@@ -69,6 +70,24 @@ class SettingController extends Controller
         $this->settings->save([
             'sale_edit_days' => $data['sale_edit_days'] ?? 2,
         ], 'sales');
+
+        // Branding — logo / favicon ride on dedicated Setting rows via
+        // MediaLibrary rather than the flat key/value store (see Setting model).
+        if ($request->hasFile('site_logo')) {
+            Setting::firstOrCreate(['key' => 'site_logo'], ['group' => 'general'])
+                ->addMediaFromRequest('site_logo')
+                ->toMediaCollection(Setting::MEDIA_LOGO);
+        } elseif ($request->boolean('remove_logo')) {
+            Setting::where('key', 'site_logo')->first()?->clearMediaCollection(Setting::MEDIA_LOGO);
+        }
+
+        if ($request->hasFile('site_favicon')) {
+            Setting::firstOrCreate(['key' => 'site_favicon'], ['group' => 'general'])
+                ->addMediaFromRequest('site_favicon')
+                ->toMediaCollection(Setting::MEDIA_FAVICON);
+        } elseif ($request->boolean('remove_favicon')) {
+            Setting::where('key', 'site_favicon')->first()?->clearMediaCollection(Setting::MEDIA_FAVICON);
+        }
 
         if ($request->wantsJson() || $request->ajax()) {
             return response()->json([

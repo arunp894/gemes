@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StorePurchasePaymentRequest;
 use App\Http\Requests\StorePurchaseRequest;
 use App\Http\Requests\UpdatePurchaseRequest;
 use App\Models\Barcode;
@@ -10,6 +11,7 @@ use App\Models\CountryOfOrigin;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\Purchase;
+use App\Models\PurchasePayment;
 use App\Models\PurchaseProduct;
 use App\Models\Rack;
 use App\Models\Supplier;
@@ -53,6 +55,9 @@ class PurchaseController extends Controller
         if ($status = $request->query('status')) {
             $q->where('status', $status);
         }
+        if ($payStatus = $request->query('payment_status')) {
+            $q->where('payment_status', $payStatus);
+        }
         if ($from = $request->query('date_from')) {
             $q->whereDate('purchase_date', '>=', $from);
         }
@@ -93,6 +98,11 @@ class PurchaseController extends Controller
                 $this->settings->formatMoney($p->due_amount)
             )
             ->addColumn(
+                'payment_badge',
+                fn(Purchase $p) =>
+                '<span class="badge ' . $p->paymentStatusBadgeClass() . ' fs-xxs">' . e($p->paymentStatusLabel()) . '</span>'
+            )
+            ->addColumn(
                 'status_badge',
                 fn(Purchase $p) =>
                 '<span class="badge ' . $p->statusBadgeClass() . '">' . $p->statusLabel() . '</span>'
@@ -116,7 +126,7 @@ class PurchaseController extends Controller
                 $html .= '</div>';
                 return $html;
             })
-            ->rawColumns(['status_badge', 'actions', 'location_label'])
+            ->rawColumns(['payment_badge', 'status_badge', 'actions', 'location_label'])
             ->toJson();
     }
 
@@ -131,6 +141,7 @@ class PurchaseController extends Controller
             'categories' => Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
             'countriesOfOrigin' => CountryOfOrigin::active()->ordered()->get(['id', 'name']),
             'taxTypes'   => Purchase::TAX_TYPES,
+            'paymentMethods' => PurchasePayment::METHODS,
             'currencySymbol' => $this->settings->get('currency_symbol', '₹'),
         ]);
     }
@@ -155,6 +166,7 @@ class PurchaseController extends Controller
         return view('purchases.show', [
             'purchase'        => $purchase,
             'editBlockReason' => $purchase->editBlockReason($this->purchaseEditDays()),
+            'paymentMethods'  => PurchasePayment::METHODS,
         ]);
     }
 
@@ -172,6 +184,7 @@ class PurchaseController extends Controller
             'categories' => Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
             'countriesOfOrigin' => CountryOfOrigin::active()->ordered()->get(['id', 'name']),
             'taxTypes'   => Purchase::TAX_TYPES,
+            'paymentMethods' => PurchasePayment::METHODS,
             'currencySymbol' => $this->settings->get('currency_symbol', '₹'),
         ]);
     }
@@ -218,6 +231,37 @@ class PurchaseController extends Controller
         return response()->json([
             'message'  => 'Purchase cancelled.',
             'purchase' => $purchase,
+        ]);
+    }
+
+    /* ─── Payments ─────────────────────────────────────────── */
+
+    public function addPayment(StorePurchasePaymentRequest $request, Purchase $purchase): JsonResponse
+    {
+        if ($purchase->isDraft() || $purchase->isCancelled()) {
+            return response()->json([
+                'message' => 'Payments can only be added to posted purchases.',
+            ], 422);
+        }
+
+        $payment = $this->service->addPayment($purchase, $request->validated());
+
+        return response()->json([
+            'message'  => 'Payment recorded.',
+            'payment'  => $payment,
+            'purchase' => $purchase->fresh(),
+        ], 201);
+    }
+
+    public function removePayment(Purchase $purchase, PurchasePayment $payment): JsonResponse
+    {
+        abort_unless($payment->purchase_id === $purchase->id, 404);
+
+        $this->service->removePayment($payment);
+
+        return response()->json([
+            'message'  => 'Payment removed.',
+            'purchase' => $purchase->fresh(),
         ]);
     }
 

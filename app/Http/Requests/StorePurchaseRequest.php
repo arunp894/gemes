@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
+use App\Models\PurchasePayment;
 use App\Models\Supplier;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
@@ -26,8 +27,15 @@ class StorePurchaseRequest extends FormRequest
             'purchase_date' => ['required', 'date'],
             'tax_type'      => ['required', 'in:' . implode(',', Purchase::TAX_TYPES)],
             'note'          => ['nullable', 'string'],
-            'paid_amount'   => ['nullable', 'numeric', 'min:0'],
             'status'        => ['nullable', 'in:' . Purchase::STATUS_DRAFT . ',' . Purchase::STATUS_POSTED],
+
+            // ── Payments (optional; multiple rows, like a sale) ─────
+            'payments'                    => ['nullable', 'array'],
+            'payments.*.payment_date'     => ['required_with:payments.*.amount', 'date'],
+            'payments.*.amount'           => ['required_with:payments.*.payment_date', 'numeric'],
+            'payments.*.payment_method'   => ['required_with:payments.*.amount', Rule::in(array_keys(PurchasePayment::METHODS))],
+            'payments.*.reference_number' => ['nullable', 'string', 'max:100'],
+            'payments.*.notes'            => ['nullable', 'string', 'max:500'],
 
             'lines'               => ['required', 'array', 'min:1'],
             // Present (and matched against the purchase's own lines) only
@@ -45,6 +53,7 @@ class StorePurchaseRequest extends FormRequest
             'lines.*.country_of_origin_id' => ['nullable', 'integer', Rule::exists('countries_of_origin', 'id')->whereNull('deleted_at')],
             'lines.*.notes_tags'         => ['nullable', 'string', 'max:1000'],
             'lines.*.website_price'      => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'lines.*.website_enabled'    => ['nullable', 'boolean'],
 
             // Gemstone fields are conditionally required in withValidator().
             'lines.*.carat_weight'  => ['nullable', 'numeric', 'min:0.001', 'max:99999.999'],

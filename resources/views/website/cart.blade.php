@@ -68,7 +68,7 @@
               {{ $settings->formatPrice($item['subtotal'] ?? $item['price']) }}
             </div>
             {{-- Stepper + Remove on same row --}}
-            <div style="display:flex;align-items:center;gap:6px">
+            <div style="display:flex;align-items:center;gap:6px; display:none">
               <button type="button"
                 onclick="changeQty({{ $item['id'] }}, -1, this)"
                 style="width:28px;height:28px;background:none;border:1px solid rgba(0,191,176,.25);color:var(--teal-300);cursor:pointer;border-radius:2px;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .3s"

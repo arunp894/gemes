@@ -26,6 +26,12 @@ class SaveSettingsRequest extends FormRequest
             'cart_enabled'      => ['nullable', 'boolean'],
             'checkout_enabled'  => ['nullable', 'boolean'],
 
+            // Branding
+            'site_logo'         => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp,gif,svg', 'max:2048'],
+            'remove_logo'       => ['nullable', 'boolean'],
+            'site_favicon'      => ['nullable', 'mimes:ico,png,jpeg,jpg,svg', 'max:512'],
+            'remove_favicon'    => ['nullable', 'boolean'],
+
             // PayPal
             'paypal_enabled'    => ['nullable', 'boolean'],
             'paypal_mode'       => ['nullable', 'in:sandbox,live'],
@@ -38,6 +44,17 @@ class SaveSettingsRequest extends FormRequest
 
             // Sales
             'sale_edit_days'     => ['nullable', 'integer', 'min:0', 'max:365'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'site_logo.image'    => 'The logo must be an image file.',
+            'site_logo.mimes'    => 'Accepted logo types: JPEG, PNG, WebP, GIF, SVG.',
+            'site_logo.max'      => 'Logo must not exceed 2 MB.',
+            'site_favicon.mimes' => 'Accepted favicon types: ICO, PNG, JPEG, SVG.',
+            'site_favicon.max'   => 'Favicon must not exceed 512 KB.',
         ];
     }
 }

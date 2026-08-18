@@ -5,7 +5,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Sukaina Gems</title>
+    <title>@hasSection('title')@yield('title') | @endif{{ $settings->get('site_name', 'Sukaina Gems') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description"
         content="Paces is a modern, responsive admin dashboard available on ThemeForest. Ideal for building CRM, CMS, project management tools, and custom web applications with a clean UI, flexible layouts, and rich features." />
@@ -15,7 +15,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}" />
 
     <!-- App favicon -->
-    {{-- <link rel="shortcut icon" href="{{ asset('assets/images/favicon.ico') }}" /> --}}
+    <link rel="shortcut icon" href="{{ $settings->faviconUrl() ?? asset('assets/images/favicon.ico') }}" />
 
 
     <!-- Vector Maps css -->
@@ -37,7 +37,15 @@
             <link rel="stylesheet" href="{{ asset('assets/plugins/filepond/filepond.min.css') }}" type="text/css" />
         <link rel="stylesheet" href="{{ asset('assets/plugins/filepond/filepond-plugin-image-preview.min.css') }}" />
     @stack('styles')
-
+    <style>
+        .dt-container{
+            margin-top: 0px !important;
+        }
+        table thead.bg-light{
+            background-color: #f3f1f1 !important;
+        }
+        
+    </style>
 </head>
 
 <body>
@@ -48,18 +56,15 @@
         <div class="sidenav-menu">
             <!-- Brand Logo -->
             <a href="{{ route('dashboard') }}" class="logo">
-                {{-- <span class="logo logo-light">
-                    <span class="logo-lg"><img src="{{ asset('assets/images/logo.png') }}" alt="logo" /></span>
-                    <span class="logo-sm"><img src="{{ asset('assets/images/logo-sm.png') }}" alt="small logo" /></span>
+                <span class="logo-lg d-flex align-items-center justify-content-center gap-2">
+                    <img src="{{ $settings->logoUrl() ?? asset('assets/images/logo-sm.png') }}"
+                        alt="{{ $settings->get('site_name', 'Sukaina Gems') }}" style="height: 32px; width: auto;" />
+                    <span class="pro-username fw-bold" style="color: white;">{{ $settings->get('site_name', 'Sukaina Gems') }}</span>
                 </span>
-
-                <span class="logo logo-dark">
-                    <span class="logo-lg"><img src="{{ asset('assets/images/logo-black.png') }}" alt="dark logo" /></span>
-                    <span class="logo-sm"><img src="{{ asset('assets/images/logo-sm.png') }}" alt="small logo" /></span>
-                </span> --}}
-                <h5 class="mt-3 pro-username" style="text-align: center;color: white;">
-                    Sukaina Gems
-                </h5>
+                <span class="logo-sm">
+                    <img src="{{ $settings->logoUrl() ?? asset('assets/images/logo-sm.png') }}"
+                        alt="{{ $settings->get('site_name', 'Sukaina Gems') }}" style="height: 28px; width: auto;" />
+                </span>
             </a>
 
             <!-- Sidebar Hover Menu Toggle Button -->

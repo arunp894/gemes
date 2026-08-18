@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
+use App\Models\PurchasePayment;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,8 +29,7 @@ class UpdatePurchaseRequest extends FormRequest
         // within the edit window) both get the full line-item ruleset.
         if ($purchase && $purchase->isCancelled()) {
             return [
-                'note'        => ['nullable', 'string'],
-                'paid_amount' => ['nullable', 'numeric', 'min:0'],
+                'note' => ['nullable', 'string'],
             ];
         }
 
@@ -38,7 +38,17 @@ class UpdatePurchaseRequest extends FormRequest
             'location_id'   => ['required', 'integer', 'exists:locations,id'],
             'tax_type'      => ['required', 'in:' . implode(',', Purchase::TAX_TYPES)],
             'note'          => ['nullable', 'string'],
-            'paid_amount'   => ['nullable', 'numeric', 'min:0'],
+
+            // ── Payments (optional; multiple rows, like a sale). Only
+            // applied when the caller explicitly sends a `payments` key —
+            // see PurchaseService::update(), which otherwise leaves
+            // existing payments untouched. ───────────────────────
+            'payments'                    => ['nullable', 'array'],
+            'payments.*.payment_date'     => ['required_with:payments.*.amount', 'date'],
+            'payments.*.amount'           => ['required_with:payments.*.payment_date', 'numeric'],
+            'payments.*.payment_method'   => ['required_with:payments.*.amount', Rule::in(array_keys(PurchasePayment::METHODS))],
+            'payments.*.reference_number' => ['nullable', 'string', 'max:100'],
+            'payments.*.notes'            => ['nullable', 'string', 'max:500'],
 
             'lines'      => ['required', 'array', 'min:1'],
             // Rows/lines already on this purchase echo their id back so
@@ -57,6 +67,7 @@ class UpdatePurchaseRequest extends FormRequest
             'lines.*.country_of_origin_id' => ['nullable', 'integer', Rule::exists('countries_of_origin', 'id')->whereNull('deleted_at')],
             'lines.*.notes_tags'         => ['nullable', 'string', 'max:1000'],
             'lines.*.website_price'      => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'lines.*.website_enabled'    => ['nullable', 'boolean'],
 
             'lines.*.carat_weight'  => ['nullable', 'numeric', 'min:0.001', 'max:99999.999'],
             'lines.*.stone_type'    => ['nullable', 'string', Rule::in(Product::STONE_TYPES)],

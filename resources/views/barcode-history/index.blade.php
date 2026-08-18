@@ -30,9 +30,9 @@
                         <div class="avatar-lg bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2">
                             <i class="ti ti-scan fs-1 text-primary"></i>
                         </div>
-                        <h5 class="mb-1 fw-bold">Scan or Enter a Barcode</h5>
+                        <h5 class="mb-1 fw-bold">Scan or Enter a Barcode / Lot Code</h5>
                         <p class="text-muted small mb-0">
-                            Point your scanner here, or type the barcode value manually and press Enter
+                            Point your scanner here, or type a barcode or lot code manually and press Enter
                         </p>
                     </div>
                     <div class="input-group input-group-lg shadow-sm">
@@ -42,7 +42,7 @@
                         <input
                             type="text"
                             class="form-control border-start-0 text-center fw-semibold font-monospace fs-5"
-                            placeholder="e.g. 2000000000017"
+                            placeholder="Barcode or lot code, e.g. AM-001-001"
                             ref="barcodeInput"
                             v-model="barcodeInput"
                             @keyup.enter="search"
@@ -72,7 +72,7 @@
                     <div class="text-center mt-2">
                         <small class="text-muted">
                             <i class="ti ti-info-circle me-1"></i>
-                            Scanned barcodes auto-submit. Supports EAN-13, EAN-8, UPC-A, Code 128, QR Code &amp; Custom formats.
+                            Scanned barcodes auto-submit. Also matches purchase lot codes (SS-PPP-UUU). Supports EAN-13, EAN-8, UPC-A, Code 128, QR Code &amp; Custom formats.
                         </small>
                     </div>
                 </div>
@@ -145,7 +145,7 @@
                                     &nbsp;&bull;&nbsp;
                                     <i class="ti ti-folder me-1"></i>@{{ result.product.category_path }}
                                 </div>
-                                <div class="text-muted small">
+                                <div class="text-muted small" v-if="result.barcode">
                                     <i class="ti ti-barcode me-1"></i>
                                     <span class="font-monospace text-dark">@{{ result.barcode.value }}</span>
                                     <span class="badge bg-secondary ms-2">@{{ result.barcode.format }}</span>
@@ -153,6 +153,11 @@
                                     <span class="badge bg-light text-muted border ms-1" v-if="result.barcode.label">
                                         @{{ result.barcode.label }}
                                     </span>
+                                </div>
+                                <div class="text-muted small" v-else-if="result.lot_code">
+                                    <i class="ti ti-tag me-1"></i>
+                                    <span class="font-monospace text-dark">@{{ result.lot_code.value }}</span>
+                                    <span class="badge bg-secondary ms-2">Lot Code</span>
                                 </div>
                             </div>
 

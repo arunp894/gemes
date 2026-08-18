@@ -3,12 +3,12 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Sign In</title>
+    <title>Sign In | {{ $settings->get('site_name', 'Sukaina Gems') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
 
     {{-- Favicon --}}
-    <link rel="shortcut icon" href="{{ asset('assets/images/favicon.ico') }}" />
+    <link rel="shortcut icon" href="{{ $settings->faviconUrl() ?? asset('assets/images/favicon.ico') }}" />
 
     {{-- Theme config (must load before vendors.min.css so skin/theme is applied) --}}
     <script src="{{ asset('assets/js/config.js') }}"></script>
@@ -33,13 +33,11 @@
                 <div class="col-xxl-5 col-md-6 col-sm-8">
                     <div class="card p-4">
                         <div class="auth-brand text-center mb-2">
-                            <a href="{{ url('/') }}" class="logo-dark">
-                                <img style="display: none" src="{{ asset('assets/images/logo-black.png') }}" alt="dark logo" />
+                            <a href="{{ url('/') }}">
+                                <img src="{{ $settings->logoUrl() ?? asset('assets/images/logo-black.png') }}"
+                                    alt="{{ $settings->get('site_name', 'Sukaina Gems') }}" style="max-height: 56px; width: auto;" />
                             </a>
-                            <a href="{{ url('/') }}" class="logo-light">
-                                <img style="display: none" src="{{ asset('assets/images/logo.png') }}" alt="logo" />
-                            </a>
-                            <h3 class="fw-bold text-dark mt-3">Sukina Gems</h3>
+                            <h3 class="fw-bold text-dark mt-3">{{ $settings->get('site_name', 'Sukaina Gems') }}</h3>
                             <p class="text-muted w-lg-75 mx-auto">
                                 Sign in with your email and password to continue.
                             </p>

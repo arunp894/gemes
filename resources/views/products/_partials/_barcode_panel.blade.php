@@ -7,7 +7,7 @@
      and `barcodes` data live on that root instance.
 --}}
 
-<div class="card mb-3">
+<div class="card mb-3 d-none">
     <div class="card-header d-flex align-items-center justify-content-between">
         <h5 class="card-title mb-0"><i class="ti ti-barcode me-1"></i>Barcodes</h5>
         <div class="btn-group btn-group-sm" role="group" aria-label="Barcode mode">

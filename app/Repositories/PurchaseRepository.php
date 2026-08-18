@@ -35,6 +35,8 @@ class PurchaseRepository
             'lines.category:id,name,is_gemstone',
             'lines.rows.rack:id,code,name',
             'lines.rows.product:id,title,sku,status,website_enabled',
+            'payments' => fn ($q) => $q->orderBy('payment_date')->orderBy('id'),
+            'payments.creator:id,name',
         ])->find($id);
     }
 

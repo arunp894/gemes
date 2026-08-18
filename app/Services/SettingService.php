@@ -57,6 +57,27 @@ class SettingService
     }
 
     /**
+     * URL of the uploaded site logo, or null if none has been set.
+     * Backed by Spatie MediaLibrary on the 'site_logo' Setting row —
+     * not cached with the flat key/value store since it's a live
+     * media lookup, not a string value.
+     */
+    public function logoUrl(): ?string
+    {
+        $media = Setting::where('key', 'site_logo')->first()?->getFirstMedia(Setting::MEDIA_LOGO);
+        return $media ? $media->getUrl() : null;
+    }
+
+    /**
+     * URL of the uploaded favicon, or null if none has been set.
+     */
+    public function faviconUrl(): ?string
+    {
+        $media = Setting::where('key', 'site_favicon')->first()?->getFirstMedia(Setting::MEDIA_FAVICON);
+        return $media ? $media->getUrl() : null;
+    }
+
+    /**
      * Return formatted price string respecting currency settings.
      * e.g.  formatPrice(1250.00)  =>  "₹1,250"  or  "1,250 USD"
      */

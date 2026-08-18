@@ -137,6 +137,18 @@
                                 <small class="text-muted">Set later if unsure.</small>
                             </div>
 
+                            <div class="col-md-2">
+                                <label class="form-label d-block">Website</label>
+                                <div class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                           id="addFormWebsiteEnabled" v-model="addForm.website_enabled">
+                                    <label class="form-check-label" for="addFormWebsiteEnabled">
+                                        @{{ addForm.website_enabled ? 'Enabled' : 'Disabled' }}
+                                    </label>
+                                </div>
+                                <small class="text-muted">Lists this item for sale online.</small>
+                            </div>
+
                             <template v-if="addFormIsGemstone">
                                 <div class="col-12"><hr class="my-1"></div>
                                 <div class="col-md-2">

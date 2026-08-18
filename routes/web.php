@@ -334,6 +334,13 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('purchase')->middleware('permission:purchases.edit')->name('cancel');
         Route::get('/{purchase}/print-labels', [PurchaseController::class, 'printLabels'])
             ->whereNumber('purchase')->middleware('permission:purchases.view')->name('print-labels');
+
+        // ── Payments ──
+        Route::post('/{purchase}/payments', [PurchaseController::class, 'addPayment'])
+            ->whereNumber('purchase')->middleware('permission:purchases.edit')->name('payments.store');
+        Route::delete('/{purchase}/payments/{payment}', [PurchaseController::class, 'removePayment'])
+            ->whereNumber('purchase')->whereNumber('payment')
+            ->middleware('permission:purchases.edit')->name('payments.destroy');
     });
     Route::resource('purchases', PurchaseController::class)->whereNumber('purchase')
         ->middleware([
@@ -438,6 +445,10 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:stock.view')->name('data');
         Route::get('/category-data', [StockController::class, 'categoryData'])
             ->middleware('permission:stock.view')->name('category-data');
+        Route::get('/sales-data', [StockController::class, 'salesData'])
+            ->middleware('permission:stock.view')->name('sales-data');
+        Route::get('/sales-summary', [StockController::class, 'salesSummary'])
+            ->middleware('permission:stock.view')->name('sales-summary');
         Route::get('/product/{product}', [StockController::class, 'product'])
             ->whereNumber('product')->middleware('permission:stock.view')->name('product');
         Route::get('/piece/{purchaseProduct}', [StockController::class, 'piece'])

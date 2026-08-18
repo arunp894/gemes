@@ -22,17 +22,52 @@
             <span class="fw-bold fs-18 text-primary">@{{ formatMoney(totals.grand) }}</span>
         </div>
 
-        <div class="mb-2">
-            <label class="form-label small text-muted">Paid Amount</label>
-            <input type="number" step="0.01" min="0" class="form-control" v-model.number="form.paid_amount">
+        <div class="d-flex justify-content-between mb-2 small">
+            <span class="text-muted">Paid</span>
+            <span>@{{ formatMoney(totals.paid) }}</span>
         </div>
-
         <div class="d-flex justify-content-between mb-3 small">
             <span class="text-muted">Due</span>
             <span class="fw-semibold" :class="totals.due > 0 ? 'text-warning' : 'text-success'">
                 @{{ formatMoney(totals.due) }}
             </span>
         </div>
+
+        @if (! isset($purchase))
+        {{-- Payments editor — create mode only. Once a purchase exists,
+             payments are added/removed from its detail page instead
+             (PurchaseService::update() never touches existing payments). --}}
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label small text-muted mb-0">Payments</label>
+                <button type="button" class="btn btn-sm btn-soft-primary py-0 px-2" @click="addPayment">
+                    <i class="ti ti-plus"></i>
+                </button>
+            </div>
+
+            <p v-if="form.payments.length === 0" class="text-muted small mb-0">No payments yet.</p>
+
+            <div v-for="(p, idx) in form.payments" :key="idx" class="border rounded p-2 mb-2">
+                <select class="form-select form-select-sm mb-1" v-model="p.payment_method">
+                    @foreach ($paymentMethods as $key => $label)
+                        <option value="{{ $key }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                <input type="number" step="0.01" class="form-control form-control-sm mb-1 text-end"
+                    v-model.number="p.amount" placeholder="Amount">
+                <input type="date" class="form-control form-control-sm mb-1" v-model="p.payment_date">
+                <input type="text" class="form-control form-control-sm mb-1" v-model="p.reference_number"
+                    placeholder="Reference (optional)">
+                <button type="button" class="btn btn-sm btn-soft-danger w-100" @click="removePayment(idx)">
+                    <i class="ti ti-trash me-1"></i> Remove
+                </button>
+            </div>
+        </div>
+        @else
+        <p class="text-muted small mb-3">
+            <a href="{{ route('purchases.show', $purchase) }}">Manage payments</a> from the purchase's detail page.
+        </p>
+        @endif
 
         <div class="mb-3">
             <label class="form-label small text-muted">Notes</label>

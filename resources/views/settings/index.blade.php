@@ -81,6 +81,53 @@
                   </div>
                 </div>
 
+                <hr class="my-4">
+                <h6 class="text-muted fw-semibold mb-3 text-uppercase small">Branding</h6>
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Site Logo</label>
+                    <div class="d-flex align-items-center gap-3">
+                      <div class="border rounded d-flex align-items-center justify-content-center bg-light flex-shrink-0" style="width:64px;height:64px;overflow:hidden;">
+                        <img id="logoPreview" src="{{ $settings->logoUrl() ?? asset('assets/images/logo-sm.png') }}" alt="Logo preview" style="max-width:100%;max-height:100%;object-fit:contain;">
+                      </div>
+                      <div class="flex-grow-1">
+                        <input type="file" name="site_logo" id="siteLogoInput"
+                          class="form-control @error('site_logo') is-invalid @enderror"
+                          accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml">
+                        @error('site_logo')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        @if ($settings->logoUrl())
+                          <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" name="remove_logo" value="1" id="removeLogoCheck">
+                            <label class="form-check-label small text-danger" for="removeLogoCheck">Remove current logo</label>
+                          </div>
+                        @endif
+                      </div>
+                    </div>
+                    <div class="form-text">Shown in the sidebar menu, top header, and login page.</div>
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Favicon</label>
+                    <div class="d-flex align-items-center gap-3">
+                      <div class="border rounded d-flex align-items-center justify-content-center bg-light flex-shrink-0" style="width:64px;height:64px;overflow:hidden;">
+                        <img id="faviconPreview" src="{{ $settings->faviconUrl() ?? asset('assets/images/favicon.ico') }}" alt="Favicon preview" style="max-width:32px;max-height:32px;object-fit:contain;">
+                      </div>
+                      <div class="flex-grow-1">
+                        <input type="file" name="site_favicon" id="siteFaviconInput"
+                          class="form-control @error('site_favicon') is-invalid @enderror"
+                          accept="image/png,image/jpeg,image/svg+xml,.ico">
+                        @error('site_favicon')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        @if ($settings->faviconUrl())
+                          <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox" name="remove_favicon" value="1" id="removeFaviconCheck">
+                            <label class="form-check-label small text-danger" for="removeFaviconCheck">Remove current favicon</label>
+                          </div>
+                        @endif
+                      </div>
+                    </div>
+                    <div class="form-text">Shown in the browser tab. Square PNG or ICO works best.</div>
+                  </div>
+                </div>
+
                 <div class="row">
                   <div class="col-md-4 mb-3">
                     <label class="form-label fw-semibold">Contact Email</label>
@@ -341,6 +388,21 @@
 @push('scripts')
 <script>
 $(function () {
+
+  // ── Branding image previews ───────────────────────────────────
+  function wireImagePreview(inputId, previewId) {
+    var el = document.getElementById(inputId);
+    if (!el) return;
+    el.addEventListener('change', function (e) {
+      var file = e.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) { document.getElementById(previewId).src = ev.target.result; };
+      reader.readAsDataURL(file);
+    });
+  }
+  wireImagePreview('siteLogoInput', 'logoPreview');
+  wireImagePreview('siteFaviconInput', 'faviconPreview');
 
   // ── Currency preview ──────────────────────────────────────────
   function updatePreview() {

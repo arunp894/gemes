@@ -18,12 +18,16 @@ use Illuminate\Support\Facades\DB;
 class BarcodeHistoryService
 {
     /**
-     * Look up a barcode value and return the complete product history.
+     * Look up a barcode OR a purchase lot code and return the complete
+     * product history. Barcode is tried first (the primary scan path);
+     * if nothing matches, the value is retried against
+     * purchase_products.lot_code (format SS-PPP-UUU), which identifies
+     * one physical piece rather than the catalogue product directly.
      *
      * Returns ['found' => false, 'message' => '...'] when nothing matches.
      * Returns ['found' => true, ...data...] on success.
      */
-    public function lookup(string $barcodeValue): array
+    public function lookup(string $searchValue): array
     {
         // ── 1. Resolve barcode → product ─────────────────────────────────
         $barcode = Barcode::withTrashed()
@@ -31,17 +35,42 @@ class BarcodeHistoryService
                 'product' => fn ($q) => $q->withTrashed()
                     ->with(['category.parent', 'media']),
             ])
-            ->where('barcode_value', $barcodeValue)
+            ->where('barcode_value', $searchValue)
             ->first();
 
-        if (! $barcode || ! $barcode->product) {
+        $product         = $barcode?->product;
+        $purchaseProduct = null;
+
+        if (! $product) {
+            // Either no barcode row matched, or one did but its product is
+            // gone — either way, don't carry a barcode forward that
+            // doesn't actually belong to whatever we resolve next.
+            $barcode = null;
+
+            // Lot code fallback: identifies one physical piece rather than
+            // the catalogue product directly, so it resolves via
+            // PurchaseProduct's own resolved_product accessor. withTrashed()
+            // because an edited purchase soft-deletes and regenerates its
+            // purchase_products rows (PurchaseService::syncLines()), so an
+            // already-printed label needs to keep resolving after that edit.
+            $purchaseProduct = PurchaseProduct::withTrashed()
+                ->with([
+                    'product'      => fn ($q) => $q->withTrashed()->with(['category.parent', 'media']),
+                    'line.product' => fn ($q) => $q->withTrashed()->with(['category.parent', 'media']),
+                ])
+                ->where('lot_code', $searchValue)
+                ->first();
+
+            $product = $purchaseProduct?->resolved_product;
+        }
+
+        if (! $product) {
             return [
                 'found'   => false,
-                'message' => "No product found for barcode: {$barcodeValue}",
+                'message' => "No product found for barcode or lot code: {$searchValue}",
             ];
         }
 
-        $product   = $barcode->product;
         $productId = $product->id;
 
         // ── 2. Purchase history ───────────────────────────────────────────
@@ -143,12 +172,16 @@ class BarcodeHistoryService
         return [
             'found'   => true,
 
-            'barcode' => [
+            'barcode' => $barcode ? [
                 'value'      => $barcode->barcode_value,
                 'format'     => $barcode->barcode_format,
                 'label'      => $barcode->barcode_label,
                 'is_primary' => (bool) $barcode->is_primary,
-            ],
+            ] : null,
+
+            'lot_code' => $purchaseProduct ? [
+                'value' => $purchaseProduct->lot_code,
+            ] : null,
 
             'product' => [
                 'id'             => $product->id,

@@ -69,8 +69,19 @@
 </td>
 
                         <td>
-                            <div class="fw-semibold">@{{ line.title }}</div>
-                            <small class="text-muted">@{{ categoryName(line.category_id) }}</small>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <div>
+                                    <div class="fw-semibold">@{{ line.title }}</div>
+                                    <small class="text-muted">@{{ categoryName(line.category_id) }}</small>
+                                </div>
+                                <button type="button"
+                                        class="btn btn-icon btn-sm flex-shrink-0"
+                                        :class="line.website_enabled ? 'btn-soft-info' : 'btn-default'"
+                                        @click="line.website_enabled = !line.website_enabled"
+                                        :title="line.website_enabled ? 'Listed on website — click to unlist' : 'Not listed — click to list on website'">
+                                    <i class="ti fs-16" :class="line.website_enabled ? 'ti-world' : 'ti-world-off'"></i>
+                                </button>
+                            </div>
                         </td>
 
 <td>
