@@ -434,7 +434,11 @@ $(function () {
 
     fetch(this.action, {
       method: 'POST',
-      headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content') },
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      },
       body: new FormData(this),
     })
     .then(r => r.json())
