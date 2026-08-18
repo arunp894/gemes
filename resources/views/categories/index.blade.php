@@ -84,7 +84,6 @@
                                 </th>
                                 <th>Category Name</th>
                                 <th>Code</th>
-                                <th>Subcategories</th>
                                 <th>Display Order</th>
                                 <th>Status</th>
                                 <th>Last Modified</th>
@@ -112,7 +111,7 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="addCategoryModalLabel">
                         <i class="ti ti-plus me-1"></i>
-                        @{{ form.parent_id ? 'Add New Subcategory' : 'Add New Category' }}
+                        Add New Category
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -120,18 +119,6 @@
                 <form id="quickAddForm" novalidate @submit.prevent="submitForm">
                     <div class="modal-body">
                         <div class="row g-3">
-                            {{-- Parent --}}
-                            <div class="col-md-6">
-                                <label for="quick_parent_id" class="form-label">Parent Category</label>
-                                <select class="form-select" id="quick_parent_id" v-model="form.parent_id">
-                                    <option :value="null">— None (Top-Level) —</option>
-                                    @foreach ($parents as $p)
-                                        <option value="{{ $p->id }}">{{ $p->name }}</option>
-                                    @endforeach
-                                </select>
-                                <small class="text-muted">Leave blank for top-level. Pick a parent to create a subcategory.</small>
-                            </div>
-
                             {{-- Status --}}
                             <div class="col-md-6">
                                 <label class="form-label d-block">Status <span class="text-danger">*</span></label>
@@ -234,7 +221,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[4, 'asc'], [1, 'asc']], // display_order asc, then name asc
+            order: [[3, 'asc'], [1, 'asc']], // display_order asc, then name asc
             ajax: {
                 url: '{{ route('categories.data') }}',
                 type: 'GET',
@@ -246,7 +233,6 @@
                 { data: 'checkbox',            name: 'checkbox',                  orderable: false, searchable: false, className: 'ps-3' },
                 { data: 'name',                name: 'categories.name' },
                 { data: 'code',                name: 'categories.code' },
-                { data: 'children_count',      name: 'children_count',            orderable: false, searchable: false },
                 { data: 'display_order',       name: 'categories.display_order' },
                 { data: 'status_badge',        name: 'categories.status',         searchable: true },
                 { data: 'updated_at',          name: 'categories.updated_at' },
@@ -284,9 +270,9 @@
             dt.page.len(parseInt(this.value, 10)).draw();
         });
 
-        // Status filter — column index 5 is the status_badge column
+        // Status filter — column index 4 is the status_badge column
         $('#categoryStatusFilter').on('change', function () {
-            dt.column(5).search(this.value).draw();
+            dt.column(4).search(this.value).draw();
         });
 
         // ============= Select-all =============
@@ -333,7 +319,6 @@
             el: '#addCategoryModalApp',
             data: {
                 form: {
-                    parent_id: null,
                     name: '',
                     code: '',
                     description: '',
@@ -360,7 +345,7 @@
                     this.imageFile = file;
                 },
                 resetForm() {
-                    this.form = { parent_id: null, name: '', code: '', description: '', status: true };
+                    this.form = { name: '', code: '', description: '', status: true };
                     this.imageFile = null;
                     this.errors = {};
                     this.serverError = null;
@@ -389,7 +374,6 @@
                     fd.append('name', this.form.name);
                     fd.append('code', this.form.code);
                     fd.append('description', this.form.description || '');
-                    if (this.form.parent_id) fd.append('parent_id', this.form.parent_id);
                     fd.append('display_order', 0);
                     fd.append('status', this.form.status ? 1 : 0);
                     if (this.imageFile) fd.append('image', this.imageFile);

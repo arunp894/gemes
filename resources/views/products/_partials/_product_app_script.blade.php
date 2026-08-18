@@ -28,11 +28,10 @@
                 form: {
                     title: '',
                     sku: '',
-                    top_category_id: null,
                     category_id: null,
                     short_description: '',
                     full_description: '',
-                    country_of_origin: '',
+                    country_of_origin_id: null,
                     notes_tags: '',
                     status: false,
                     carat_weight: null,
@@ -52,8 +51,6 @@
                     remove_certificate_image: false,
                     remove_gallery_ids: [],
                 },
-                subcategories: [],
-                loadingSubcategories: false,
                 isGemstone: false,
 
                 primaryImageFile: null,
@@ -82,36 +79,9 @@
             },
 
             methods: {
-                /* -------------------- Cascading dropdown -------------------- */
-                onTopCategoryChange() {
-                    this.form.category_id = null;
-                    this.subcategories = [];
-                    if (!this.form.top_category_id) {
-                        this.isGemstone = false;
-                        return;
-                    }
-                    this.loadSubcategories(this.form.top_category_id);
-                    this.recomputeGemstone();
-                },
-
-                loadSubcategories(topId) {
-                    this.loadingSubcategories = true;
-                    fetch('/products/subcategories/' + topId, {
-                        headers: { 'Accept': 'application/json' },
-                    })
-                    .then((r) => r.json())
-                    .then((res) => {
-                        this.subcategories = res.success ? res.data : [];
-                        this.loadingSubcategories = false;
-                    })
-                    .catch(() => {
-                        this.subcategories = [];
-                        this.loadingSubcategories = false;
-                    });
-                },
-
+                /* -------------------- Category selection -------------------- */
                 recomputeGemstone() {
-                    const sel = document.getElementById('top_category_id');
+                    const sel = document.getElementById('category_id');
                     if (!sel) { this.isGemstone = false; return; }
                     const opt = sel.options[sel.selectedIndex];
                     // Read the is_gemstone flag stamped onto the <option> by
@@ -302,8 +272,6 @@
                     this.form.remove_primary_image = false;
                     this.form.remove_certificate_image = false;
 
-                    this.form.top_category_id = data.top_category_id || null;
-                    this.subcategories = data.subcategories || [];
                     this.$nextTick(() => this.recomputeGemstone());
 
                     this.existingPrimaryImage = data.primary_image_url || null;
@@ -397,7 +365,7 @@
 
                     const scalarFields = [
                         'title','sku','category_id','short_description','full_description',
-                        'country_of_origin','notes_tags','status',
+                        'country_of_origin_id','notes_tags','status',
                         'carat_weight','stone_type','colour_grade','clarity_grade',
                         'cut_shape','treatment','certificate_number',
                         'website_enabled','website_price','website_title','website_description',

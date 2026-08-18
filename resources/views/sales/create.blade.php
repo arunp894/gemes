@@ -663,6 +663,13 @@ $(function () {
                     }
                 }
 
+                // Prefer the price actually set on the product (seeded at
+                // purchase time, editable on the product screen); fall back
+                // to a cost-based estimate only when nothing's been set yet.
+                const defaultPrice = (p.website_price !== null && p.website_price !== undefined)
+                    ? Number(p.website_price)
+                    : (inv && inv.cost_price ? +(Number(inv.cost_price) * 1.3).toFixed(2) : 0);
+
                 this.form.lines.push({
                     product_id:          p.id,
                     product_title:       p.title,
@@ -670,7 +677,7 @@ $(function () {
                     purchase_product_id: inv ? inv.purchase_product_id : null,
                     barcode:             data.barcode || null,
                     qty:                 1,
-                    unit_price:          inv && inv.cost_price ? +(Number(inv.cost_price) * 1.3).toFixed(2) : 0,
+                    unit_price:          defaultPrice,
                     cost_price:          inv ? Number(inv.cost_price || 0) : 0,
                     qty_on_record:       inv && inv.on_hand !== undefined && inv.on_hand !== null
                                             ? Number(inv.on_hand)
@@ -704,7 +711,7 @@ $(function () {
                     purchase_product_id: null,
                     barcode:             null,
                     qty:                 1,
-                    unit_price:          0,
+                    unit_price:          (p.website_price !== null && p.website_price !== undefined) ? Number(p.website_price) : 0,
                     cost_price:          0,
                     qty_on_record:       null,
                     tax_percent:         0,

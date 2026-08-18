@@ -26,40 +26,32 @@
                 <small class="text-muted">Letters, numbers, hyphens, underscores — no spaces.</small>
             </div>
 
-            {{-- Top-level Category --}}
+            {{-- Category --}}
             <div class="col-md-6">
-                <label for="top_category_id" class="form-label">Category <span class="text-danger">*</span></label>
-                <select id="top_category_id" class="form-select"
-                    v-model="form.top_category_id" @change="onTopCategoryChange">
-                    <option :value="null">— Select Category —</option>
-                    @foreach ($topCategories as $cat)
-                        <option value="{{ $cat->id }}"
-                            data-code="{{ $cat->code }}"
-                            data-gemstone="{{ $cat->is_gemstone ? '1' : '0' }}">{{ $cat->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            {{-- Subcategory --}}
-            <div class="col-md-6">
-                <label for="category_id" class="form-label">Subcategory <span class="text-danger">*</span></label>
+                <label for="category_id" class="form-label">Category <span class="text-danger">*</span></label>
                 <select id="category_id" name="category_id" class="form-select"
                     v-model="form.category_id"
                     :class="{ 'is-invalid': errors.category_id }"
-                    :disabled="!form.top_category_id || loadingSubcategories">
-                    <option :value="null">
-                        @{{ loadingSubcategories ? 'Loading…' : (form.top_category_id ? '— Select Subcategory —' : '— Pick a category first —') }}
-                    </option>
-                    <option v-for="sub in subcategories" :key="sub.id" :value="sub.id">@{{ sub.name }}</option>
+                    @change="recomputeGemstone">
+                    <option :value="null">— Select Category —</option>
+                    @foreach ($categories as $cat)
+                        <option value="{{ $cat->id }}"
+                            data-gemstone="{{ $cat->is_gemstone ? '1' : '0' }}">{{ $cat->name }}</option>
+                    @endforeach
                 </select>
                 <div class="invalid-feedback">@{{ errors.category_id }}</div>
             </div>
 
             {{-- Country of Origin --}}
             <div class="col-md-6">
-                <label for="country_of_origin" class="form-label">Country of Origin</label>
-                <input type="text" class="form-control" id="country_of_origin" name="country_of_origin"
-                    v-model="form.country_of_origin" maxlength="100">
+                <label for="country_of_origin_id" class="form-label">Country of Origin</label>
+                <select class="form-select" id="country_of_origin_id" name="country_of_origin_id"
+                    v-model="form.country_of_origin_id">
+                    <option :value="null">— Select —</option>
+                    @foreach ($countriesOfOrigin as $origin)
+                        <option value="{{ $origin->id }}">{{ $origin->name }}</option>
+                    @endforeach
+                </select>
             </div>
 
             {{-- Status --}}

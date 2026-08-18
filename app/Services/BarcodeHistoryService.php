@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Barcode;
 use App\Models\PurchaseLine;
+use App\Models\PurchaseProduct;
 use App\Models\SaleLine;
 use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
@@ -43,26 +44,64 @@ class BarcodeHistoryService
         $product   = $barcode->product;
         $productId = $product->id;
 
-        // ── 2. Purchase lines ─────────────────────────────────────────────
-        // purchase_lines has product_id directly, so no extra join needed.
-        $purchaseLines = PurchaseLine::with(['purchase.supplier'])
+        // ── 2. Purchase history ───────────────────────────────────────────
+        // Two eras to account for: new-style rows own their product
+        // directly (purchase_products.product_id — one row IS one
+        // purchase event of this exact product), while historical rows
+        // still reach it only via the line's shared product_id (one line
+        // could represent several rows of the same catalogue product).
+        // Build both into one normalised list of purchase "events" so the
+        // rest of this method (KPIs, response payload) doesn't need to
+        // care which era a given product came from.
+        $newStyleRows = PurchaseProduct::with(['line.purchase.supplier'])
+            ->where('product_id', $productId)
+            ->whereNull('deleted_at')
+            ->get();
+
+        $legacyLines = PurchaseLine::with(['purchase.supplier'])
             ->where('product_id', $productId)
             ->whereNull('purchase_lines.deleted_at')
-            ->get()
-            ->sortByDesc(fn ($l) => optional($l->purchase)->purchase_date)
-            ->values();
+            ->get();
 
-        // Carat weight totals per line row (from purchase_products)
-        $lineIds = $purchaseLines->pluck('id')->all();
-
-        $caratsByLine = $lineIds
+        $legacyCaratsByLine = $legacyLines->isNotEmpty()
             ? DB::table('purchase_products')
-                ->whereIn('purchase_line_id', $lineIds)
+                ->whereIn('purchase_line_id', $legacyLines->pluck('id'))
                 ->whereNull('deleted_at')
                 ->select('purchase_line_id', DB::raw('SUM(carat_weight) as total_carats'))
                 ->groupBy('purchase_line_id')
                 ->pluck('total_carats', 'purchase_line_id')
             : collect();
+
+        $purchaseEvents = $newStyleRows->map(function ($row) {
+            $line = $row->line;
+            $p    = $line?->purchase;
+            return [
+                'purchase_date'  => $p?->purchase_date,
+                'id'             => $p?->id,
+                'invoice_number' => $p?->invoice_number ?? '—',
+                'supplier'       => $p?->supplier?->name ?? '—',
+                'type'           => ucfirst($line?->type ?? 'piece'),
+                'qty'            => (int) $row->qty,
+                'carats'         => round((float) $row->carat_weight, 3),
+                'total'          => round($row->net(), 2),
+                'status'         => $p?->statusLabel() ?? '—',
+                'status_class'   => $p?->statusBadgeClass() ?? 'badge-soft-secondary',
+            ];
+        })->concat($legacyLines->map(function ($line) use ($legacyCaratsByLine) {
+            $p = $line->purchase;
+            return [
+                'purchase_date'  => $p?->purchase_date,
+                'id'             => $p?->id,
+                'invoice_number' => $p?->invoice_number ?? '—',
+                'supplier'       => $p?->supplier?->name ?? '—',
+                'type'           => ucfirst($line->type),
+                'qty'            => (int) $line->total_qty,
+                'carats'         => round((float) ($legacyCaratsByLine[$line->id] ?? 0), 3),
+                'total'          => (float) $line->total,
+                'status'         => $p?->statusLabel() ?? '—',
+                'status_class'   => $p?->statusBadgeClass() ?? 'badge-soft-secondary',
+            ];
+        }))->sortByDesc('purchase_date')->values();
 
         // ── 3. Sale lines ─────────────────────────────────────────────────
         $saleLines = SaleLine::with(['sale.customer', 'sale.location', 'sale.channel'])
@@ -81,10 +120,10 @@ class BarcodeHistoryService
             ->get();
 
         // ── 5. KPI summary ────────────────────────────────────────────────
-        $totalPurchasedQty    = (int) $purchaseLines->sum('total_qty');
-        $totalPurchasedCarats = round((float) $caratsByLine->sum(), 3);
-        $totalPurchasedValue  = round((float) $purchaseLines->sum('total'), 2);
-        $purchaseCount        = $purchaseLines->count();
+        $totalPurchasedQty    = (int) $purchaseEvents->sum('qty');
+        $totalPurchasedCarats = round((float) $purchaseEvents->sum('carats'), 3);
+        $totalPurchasedValue  = round((float) $purchaseEvents->sum('total'), 2);
+        $purchaseCount        = $purchaseEvents->count();
 
         $totalSoldQty   = (int) $saleLines->sum('qty');
         $totalSoldValue = round((float) $saleLines->sum('total'), 2);
@@ -145,20 +184,9 @@ class BarcodeHistoryService
                 'out_qty'                  => $outQty,
             ],
 
-            'purchases' => $purchaseLines->map(function ($line) use ($caratsByLine) {
-                $p = $line->purchase;
-                return [
-                    'id'             => $p?->id,
-                    'invoice_number' => $p?->invoice_number ?? '—',
-                    'purchase_date'  => $p?->purchase_date?->format('d M Y') ?? '—',
-                    'supplier'       => $p?->supplier?->name ?? '—',
-                    'type'           => ucfirst($line->type),
-                    'qty'            => (int) $line->total_qty,
-                    'carats'         => round((float) ($caratsByLine[$line->id] ?? 0), 3),
-                    'total'          => (float) $line->total,
-                    'status'         => $p?->statusLabel() ?? '—',
-                    'status_class'   => $p?->statusBadgeClass() ?? 'badge-soft-secondary',
-                ];
+            'purchases' => $purchaseEvents->map(function ($event) {
+                $event['purchase_date'] = optional($event['purchase_date'])->format('d M Y') ?? '—';
+                return $event;
             })->values()->all(),
 
             'sales' => $saleLines->map(function ($line) {

@@ -77,6 +77,9 @@ class StoreSupplierRequest extends FormRequest
             'credit_limit'    => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
 
             'status'          => ['required', 'boolean'],
+
+            'category_ids'    => ['nullable', 'array'],
+            'category_ids.*'  => ['integer', Rule::exists('categories', 'id')->whereNull('deleted_at')],
         ];
     }
 
@@ -110,6 +113,7 @@ class StoreSupplierRequest extends FormRequest
             'opening_balance' => 'Opening Balance',
             'credit_limit'    => 'Credit Limit',
             'status'          => 'Status',
+            'category_ids'    => 'Categories',
         ];
     }
 }

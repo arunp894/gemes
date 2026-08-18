@@ -152,7 +152,10 @@
         <div class="sheet">
             @foreach ($labels as $row)
                 @php
-                    $product = $row->line?->product;
+                    // New-style rows own their product directly; historical
+                    // rows (pre this column existing) fall back to the
+                    // line's shared product.
+                    $product = $row->product ?? $row->line?->product;
                     $carat   = $row->carat_weight !== null
                         ? rtrim(rtrim(number_format((float) $row->carat_weight, 3), '0'), '.') . ' ct'
                         : null;

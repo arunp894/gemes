@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Supplier extends Model
@@ -163,6 +164,19 @@ class Supplier extends Model
     public function purchases(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Purchase::class);
+    }
+
+    /**
+     * Categories this supplier deals in. Drives the category dropdown on
+     * the purchase create/edit screen — once a supplier is chosen, only
+     * their mapped categories are offered (see
+     * SupplierController::categories()). A supplier with no categories
+     * mapped yet is treated as unrestricted (no filtering applied) so
+     * existing suppliers keep working until someone maps them.
+     */
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class, 'category_supplier')->withTimestamps();
     }
 
     /* -----------------------------------------------------------------

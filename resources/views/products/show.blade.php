@@ -91,11 +91,7 @@
                 <div class="card-body">
                     <dl class="row mb-0">
                         <dt class="col-sm-4 text-muted">Category</dt>
-                        <dd class="col-sm-8">
-                            {{ $product->category?->parent?->name ?? '—' }}
-                            <i class="ti ti-chevron-right text-muted"></i>
-                            <strong>{{ $product->category?->name ?? '—' }}</strong>
-                        </dd>
+                        <dd class="col-sm-8"><strong>{{ $product->category?->name ?? '—' }}</strong></dd>
 
                         <dt class="col-sm-4 text-muted">Country of Origin</dt>
                         <dd class="col-sm-8">{{ $product->country_of_origin ?: '—' }}</dd>

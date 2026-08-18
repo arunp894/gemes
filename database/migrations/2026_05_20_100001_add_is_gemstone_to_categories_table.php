@@ -11,10 +11,9 @@ return new class extends Migration
      *
      * Adds a boolean `is_gemstone` flag to the categories table.
      *
-     * The flag is only meaningful for top-level categories (parent_id IS NULL).
-     * When ticked, products whose category rolls up to this top-level
-     * category will see the Gemstone Details panel on the product form,
-     * and validation will require carat_weight / stone_type / treatment.
+     * When ticked, products in that category will see the Gemstone Details
+     * panel on the product form, and validation will require
+     * carat_weight / stone_type / treatment.
      *
      * Replaces the previous design that relied on a hard-coded list of
      * category codes (Product::GEMSTONE_PARENT_CODES). The flag lets

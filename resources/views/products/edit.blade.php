@@ -64,8 +64,6 @@
     // mangles multi-line inline arrays.
     $productBootstrap = [
         'id'                 => $product->id,
-        'top_category_id'    => $topCategoryId,
-        'subcategories'      => $subcategories,
         'primary_image_url'  => $product->primary_image_url,
         'certificate_url'    => $product->certificate_url,
         'gallery'            => $product->gallery_urls,
@@ -75,7 +73,7 @@
             'category_id'        => $product->category_id,
             'short_description'  => $product->short_description,
             'full_description'   => $product->full_description,
-            'country_of_origin'  => $product->country_of_origin,
+            'country_of_origin_id' => $product->country_of_origin_id,
             'notes_tags'         => $product->notes_tags,
             'status'             => (bool) $product->status,
             'carat_weight'       => $product->carat_weight,

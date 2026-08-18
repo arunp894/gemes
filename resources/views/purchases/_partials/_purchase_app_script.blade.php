@@ -3,14 +3,22 @@
      Mounting:
        new Vue({ el: '#purchaseFormApp', data, methods })
 
+     As of the "purchase creates its own products" change, a line no
+     longer points at an existing catalogue product — it's a template
+     (category, title, gemstone fields) that gets stamped onto a
+     brand-new Product for every inventory row generated under it. The
+     old "scan or search an existing product" step is gone; adding a
+     line now means filling in the Add Item mini-form below.
+
      Configuration (interpolated via Blade above the script):
        mode              create|edit
        suppliersJson     JSON of supplier list   (id, name, company_name, supplier_code, invoice_prefix, gst_number)
+       locationsJson     JSON of location list
        racksJson         JSON of rack list       (id, code, name)
-       lookupUrl         GET endpoint: barcode -> product
-       searchUrl         GET endpoint: q -> products
+       categoriesJson    JSON of category list   (id, name, code, is_gemstone)
+       countriesOfOriginJson JSON of country-of-origin list (id, name)
        previewUrl        GET endpoint: supplier_id, date -> next invoice number
-       lotCodePreviewUrl GET endpoint: supplier_id, product_id, count -> next lot code(s)
+       lotCodePreviewUrl GET endpoint: supplier_id, category_id, count -> next lot code(s)
        submitUrl         POST/PUT endpoint for save
        submitMethod      POST or PUT
        existingPurchase  null on create, hydrated Purchase model on edit
@@ -23,10 +31,15 @@
         suppliers:   {!! $suppliersJson !!},
         locations:   {!! $locationsJson !!},
         racks:       {!! $racksJson !!},
-        lookupUrl:   @json($lookupUrl),
-        searchUrl:   @json($searchUrl),
+        categories:  {!! $categoriesJson !!},
+        countriesOfOrigin: {!! $countriesOfOriginJson !!},
         previewUrl:  @json($previewUrl),
         lotCodePreviewUrl: @json($lotCodePreviewUrl),
+        // Route template for the supplier -> categories AJAX lookup. The
+        // literal token is swapped for the real supplier id at call time
+        // (see fetchSupplierCategories()) so this stays a normal named
+        // route rather than a hand-built URL.
+        supplierCategoriesUrlTemplate: @json(route('suppliers.categories', ['supplier' => '__SUPPLIER_ID__'])),
         submitUrl:   @json($submitUrl),
         submitMethod:@json($submitMethod),
         existing:    {!! $existingPurchase ? $existingPurchase->toJson() : 'null' !!},
@@ -35,14 +48,33 @@
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
     // ── Helpers ─────────────────────────────────────────────────────
-    function emptyRow(qty) {
+    function emptyAddForm() {
         return {
-            qty:              qty || 0,
-            carat_weight:     null,
+            category_id:   null,
+            title:         '',
+            country_of_origin_id: null,
+            website_price: null,
+            carat_weight:  null,
+            stone_type:    null,
+            colour_grade:  '',
+            clarity_grade: null,
+            cut_shape:     null,
+            treatment:     null,
+            type:          'piece',
+            package_qty:   1,
+        };
+    }
+
+    function emptyRow(caratDefault, websitePriceDefault) {
+        return {
+            id:               null,
+            qty:              1,
+            carat_weight:     (caratDefault !== undefined && caratDefault !== null) ? caratDefault : null,
             barcode:          '',
             rack_id:          null,
             serial_number:    null,
             price:            0,
+            website_price:    (websitePriceDefault !== undefined && websitePriceDefault !== null) ? websitePriceDefault : null,
             tax_percent:      0,
             discount_percent: 0,
             expiry_date:      null,
@@ -50,47 +82,7 @@
             remarks:          null,
             _focused:         false,
             _lotCode:         null,
-        };
-    }
-
-    function newLineFromProduct(product, scannedBarcode) {
-        const pkg     = product.packaging || {};
-        const type    = 'piece';                                      // always default to piece
-const innerN  = parseInt(pkg.inner_pack_contains, 10) || 1;
-
-const packageQty = 1;
-
-// piece -> 1 row; box -> packageQty rows
-const innerRows = 1;                                          // piece default
-const perRowQty = 1;
-
-
-        // Prefill carat weight from the product's catalogue value (editable per row).
-        const caratDefault = (product.carat_weight !== null && product.carat_weight !== undefined && product.carat_weight !== '')
-            ? parseFloat(product.carat_weight)
-            : null;
-
-        const rows = [];
-        for (let i = 0; i < innerRows; i++) {
-            const r = emptyRow(perRowQty);
-            r.carat_weight = caratDefault;
-            if (i === 0 && scannedBarcode) {
-                r.barcode = scannedBarcode;
-            }
-            rows.push(r);
-        }
-
-        return {
-            _product:       product,
-            _highlight:     true,
-            _expanded:      true,
-            product_id:     product.id,
-            type:           type,
-            package_name:   pkg.inner_pack_name || (type === 'piece' ? 'Piece' : 'Box'),
-            package_qty:    packageQty,
-            unit_contains:  (type === 'piece') ? null : innerN,
-            remarks:        null,
-            rows:           rows,
+            _product:         null, // populated only for rows hydrated from an existing purchase
         };
     }
 
@@ -99,33 +91,35 @@ const perRowQty = 1;
         if (!purchase || !Array.isArray(purchase.lines)) return [];
 
         return purchase.lines.map(l => ({
-            _product: {
-                id: l.product_id,
-                title: (l.product && l.product.title) || 'Product #' + l.product_id,
-                sku:   (l.product && l.product.sku)   || '',
-                packaging: l.product ? {
-                    pack_type:           l.product.pack_type,
-                    outer_pack_name:     l.product.outer_pack_name,
-                    outer_pack_contains: l.product.outer_pack_contains,
-                    inner_pack_name:     l.product.inner_pack_name,
-                    inner_pack_contains: l.product.inner_pack_contains,
-                } : {},
-            },
-            _highlight:    false,
-            _expanded: (l.rows || []).length > 1,
-            product_id:    l.product_id,
-            type:          l.type,
-            package_name:  l.package_name,
-            package_qty:   l.package_qty,
-            unit_contains: l.unit_contains,
-            remarks:       l.remarks,
+            id:                 l.id,
+            category_id:        l.category_id,
+            title:              l.title || '',
+            short_description:  l.short_description,
+            full_description:   l.full_description,
+            country_of_origin_id: l.country_of_origin_id || null,
+            notes_tags:         l.notes_tags,
+            website_price:      (l.website_price !== null && l.website_price !== undefined) ? parseFloat(l.website_price) : null,
+            carat_weight:       (l.carat_weight !== null && l.carat_weight !== undefined) ? parseFloat(l.carat_weight) : null,
+            stone_type:         l.stone_type,
+            colour_grade:       l.colour_grade || '',
+            clarity_grade:      l.clarity_grade,
+            cut_shape:          l.cut_shape,
+            treatment:          l.treatment,
+            _highlight:         false,
+            _expanded:          (l.rows || []).length > 1,
+            type:               l.type,
+            package_name:       l.package_name,
+            package_qty:        l.package_qty,
+            remarks:            l.remarks,
             rows: (l.rows || []).map(r => ({
+                id:               r.id,
                 qty:              r.qty,
                 carat_weight:     (r.carat_weight !== null && r.carat_weight !== undefined) ? parseFloat(r.carat_weight) : null,
                 barcode:          r.barcode || '',
                 rack_id:          r.rack_id,
                 serial_number:    r.serial_number,
                 price:            parseFloat(r.price)            || 0,
+                website_price:    (r.website_price !== null && r.website_price !== undefined) ? parseFloat(r.website_price) : null,
                 tax_percent:      parseFloat(r.tax_percent)      || 0,
                 discount_percent: parseFloat(r.discount_percent) || 0,
                 expiry_date:      r.expiry_date,
@@ -133,6 +127,7 @@ const perRowQty = 1;
                 remarks:          r.remarks,
                 _focused:         false,
                 _lotCode:         r.lot_code || null,
+                _product:         r.product ? { id: r.product.id, title: r.product.title, sku: r.product.sku } : null,
             })),
         }));
     }
@@ -144,11 +139,19 @@ const perRowQty = 1;
             suppliers:      CONFIG.suppliers,
             locations:      CONFIG.locations,
             racks:          CONFIG.racks,
-            barcodeInput:   '',
-            productSearch:  '',
-            searchResults:  [],
-            scannerMessage: '',
-            scannerLevel:   '',   // 'success' | 'danger' | 'info'
+            categories:     CONFIG.categories,
+            countriesOfOrigin: CONFIG.countriesOfOrigin,
+            // Subset of `categories` mapped to the chosen supplier (see
+            // fetchSupplierCategories()). Empty until a supplier with at
+            // least one mapped category is selected; the Add Item dropdown
+            // falls back to the full `categories` list otherwise (see the
+            // categoryOptions computed) so unmapped suppliers still work.
+            supplierCategories:       [],
+            supplierCategoriesLoaded: false,
+            addForm:        emptyAddForm(),
+            addErrors:      {},
+            formMessage:    '',
+            formLevel:      '',   // 'success' | 'danger' | 'info'
             submitting:     false,
             wasValidated:   false,
             errors:         {},
@@ -188,19 +191,32 @@ const perRowQty = 1;
             totalPiecesAll() {
                 return this.form.lines.reduce((acc, l) => acc + this.totalPieces(l), 0);
             },
-            scannerAlertClass() {
+            // Categories offered in the "Add Item" dropdown: the
+            // supplier-mapped subset once loaded and non-empty, otherwise
+            // every active category (covers suppliers with no mapping yet
+            // and the brief window before a supplier is chosen).
+            categoryOptions() {
+                return this.supplierCategories.length ? this.supplierCategories : this.categories;
+            },
+            addFormCategory() {
+                return this.categories.find(c => c.id === this.addForm.category_id) || null;
+            },
+            addFormIsGemstone() {
+                return !!(this.addFormCategory && this.addFormCategory.is_gemstone);
+            },
+            formAlertClass() {
                 return {
-                    'alert-success': this.scannerLevel === 'success',
-                    'alert-danger':  this.scannerLevel === 'danger',
-                    'alert-info':    this.scannerLevel === 'info' || !this.scannerLevel,
+                    'alert-success': this.formLevel === 'success',
+                    'alert-danger':  this.formLevel === 'danger',
+                    'alert-info':    this.formLevel === 'info' || !this.formLevel,
                 };
             },
-            scannerIconClass() {
+            formIconClass() {
                 return {
                     'ti me-1':         true,
-                    'ti-circle-check': this.scannerLevel === 'success',
-                    'ti-alert-circle': this.scannerLevel === 'danger',
-                    'ti-info-circle':  this.scannerLevel === 'info' || !this.scannerLevel,
+                    'ti-circle-check': this.formLevel === 'success',
+                    'ti-alert-circle': this.formLevel === 'danger',
+                    'ti-info-circle':  this.formLevel === 'info' || !this.formLevel,
                 };
             },
         },
@@ -208,6 +224,13 @@ const perRowQty = 1;
         mounted() {
             if (this.form.supplier_id && !CONFIG.existing) {
                 this.refreshInvoiceNumber();
+            }
+            // Edit mode locks the supplier, and a fresh create can arrive
+            // with one preselected — either way, load its mapped
+            // categories up front rather than waiting for a change event
+            // that may never fire.
+            if (this.form.supplier_id) {
+                this.fetchSupplierCategories();
             }
         },
 
@@ -230,21 +253,16 @@ const perRowQty = 1;
             totalPieces(line) {
                 return line.rows.reduce((acc, r) => acc + (parseInt(r.qty, 10) || 0), 0);
             },
-
-            packBadge(pkg) {
-                if (pkg.pack_type === 'carton') {
-                    return `1 ${pkg.outer_pack_name || 'Ctn'} × ${pkg.outer_pack_contains} ${pkg.inner_pack_name || 'Box'} × ${pkg.inner_pack_contains} pcs`;
-                }
-                if (pkg.pack_type === 'unit') {
-                    return `1 ${pkg.inner_pack_name || 'Unit'} × ${pkg.inner_pack_contains} pcs`;
-                }
-                return 'Piece';
+            categoryName(id) {
+                const c = this.categories.find(c => c.id === id);
+                return c ? c.name : '—';
             },
 
             /* ─── Supplier / invoice number ──────────────────────── */
 
             onSupplierChange() {
                 this.refreshInvoiceNumber();
+                this.fetchSupplierCategories();
                 // Every existing preview embeds the OLD supplier's initials
                 // (create mode only — supplier is locked/readonly on edit),
                 // so clear them all before refetching rather than only
@@ -253,6 +271,35 @@ const perRowQty = 1;
                     line.rows.forEach(row => { row._lotCode = null; });
                 });
                 this.refreshAllLotCodePreviews();
+            },
+
+            /* ─── Supplier -> mapped categories ───────────────────────
+               Filters the "Add Item" category dropdown down to whatever the
+               chosen supplier is mapped to (Supplier::categories()). A
+               supplier with no mapping yet resolves to an empty list here,
+               and categoryOptions() falls back to the full category list
+               in that case — see its comment. */
+            fetchSupplierCategories() {
+                this.supplierCategories = [];
+                this.supplierCategoriesLoaded = false;
+                if (!this.form.supplier_id) return;
+
+                const url = CONFIG.supplierCategoriesUrlTemplate.replace('__SUPPLIER_ID__', this.form.supplier_id);
+                fetch(url, { headers: { 'Accept': 'application/json' } })
+                    .then(r => r.json())
+                    .then(j => {
+                        if (!j.success) return;
+                        this.supplierCategories = j.categories || [];
+                        this.supplierCategoriesLoaded = true;
+                        // If the Add Item form already has a category picked
+                        // that fell out of the newly-filtered list, clear it
+                        // rather than silently submitting a mismatched pick.
+                        if (this.addForm.category_id && this.supplierCategories.length
+                            && !this.supplierCategories.some(c => c.id === this.addForm.category_id)) {
+                            this.addForm.category_id = null;
+                        }
+                    })
+                    .catch(() => {});
             },
             refreshInvoiceNumber() {
                 if (!this.form.supplier_id || !this.form.purchase_date) return;
@@ -268,17 +315,18 @@ const perRowQty = 1;
             /* ─── Lot code preview ────────────────────────────
                Only fills rows that don't already have a code — real
                (hydrated) codes from an existing purchase are left alone;
-               only newly added rows get a live preview. */
+               only newly added rows get a live preview. Keyed on the
+               line's category now, not a pre-existing product. */
             refreshLotCodePreview(lineIdx) {
                 const line = this.form.lines[lineIdx];
-                if (!line || !this.form.supplier_id || !line.product_id) return;
+                if (!line || !this.form.supplier_id || !line.category_id) return;
 
                 const missing = [];
                 line.rows.forEach((row, ri) => { if (!row._lotCode) missing.push(ri); });
                 if (missing.length === 0) return;
 
                 const url = `${CONFIG.lotCodePreviewUrl}?supplier_id=${this.form.supplier_id}`
-                    + `&product_id=${line.product_id}&count=${missing.length}`;
+                    + `&category_id=${line.category_id}&count=${missing.length}`;
                 fetch(url, { headers: { 'Accept': 'application/json' } })
                     .then(r => r.json())
                     .then(j => {
@@ -293,55 +341,13 @@ const perRowQty = 1;
                 this.form.lines.forEach((_, li) => this.refreshLotCodePreview(li));
             },
 
-            /* ─── Barcode scan ───────────────────────────────────── */
+            /* ─── Messages ───────────────────────────────────────── */
 
-            onBarcodeEnter() {
-                const code = this.barcodeInput.trim();
-                if (!code) return;
-
-                // If this barcode already lives on a row, just bump qty there.
-                const existing = this.findRowByBarcode(code);
-                if (existing) {
-                    existing.row.qty = (parseInt(existing.row.qty, 10) || 0) + 1;
-                    this.flashLine(existing.lineIdx);
-                    this.setScanner('info', `Incremented qty on existing row for "${code}".`);
-                    this.barcodeInput = '';
-                    return;
-                }
-
-                const url = `${CONFIG.lookupUrl}?barcode=${encodeURIComponent(code)}`;
-                fetch(url, { headers: { 'Accept': 'application/json' } })
-                    .then(async r => {
-                        const j = await r.json();
-                        if (!r.ok || !j.ok) {
-                            this.setScanner('danger', j.message || 'Barcode not found.');
-                            return;
-                        }
-                        this.addProduct(j.product, code);
-                        this.setScanner('success', `Added ${j.product.title}.`);
-                    })
-                    .catch(err => this.setScanner('danger', 'Lookup failed: ' + err.message))
-                    .finally(() => {
-                        this.barcodeInput = '';
-                        this.$nextTick(() => this.$refs.barcodeInput?.focus());
-                    });
-            },
-            findRowByBarcode(code) {
-                for (let li = 0; li < this.form.lines.length; li++) {
-                    const line = this.form.lines[li];
-                    for (const row of line.rows) {
-                        if (row.barcode === code) {
-                            return { lineIdx: li, row };
-                        }
-                    }
-                }
-                return null;
-            },
-            setScanner(level, msg) {
-                this.scannerLevel   = level;
-                this.scannerMessage = msg;
+            setMessage(level, msg) {
+                this.formLevel   = level;
+                this.formMessage = msg;
                 if (level === 'success' || level === 'info') {
-                    setTimeout(() => { if (this.scannerMessage === msg) this.scannerMessage = ''; }, 3000);
+                    setTimeout(() => { if (this.formMessage === msg) this.formMessage = ''; }, 3000);
                 }
             },
             flashLine(li) {
@@ -351,86 +357,134 @@ const perRowQty = 1;
                 }, 1500);
             },
             toggleExpand(li) {
-    const line = this.form.lines[li];
-    this.$set(line, '_expanded', !line._expanded);
-},
-            /* ─── Product search ─────────────────────────────────── */
-
-            onSearchInput() {
-                const term = this.productSearch.trim();
-                if (term.length < 1) { this.searchResults = []; return; }
-
-                fetch(`${CONFIG.searchUrl}?q=${encodeURIComponent(term)}`, { headers: { 'Accept': 'application/json' } })
-                    .then(r => r.json())
-                    .then(j => { this.searchResults = j.items || []; })
-                    .catch(() => { this.searchResults = []; });
+                const line = this.form.lines[li];
+                this.$set(line, '_expanded', !line._expanded);
             },
-            addProduct(product, scannedBarcode) {
-                this.form.lines.push(newLineFromProduct(product, scannedBarcode));
-                this.searchResults = [];
-                this.productSearch = '';
+
+            /* ─── Add Item ───────────────────────────────────────── */
+
+            addLine() {
+                this.addErrors = {};
+
+                if (!this.addForm.category_id) this.addErrors.category_id = 'Required';
+                if (!this.addForm.title || !this.addForm.title.trim()) this.addErrors.title = 'Required';
+
+                // Piece lines are always a single inventory row/product —
+                // the physical count goes on that row's own Qty field
+                // instead. Only Box lines fan out into one row per box.
+                if (this.addForm.type === 'piece') {
+                    this.addForm.package_qty = 1;
+                }
+                const qty = parseInt(this.addForm.package_qty, 10) || 0;
+                if (qty < 1) this.addErrors.package_qty = 'Must be at least 1';
+
+                if (this.addFormIsGemstone) {
+                    if (this.addForm.carat_weight === null || this.addForm.carat_weight === '') {
+                        this.addErrors.carat_weight = 'Required for gemstone items';
+                    }
+                    if (!this.addForm.stone_type) this.addErrors.stone_type = 'Required for gemstone items';
+                    if (!this.addForm.treatment)  this.addErrors.treatment  = 'Required for gemstone items';
+                }
+
+                if (Object.keys(this.addErrors).length) return;
+
+                const caratDefault = (this.addForm.carat_weight !== null && this.addForm.carat_weight !== '')
+                    ? parseFloat(this.addForm.carat_weight) : null;
+                const websitePriceDefault = (this.addForm.website_price !== null && this.addForm.website_price !== '')
+                    ? parseFloat(this.addForm.website_price) : null;
+
+                const rows = [];
+                for (let i = 0; i < qty; i++) {
+                    rows.push(emptyRow(caratDefault, websitePriceDefault));
+                }
+
+                this.form.lines.push({
+                    id:                 null,
+                    category_id:        this.addForm.category_id,
+                    title:              this.addForm.title.trim(),
+                    short_description:  null,
+                    full_description:   null,
+                    country_of_origin_id: this.addForm.country_of_origin_id || null,
+                    notes_tags:         null,
+                    website_price:      (this.addForm.website_price !== null && this.addForm.website_price !== '') ? parseFloat(this.addForm.website_price) : null,
+                    carat_weight:       caratDefault,
+                    stone_type:         this.addFormIsGemstone ? this.addForm.stone_type   : null,
+                    colour_grade:       this.addFormIsGemstone ? (this.addForm.colour_grade || null) : null,
+                    clarity_grade:      this.addFormIsGemstone ? this.addForm.clarity_grade : null,
+                    cut_shape:          this.addFormIsGemstone ? this.addForm.cut_shape     : null,
+                    treatment:          this.addFormIsGemstone ? this.addForm.treatment     : null,
+                    _highlight:         true,
+                    _expanded:          qty > 1,
+                    type:               this.addForm.type,
+                    package_name:       this.addForm.type === 'piece' ? 'Piece' : 'Box',
+                    package_qty:        qty,
+                    remarks:            null,
+                    rows:               rows,
+                });
+
                 const newIdx = this.form.lines.length - 1;
                 this.flashLine(newIdx);
                 this.refreshLotCodePreview(newIdx);
+                this.setMessage('success', `Added "${this.form.lines[newIdx].title}" (${qty} ${this.form.lines[newIdx].package_name.toLowerCase()}${qty === 1 ? '' : 's'}).`);
+                this.addForm = emptyAddForm();
+            },
+            onAddFormTypeChange() {
+                // Locks the Add Item Qty input at 1 for Piece — mirrors the
+                // disabled state on the input itself; kept as an explicit
+                // handler so switching back to Box cleanly re-enables it
+                // without leaving a stale value behind.
+                if (this.addForm.type === 'piece') {
+                    this.addForm.package_qty = 1;
+                }
             },
 
             /* ─── Row management ─────────────────────────────────── */
 
             rebuildRows(lineIdx) {
                 const line = this.form.lines[lineIdx];
-                const pkg  = line._product.packaging || {};
+                line.package_name = line.type === 'piece' ? 'Piece' : 'Box';
 
-                const innerN     = parseInt(pkg.inner_pack_contains, 10) || 1;
-                const packageQty = parseInt(line.package_qty, 10) || 1;
-
-                // Piece lines are ALWAYS a single inventory row (the
-                // parent row carries the inputs inline — no child rows).
-                // Only Box lines fan out into one child row per Pack Qty.
+                // Piece lines are always exactly one inventory row/product
+                // — Pack Qty isn't meaningful for them (disabled in the UI);
+                // the physical count lives on that row's own Qty field
+                // instead, so several identical pieces can share one
+                // product. Only Box lines fan out into one row per box.
                 if (line.type === 'piece') {
-                    line.package_qty   = 1;
-                    line.package_name  = 'Piece';
-                    line.unit_contains = null;
+                    line.package_qty = 1;
                 } else {
-                    line.package_name  = pkg.inner_pack_name || 'Box';
-                    line.unit_contains = innerN;
+                    line.package_qty = Math.max(1, parseInt(line.package_qty, 10) || 1);
                 }
 
-                // Pack Qty == desired inventory-row count for Box lines;
-                // Piece lines are pinned to exactly one row.
-                const expected = (line.type === 'piece') ? 1 : packageQty;
+                const expected = (line.type === 'piece') ? 1 : line.package_qty;
 
-                // Grow or shrink to `expected` rows, preserving existing data.
                 if (line.rows.length < expected) {
                     while (line.rows.length < expected) {
-                        // Use the first row as a template so price/tax cascades.
-                        const t = line.rows[0] || emptyRow(innerN);
-                        line.rows.push({
-                            qty:              t.qty || 1,
-                            carat_weight:     (t.carat_weight !== null && t.carat_weight !== undefined) ? t.carat_weight : null,
-                            barcode:          '',
-                            rack_id:          t.rack_id,
-                            serial_number:    null,
-                            price:            t.price,
-                            tax_percent:      t.tax_percent,
-                            discount_percent: t.discount_percent,
-                            expiry_date:      t.expiry_date,
-                            manufacture_date: null,
-                            remarks:          null,
-                            _focused:         false,
-                            _lotCode:         null,
-                        });
+                        const t = line.rows[line.rows.length - 1];
+                        const row = emptyRow(
+                            t ? t.carat_weight : line.carat_weight,
+                            t ? t.website_price : line.website_price
+                        );
+                        if (t) {
+                            row.rack_id     = t.rack_id;
+                            row.price       = t.price;
+                            row.expiry_date = t.expiry_date;
+                        }
+                        line.rows.push(row);
                     }
                 } else if (line.rows.length > expected) {
+                    const removed = line.rows.slice(expected);
+                    const locked  = removed.filter(r => r._product);
+                    if (locked.length && !confirm(
+                        `${locked.length} row(s) you're about to drop already have a product created. `
+                        + `Continue? (Rows with photos, extra barcodes, or a website listing will be rejected on save.)`
+                    )) {
+                        line.package_qty = line.rows.length; // revert
+                        return;
+                    }
                     line.rows.splice(expected);
                 }
 
-                // When a line ends up with more than one row, show them
-                // expanded by default so the change is immediately visible
-                // and editable.
-                if (line.rows.length > 1) {
-                    line._expanded = true;
-                }
-
+                if (line.rows.length > 1) line._expanded = true;
                 this.refreshLotCodePreview(lineIdx);
             },
             focusFirstRow(li) {
@@ -450,17 +504,17 @@ const perRowQty = 1;
                         const target = Array.isArray(el) ? el[0] : el;
                         target?.focus();
                     });
-                } else {
-                    this.$nextTick(() => this.$refs.barcodeInput?.focus());
                 }
             },
             removeLine(li) {
-                if (!confirm('Remove this product from the purchase?')) return;
+                const line = this.form.lines[li];
+                const lockedCount = line.rows.filter(r => r._product).length;
+                const msg = lockedCount
+                    ? `Remove "${line.title}"? ${lockedCount} of its item(s) already have a product created — `
+                      + `rows with photos, extra barcodes, or a website listing will be rejected on save.`
+                    : `Remove "${line.title}" from this purchase?`;
+                if (!confirm(msg)) return;
                 this.form.lines.splice(li, 1);
-            },
-            resetForm() {
-                if (!confirm('Clear all lines?')) return;
-                this.form.lines = [];
             },
 
             /* ─── Submit ─────────────────────────────────────────── */
@@ -475,21 +529,33 @@ const perRowQty = 1;
                     paid_amount:   this.form.paid_amount,
                     status:        post ? 'posted' : 'draft',
                     lines: this.form.lines.map(l => ({
-                        product_id:    l.product_id,
-                        type:          l.type,
-                        package_name:  l.package_name,
-                        package_qty:   l.package_qty,
-                        unit_contains: l.unit_contains,
-                        remarks:       l.remarks,
+                        id:                 l.id,
+                        category_id:        l.category_id,
+                        title:              l.title,
+                        short_description:  l.short_description,
+                        full_description:   l.full_description,
+                        country_of_origin_id: l.country_of_origin_id,
+                        notes_tags:         l.notes_tags,
+                        website_price:      (l.website_price === '' || l.website_price === undefined) ? null : l.website_price,
+                        carat_weight:       (l.carat_weight === '' || l.carat_weight === undefined) ? null : l.carat_weight,
+                        stone_type:         l.stone_type,
+                        colour_grade:       l.colour_grade,
+                        clarity_grade:      l.clarity_grade,
+                        cut_shape:          l.cut_shape,
+                        treatment:          l.treatment,
+                        type:               l.type,
+                        package_name:       l.package_name,
+                        package_qty:        l.package_qty,
+                        remarks:            l.remarks,
                         rows: l.rows.map(r => ({
+                            id:               r.id,
                             qty:              r.qty,
                             carat_weight:     (r.carat_weight === '' || r.carat_weight === undefined) ? null : r.carat_weight,
                             barcode:          r.barcode || null,
                             rack_id:          r.rack_id,
                             serial_number:    r.serial_number,
                             price:            r.price,
-                            tax_percent:      r.tax_percent,
-                            discount_percent: r.discount_percent,
+                            website_price:    (r.website_price === '' || r.website_price === undefined) ? null : r.website_price,
                             expiry_date:      r.expiry_date,
                             manufacture_date: r.manufacture_date,
                             remarks:          r.remarks,
@@ -508,7 +574,7 @@ const perRowQty = 1;
                     return;
                 }
                 if (this.form.lines.length === 0) {
-                    this.setScanner('danger', 'Add at least one product before saving.');
+                    this.setMessage('danger', 'Add at least one item before saving.');
                     return;
                 }
 
@@ -526,12 +592,12 @@ const perRowQty = 1;
                     const j = await r.json();
                     if (!r.ok) {
                         if (j.errors) this.errors = this.flattenErrors(j.errors);
-                        this.setScanner('danger', j.message || 'Save failed.');
+                        this.setMessage('danger', j.message || 'Save failed.');
                         return;
                     }
                     window.location.href = j.redirect;
                 })
-                .catch(err => this.setScanner('danger', 'Save failed: ' + err.message))
+                .catch(err => this.setMessage('danger', 'Save failed: ' + err.message))
                 .finally(() => { this.submitting = false; });
             },
             flattenErrors(errs) {

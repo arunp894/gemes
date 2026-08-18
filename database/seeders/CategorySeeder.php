@@ -6,21 +6,20 @@ use App\Models\Category;
 use Illuminate\Database\Seeder;
 
 /**
- * Seeds the core gemstone category hierarchy for Sukainagems.
+ * Seeds the core gemstone category list for Sukainagems.
  *
- * Structure (two levels max):
- *   Gemstones (is_gemstone=true)
- *     ├── Ruby
- *     ├── Sapphire
- *     ├── Emerald
- *     ├── Diamond
- *     └── Other Gemstones
- *   Rough Stones (is_gemstone=true)
- *     ├── Ruby Rough
- *     └── Sapphire Rough
- *   Accessories (is_gemstone=false)
- *     ├── Jewellery Tools
- *     └── Packaging
+ * Categories are a flat, single-level list — no parent/child nesting.
+ * `is_gemstone` is set directly on each row:
+ *
+ *   Ruby              (is_gemstone=true)
+ *   Sapphire          (is_gemstone=true)
+ *   Emerald           (is_gemstone=true)
+ *   Diamond           (is_gemstone=true)
+ *   Other Gemstones   (is_gemstone=true)
+ *   Ruby Rough        (is_gemstone=true)
+ *   Sapphire Rough    (is_gemstone=true)
+ *   Jewellery Tools   (is_gemstone=false)
+ *   Packaging         (is_gemstone=false)
  *
  * Idempotent: upserts on `code`.
  */
@@ -28,95 +27,25 @@ class CategorySeeder extends Seeder
 {
     public function run(): void
     {
-        // ── Top-level categories ──────────────────────────────────
-        $gemstones = Category::updateOrCreate(
-            ['code' => 'GEMS'],
-            [
-                'name'         => 'Gemstones',
-                'is_gemstone'  => true,
-                'parent_id'    => null,
-                'display_order'=> 1,
-                'status'       => true,
-            ]
-        );
-
-        $rough = Category::updateOrCreate(
-            ['code' => 'ROUGH'],
-            [
-                'name'         => 'Rough Stones',
-                'is_gemstone'  => true,
-                'parent_id'    => null,
-                'display_order'=> 2,
-                'status'       => true,
-            ]
-        );
-
-        $accessories = Category::updateOrCreate(
-            ['code' => 'ACCS'],
-            [
-                'name'         => 'Accessories',
-                'is_gemstone'  => false,
-                'parent_id'    => null,
-                'display_order'=> 3,
-                'status'       => true,
-            ]
-        );
-
-        // ── Gemstones child categories ────────────────────────────
-        $subGems = [
-            ['code' => 'GEMS-RBY',  'name' => 'Ruby',             'display_order' => 1],
-            ['code' => 'GEMS-SPH',  'name' => 'Sapphire',         'display_order' => 2],
-            ['code' => 'GEMS-EMR',  'name' => 'Emerald',          'display_order' => 3],
-            ['code' => 'GEMS-DIA',  'name' => 'Diamond',          'display_order' => 4],
-            ['code' => 'GEMS-OTH',  'name' => 'Other Gemstones',  'display_order' => 5],
+        $categories = [
+            ['code' => 'GEMS-RBY',   'name' => 'Ruby',            'is_gemstone' => true,  'display_order' => 1],
+            ['code' => 'GEMS-SPH',   'name' => 'Sapphire',        'is_gemstone' => true,  'display_order' => 2],
+            ['code' => 'GEMS-EMR',   'name' => 'Emerald',         'is_gemstone' => true,  'display_order' => 3],
+            ['code' => 'GEMS-DIA',   'name' => 'Diamond',         'is_gemstone' => true,  'display_order' => 4],
+            ['code' => 'GEMS-OTH',   'name' => 'Other Gemstones', 'is_gemstone' => true,  'display_order' => 5],
+            ['code' => 'ROUGH-RBY',  'name' => 'Ruby Rough',      'is_gemstone' => true,  'display_order' => 6],
+            ['code' => 'ROUGH-SPH',  'name' => 'Sapphire Rough',  'is_gemstone' => true,  'display_order' => 7],
+            ['code' => 'ACCS-TOOLS', 'name' => 'Jewellery Tools', 'is_gemstone' => false, 'display_order' => 8],
+            ['code' => 'ACCS-PACK',  'name' => 'Packaging',       'is_gemstone' => false, 'display_order' => 9],
         ];
 
-        foreach ($subGems as $sub) {
+        foreach ($categories as $cat) {
             Category::updateOrCreate(
-                ['code' => $sub['code']],
+                ['code' => $cat['code']],
                 [
-                    'name'          => $sub['name'],
-                    'parent_id'     => $gemstones->id,
-                    'is_gemstone'   => false, // forced false by CategoryController rule
-                    'display_order' => $sub['display_order'],
-                    'status'        => true,
-                ]
-            );
-        }
-
-        // ── Rough Stones child categories ─────────────────────────
-        $subRough = [
-            ['code' => 'ROUGH-RBY', 'name' => 'Ruby Rough',     'display_order' => 1],
-            ['code' => 'ROUGH-SPH', 'name' => 'Sapphire Rough', 'display_order' => 2],
-        ];
-
-        foreach ($subRough as $sub) {
-            Category::updateOrCreate(
-                ['code' => $sub['code']],
-                [
-                    'name'          => $sub['name'],
-                    'parent_id'     => $rough->id,
-                    'is_gemstone'   => false,
-                    'display_order' => $sub['display_order'],
-                    'status'        => true,
-                ]
-            );
-        }
-
-        // ── Accessories child categories ──────────────────────────
-        $subAccs = [
-            ['code' => 'ACCS-TOOLS', 'name' => 'Jewellery Tools', 'display_order' => 1],
-            ['code' => 'ACCS-PACK',  'name' => 'Packaging',       'display_order' => 2],
-        ];
-
-        foreach ($subAccs as $sub) {
-            Category::updateOrCreate(
-                ['code' => $sub['code']],
-                [
-                    'name'          => $sub['name'],
-                    'parent_id'     => $accessories->id,
-                    'is_gemstone'   => false,
-                    'display_order' => $sub['display_order'],
+                    'name'          => $cat['name'],
+                    'is_gemstone'   => $cat['is_gemstone'],
+                    'display_order' => $cat['display_order'],
                     'status'        => true,
                 ]
             );

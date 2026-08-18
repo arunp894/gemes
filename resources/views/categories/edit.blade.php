@@ -29,32 +29,6 @@
                         @csrf
                         @method('PUT')
 
-                        {{-- Parent --}}
-                        <div class="mb-3">
-                            <label for="parent_id" class="form-label">Parent Category</label>
-                            <select
-                                class="form-select"
-                                id="parent_id"
-                                name="parent_id"
-                                v-model="form.parent_id"
-                                @if ($hasChildren) disabled @endif>
-                                <option :value="null">— None (Top-Level Category) —</option>
-                                @foreach ($parents as $p)
-                                    <option value="{{ $p->id }}">{{ $p->name }}</option>
-                                @endforeach
-                            </select>
-                            @if ($hasChildren)
-                                <small class="text-warning">
-                                    <i class="ti ti-alert-triangle me-1"></i>
-                                    This category has subcategories, so it cannot itself become a subcategory.
-                                </small>
-                            @else
-                                <small class="text-muted">
-                                    Leave blank for top-level. Pick a parent to make this a subcategory.
-                                </small>
-                            @endif
-                        </div>
-
                         {{-- Name --}}
                         <div class="mb-3">
                             <label for="name" class="form-label">Category Name <span class="text-danger">*</span></label>
@@ -153,8 +127,8 @@
                             </div>
                         </div>
 
-                        {{-- Gemstone-Type flag (top-level only) --}}
-                        <div class="mb-3" v-show="!form.parent_id">
+                        {{-- Gemstone-Type flag --}}
+                        <div class="mb-3">
                             <label class="form-label d-block">Gemstone Category</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="is_gemstone"
@@ -164,8 +138,8 @@
                                 </label>
                             </div>
                             <small class="text-muted">
-                                When ticked, products under this category and its subcategories show the Gemstone
-                                Details panel on the product form and require carat / stone type / treatment.
+                                When ticked, products under this category show the Gemstone Details panel on the
+                                product form and require carat / stone type / treatment.
                             </small>
                         </div>
 
@@ -202,15 +176,9 @@
                     <p class="mb-1 text-muted small">
                         <strong>Created:</strong> {{ $category->created_at?->format('d M Y, h:i A') }}
                     </p>
-                    <p class="mb-1 text-muted small">
+                    <p class="mb-0 text-muted small">
                         <strong>Last Modified:</strong> {{ $category->updated_at?->format('d M Y, h:i A') }}
                     </p>
-                    @if ($category->parent)
-                        <p class="mb-0 text-muted small">
-                            <strong>Parent:</strong>
-                            <a href="{{ route('categories.show', $category->parent) }}">{{ $category->parent->name }}</a>
-                        </p>
-                    @endif
                 </div>
             </div>
         </div>
@@ -226,7 +194,6 @@
         el: '#categoryEditApp',
         data: {
             form: {
-                parent_id:     @json($category->parent_id),
                 name:          @json($category->name),
                 code:          @json($category->code),
                 description:   @json($category->description),
@@ -242,7 +209,6 @@
             touched: {},
             submitting: false,
             serverError: null,
-            hasChildren: @json((bool) $hasChildren),
         },
         methods: {
             validateField(field) {
@@ -287,15 +253,7 @@
                 fd.append('description', this.form.description || '');
                 fd.append('display_order', this.form.display_order || 0);
                 fd.append('status', this.form.status ? 1 : 0);
-                // parent_id is only sent if the field isn't disabled (no children)
-                if (!this.hasChildren) {
-                    fd.append('parent_id', this.form.parent_id || '');
-                }
-                // is_gemstone is only meaningful for top-level categories.
-                // Send it whenever the category IS top-level (no parent selected).
-                if (!this.form.parent_id) {
-                    fd.append('is_gemstone', this.form.is_gemstone ? 1 : 0);
-                }
+                fd.append('is_gemstone', this.form.is_gemstone ? 1 : 0);
                 if (this.imageFile)   fd.append('image', this.imageFile);
                 if (this.removeImage) fd.append('remove_image', 1);
 

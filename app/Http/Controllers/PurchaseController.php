@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePurchaseRequest;
 use App\Http\Requests\UpdatePurchaseRequest;
 use App\Models\Barcode;
+use App\Models\Category;
+use App\Models\CountryOfOrigin;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\Purchase;
@@ -122,10 +124,12 @@ class PurchaseController extends Controller
     public function create(): View
     {
         return view('purchases.create', [
-            'suppliers' => Supplier::active()->ordered()->get(['id', 'supplier_code', 'name', 'company_name', 'invoice_prefix', 'gst_number']),
-            'locations' => Location::active()->ordered()->get(['id', 'location_code', 'name', 'type']),
-            'racks'     => Rack::active()->ordered()->get(['id', 'code', 'name']),
-            'taxTypes'  => Purchase::TAX_TYPES,
+            'suppliers'  => Supplier::active()->ordered()->get(['id', 'supplier_code', 'name', 'company_name', 'invoice_prefix', 'gst_number']),
+            'locations'  => Location::active()->ordered()->get(['id', 'location_code', 'name', 'type']),
+            'racks'      => Rack::active()->ordered()->get(['id', 'code', 'name']),
+            'categories' => Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
+            'countriesOfOrigin' => CountryOfOrigin::active()->ordered()->get(['id', 'name']),
+            'taxTypes'   => Purchase::TAX_TYPES,
         ]);
     }
 
@@ -159,11 +163,13 @@ class PurchaseController extends Controller
         }
 
         return view('purchases.edit', [
-            'purchase'  => $this->repo->find($purchase->id),
-            'suppliers' => Supplier::active()->ordered()->get(['id', 'supplier_code', 'name', 'company_name', 'invoice_prefix', 'gst_number']),
-            'locations' => Location::active()->ordered()->get(['id', 'location_code', 'name', 'type']),
-            'racks'     => Rack::active()->ordered()->get(['id', 'code', 'name']),
-            'taxTypes'  => Purchase::TAX_TYPES,
+            'purchase'   => $this->repo->find($purchase->id),
+            'suppliers'  => Supplier::active()->ordered()->get(['id', 'supplier_code', 'name', 'company_name', 'invoice_prefix', 'gst_number']),
+            'locations'  => Location::active()->ordered()->get(['id', 'location_code', 'name', 'type']),
+            'racks'      => Rack::active()->ordered()->get(['id', 'code', 'name']),
+            'categories' => Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
+            'countriesOfOrigin' => CountryOfOrigin::active()->ordered()->get(['id', 'name']),
+            'taxTypes'   => Purchase::TAX_TYPES,
         ]);
     }
 
@@ -218,6 +224,13 @@ class PurchaseController extends Controller
      * Resolve a scanned barcode value to a product. Returns the product
      * with its full packaging payload so the Vue form can decide whether
      * to insert one piece-row or expand into N inner-pack rows.
+     *
+     * NOTE: no longer called from the create/edit purchase screens — a
+     * new-style line creates its own product instead of picking an
+     * existing one, so there's nothing to look up when adding a line.
+     * Left in place (route still registered) rather than removed, in
+     * case restocking a genuinely non-unique existing product ever needs
+     * this path back.
      */
     public function lookupByBarcode(Request $request): JsonResponse
     {
@@ -271,6 +284,9 @@ class PurchaseController extends Controller
     /**
      * Quick product search for the secondary picker (when the user
      * doesn't have a scanner / barcode isn't registered yet).
+     *
+     * NOTE: no longer called from the create/edit purchase screens — see
+     * lookupByBarcode() above.
      */
     public function searchProducts(Request $request): JsonResponse
     {
@@ -354,25 +370,28 @@ class PurchaseController extends Controller
     }
 
     /**
-     * Preview the next lot code(s) for a supplier + product, optionally
-     * $count in a row (a Box line fans out into several inventory rows,
-     * each needing its own code). Read-only — the real codes are
-     * (re)generated inside the save transaction, same pattern as
-     * previewInvoiceNumber().
+     * Preview the next lot code(s) for a supplier + category, optionally
+     * $count in a row (a line fans out into one inventory row per
+     * product). Read-only — the real codes are (re)generated inside the
+     * save transaction, same pattern as previewInvoiceNumber(). Keyed on
+     * category rather than product: a purchase line no longer points at
+     * a pre-existing product to key the preview on — see
+     * PurchaseProduct::generateLotCode() for why category is the right
+     * stable key now.
      */
     public function previewLotCode(Request $request): JsonResponse
     {
         $supplier = Supplier::find((int) $request->query('supplier_id'));
-        $product  = Product::find((int) $request->query('product_id'));
+        $category = Category::find((int) $request->query('category_id'));
         $count    = max(1, (int) $request->query('count', 1));
 
-        if (! $supplier || ! $product) {
-            return response()->json(['ok' => false, 'message' => 'Supplier or product not found.'], 404);
+        if (! $supplier || ! $category) {
+            return response()->json(['ok' => false, 'message' => 'Supplier or category not found.'], 404);
         }
 
         return response()->json([
             'ok'    => true,
-            'codes' => PurchaseProduct::previewLotCodes($supplier, $product, $count),
+            'codes' => PurchaseProduct::previewLotCodes($supplier, $category, $count),
         ]);
     }
 
@@ -400,7 +419,7 @@ class PurchaseController extends Controller
                 (int) $item['id'] => max(1, min(100, (int) ($item['copies'] ?? 1))),
             ]);
 
-        $rows = PurchaseProduct::with('line.product')
+        $rows = PurchaseProduct::with(['product', 'line.product'])
             ->whereIn('id', $selections->keys()->all())
             ->get()
             ->keyBy('id');

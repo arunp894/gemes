@@ -154,7 +154,8 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
     <a href="{{ route('website.collections') }}" class="{{ request()->routeIs('website.collections') ? 'active' : '' }}">Collections</a>
     <a href="{{ route('website.collections', ['category' => 'paraiba']) }}">Paraiba</a>
     <a href="{{ route('website.collections', ['category' => 'tanzanite']) }}">Tanzanite</a>
-    <a href="#">About</a>
+    <a href="{{ route('website.blog.index') }}" class="{{ request()->routeIs('website.blog.*') ? 'active' : '' }}">Journal</a>
+    <a href="{{ route('website.pages.show', \App\Models\Page::SLUG_ABOUT_US) }}">About</a>
     <a href="#">Contact</a>
   </div>
   <div class="sg-nav-right">
@@ -252,15 +253,16 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
         <li><a href="{{ route('website.collections') }}">All Gems</a></li>
         <li><a href="{{ route('website.collections', ['category' => 'paraiba']) }}">Paraiba Tourmaline</a></li>
         <li><a href="{{ route('website.collections', ['category' => 'tanzanite']) }}">Tanzanite</a></li>
+        <li><a href="{{ route('website.blog.index') }}">Journal</a></li>
       </ul>
     </div>
     <div>
       <div class="sg-footer-heading">Connect</div>
       <ul class="sg-footer-links">
-        <li><a href="#">About Us</a></li>
+        <li><a href="{{ route('website.pages.show', \App\Models\Page::SLUG_ABOUT_US) }}">About Us</a></li>
         @if($settings->get('contact_email'))<li><a href="mailto:{{ $settings->get('contact_email') }}">Email Us</a></li>@endif
         @if($settings->get('contact_whatsapp'))<li><a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $settings->get('contact_whatsapp')) }}">WhatsApp</a></li>@endif
-        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="{{ route('website.pages.show', \App\Models\Page::SLUG_TERMS_CONDITIONS) }}">Terms &amp; Conditions</a></li>
       </ul>
     </div>
     <div>
@@ -274,7 +276,7 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
   </div>
   <div class="sg-footer-bottom">
     <span>© {{ date('Y') }} {{ $settings->get('site_name', 'Sukaina Gems') }}. All rights reserved.</span>
-    <span>Privacy Policy &nbsp;·&nbsp; Terms of Service</span>
+    <span><a href="{{ route('website.pages.show', \App\Models\Page::SLUG_TERMS_CONDITIONS) }}" style="color:inherit;text-decoration:none">Terms &amp; Conditions</a></span>
   </div>
 </footer>
 

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BarcodeHistoryController;
 use App\Http\Controllers\BannerController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\CustomerAccountController;
 use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CartController;
@@ -10,8 +11,10 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChannelController;
+use App\Http\Controllers\CountryOfOriginController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseController;
@@ -38,6 +41,13 @@ Route::name('website.')->group(function () {
     Route::get('/',                   [WebsiteController::class, 'home'])->name('home');
     Route::get('/collections',        [WebsiteController::class, 'collections'])->name('collections');
     Route::get('/products/{product}', [WebsiteController::class, 'product'])->name('product')->whereNumber('product');
+
+    Route::prefix('blog')->name('blog.')->group(function () {
+        Route::get('/',        [WebsiteController::class, 'blogIndex'])->name('index');
+        Route::get('/{blog:slug}', [WebsiteController::class, 'blogShow'])->name('show');
+    });
+
+    Route::get('/pages/{page:slug}', [WebsiteController::class, 'pageShow'])->name('pages.show');
 
     Route::prefix('cart')->name('cart.')->group(function () {
         Route::get('/',             [CartController::class, 'index'])->name('index');
@@ -117,6 +127,23 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Pages (About Us, Terms & Conditions, ...)
+    |--------------------------------------------------------------------------
+    */
+    Route::resource('pages', PageController::class)
+        ->except(['show'])
+        ->whereNumber('page')
+        ->middleware([
+            'index'   => 'permission:pages.view',
+            'create'  => 'permission:pages.create',
+            'store'   => 'permission:pages.create',
+            'edit'    => 'permission:pages.edit',
+            'update'  => 'permission:pages.edit',
+            'destroy' => 'permission:pages.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
     | Channels
     |--------------------------------------------------------------------------
     */
@@ -161,14 +188,36 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Countries of Origin
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('country-origins')->name('country-origins.')->group(function () {
+        Route::get('/data', [CountryOfOriginController::class, 'data'])
+            ->middleware('permission:country-origins.view')->name('data');
+        Route::patch('/{countryOrigin}/toggle-status', [CountryOfOriginController::class, 'toggleStatus'])
+            ->whereNumber('countryOrigin')->middleware('permission:country-origins.edit')->name('toggle-status');
+    });
+    Route::resource('country-origins', CountryOfOriginController::class)
+        ->whereNumber('countryOrigin')
+        ->parameters(['country-origins' => 'countryOrigin'])
+        ->middleware([
+            'index'   => 'permission:country-origins.view',
+            'show'    => 'permission:country-origins.view',
+            'create'  => 'permission:country-origins.create',
+            'store'   => 'permission:country-origins.create',
+            'edit'    => 'permission:country-origins.edit',
+            'update'  => 'permission:country-origins.edit',
+            'destroy' => 'permission:country-origins.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
     | Products
     |--------------------------------------------------------------------------
     */
     Route::prefix('products')->name('products.')->group(function () {
         Route::get('/data', [ProductController::class, 'data'])
             ->middleware('permission:products.view')->name('data');
-        Route::get('/subcategories/{category}', [ProductController::class, 'subcategoriesByParent'])
-            ->whereNumber('category')->middleware('permission:products.view')->name('subcategories');
         Route::post('/barcodes/generate', [ProductController::class, 'generateBarcode'])
             ->middleware('permission:products.create,products.edit')->name('barcodes.generate');
         Route::post('/barcodes/validate', [ProductController::class, 'validateBarcode'])
@@ -201,6 +250,8 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:suppliers.view')->name('data');
         Route::get('/{supplier}/purchases-data', [SupplierController::class, 'purchasesData'])
             ->whereNumber('supplier')->middleware('permission:suppliers.view')->name('purchases-data');
+        Route::get('/{supplier}/categories', [SupplierController::class, 'categories'])
+            ->whereNumber('supplier')->middleware('permission:suppliers.view,purchases.create')->name('categories');
         Route::patch('/{supplier}/toggle-status', [SupplierController::class, 'toggleStatus'])
             ->whereNumber('supplier')->middleware('permission:suppliers.edit')->name('toggle-status');
     });
@@ -385,6 +436,8 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:stock.view')->name('index');
         Route::get('/data', [StockController::class, 'data'])
             ->middleware('permission:stock.view')->name('data');
+        Route::get('/category-data', [StockController::class, 'categoryData'])
+            ->middleware('permission:stock.view')->name('category-data');
         Route::get('/product/{product}', [StockController::class, 'product'])
             ->whereNumber('product')->middleware('permission:stock.view')->name('product');
         Route::get('/piece/{purchaseProduct}', [StockController::class, 'piece'])
@@ -451,6 +504,28 @@ Route::middleware('auth')->group(function () {
             'edit'    => 'permission:banners.edit',
             'update'  => 'permission:banners.edit',
             'destroy' => 'permission:banners.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Blog
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('blogs')->name('blogs.')->group(function () {
+        Route::get('/data', [BlogController::class, 'data'])
+            ->middleware('permission:blogs.view')->name('data');
+        Route::patch('/{blog}/toggle-status', [BlogController::class, 'toggleStatus'])
+            ->whereNumber('blog')->middleware('permission:blogs.edit')->name('toggle-status');
+    });
+    Route::resource('blogs', BlogController::class)->whereNumber('blog')
+        ->middleware([
+            'index'   => 'permission:blogs.view',
+            'show'    => 'permission:blogs.view',
+            'create'  => 'permission:blogs.create',
+            'store'   => 'permission:blogs.create',
+            'edit'    => 'permission:blogs.edit',
+            'update'  => 'permission:blogs.edit',
+            'destroy' => 'permission:blogs.delete',
         ]);
 
     /*

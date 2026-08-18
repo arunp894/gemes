@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSupplierRequest;
 use App\Http\Requests\UpdateSupplierRequest;
+use App\Models\Category;
 use App\Models\Purchase;
 use App\Models\Supplier;
 use Illuminate\Http\JsonResponse;
@@ -144,8 +145,9 @@ class SupplierController extends Controller
      */
     public function create(): View
     {
-        $nextCode = Supplier::generateNextCode();
-        return view('suppliers.create', compact('nextCode'));
+        $nextCode   = Supplier::generateNextCode();
+        $categories = Category::active()->ordered()->get(['id', 'name']);
+        return view('suppliers.create', compact('nextCode', 'categories'));
     }
 
     /**
@@ -156,7 +158,7 @@ class SupplierController extends Controller
         $data = $request->validated();
 
         $supplier = DB::transaction(function () use ($data) {
-            return Supplier::create([
+            $supplier = Supplier::create([
                 'supplier_code'   => $data['supplier_code'] ?? null, // model auto-generates if null
                 'name'            => $data['name'],
                 'company_name'    => $data['company_name'] ?? null,
@@ -175,6 +177,10 @@ class SupplierController extends Controller
                 'credit_limit'    => $data['credit_limit'] ?? 0,
                 'status'          => (bool) $data['status'],
             ]);
+
+            $supplier->categories()->sync($data['category_ids'] ?? []);
+
+            return $supplier;
         });
 
         if ($request->wantsJson() || $request->ajax()) {
@@ -253,7 +259,10 @@ class SupplierController extends Controller
      */
     public function edit(Supplier $supplier): View
     {
-        return view('suppliers.edit', compact('supplier'));
+        $categories = Category::active()->ordered()->get(['id', 'name']);
+        $selectedCategoryIds = $supplier->categories()->pluck('categories.id')->all();
+
+        return view('suppliers.edit', compact('supplier', 'categories', 'selectedCategoryIds'));
     }
 
     /**
@@ -284,6 +293,8 @@ class SupplierController extends Controller
                 'credit_limit'    => $data['credit_limit'] ?? 0,
                 'status'          => (bool) $data['status'],
             ])->save();
+
+            $supplier->categories()->sync($data['category_ids'] ?? []);
         });
 
         if ($request->wantsJson() || $request->ajax()) {
@@ -317,6 +328,27 @@ class SupplierController extends Controller
         return redirect()
             ->route('suppliers.index')
             ->with('success', 'Supplier deleted successfully.');
+    }
+
+    /**
+     * Categories mapped to this supplier — AJAX endpoint consumed by the
+     * purchase create/edit screen. Once a supplier is chosen, the "Add
+     * Item" category dropdown is filtered to this list instead of every
+     * active category. A supplier with no categories mapped yet returns
+     * an empty list; the Vue form falls back to the full category list
+     * in that case so unmapped (typically older) suppliers keep working.
+     */
+    public function categories(Supplier $supplier): JsonResponse
+    {
+        $categories = $supplier->categories()
+            ->active()
+            ->ordered()
+            ->get(['categories.id', 'categories.name', 'categories.is_gemstone']);
+
+        return response()->json([
+            'success'    => true,
+            'categories' => $categories,
+        ]);
     }
 
     /**

@@ -7,10 +7,10 @@
                 <span class="menu-text" data-lang="dashboards">Dashboards</span>               
             </a>            
         </li>
-        <li class="side-nav-item {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') ? 'menuitem-active' : '' }}">
+        <li class="side-nav-item {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') || request()->routeIs('country-origins.*') ? 'menuitem-active' : '' }}">
 
             <a data-bs-toggle="collapse" href="#catalogueMenu"
-                aria-expanded="{{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') ? 'true' : 'false' }}"
+                aria-expanded="{{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') || request()->routeIs('country-origins.*') ? 'true' : 'false' }}"
                 aria-controls="catalogueMenu" class="side-nav-link">
 
                 <span class="menu-icon">
@@ -23,7 +23,7 @@
                 <span class="menu-arrow"></span>
             </a>
 
-            <div class="collapse {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') ? 'show' : '' }}"
+            <div class="collapse {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') || request()->routeIs('country-origins.*') ? 'show' : '' }}"
                 id="catalogueMenu">
 
                 <ul class="sub-menu">
@@ -33,6 +33,14 @@
                             <span class="menu-text"> Categories</span>
                         </a>
                     </li>
+
+                    @permission('country-origins.view')
+                    <li class="side-nav-item {{ request()->routeIs('country-origins.*') ? 'active' : '' }}">
+                        <a href="{{ route('country-origins.index') }}" class="side-nav-link">
+                            <span class="menu-text">Countries of Origin</span>
+                        </a>
+                    </li>
+                    @endpermission
 
                     <li class="side-nav-item {{ request()->routeIs('products.*') ? 'active' : '' }}">
                         <a href="{{ \Illuminate\Support\Facades\Route::has('products.index')
@@ -274,11 +282,11 @@
     MARKETING MENU
 ========================= --}}
 
-        @permission('banners.view')
-        <li class="side-nav-item {{ request()->routeIs('banners.*') ? 'menuitem-active' : '' }}">
+        @if (auth()->check() && auth()->user()->hasAnyPermission(['banners.view', 'blogs.view']))
+        <li class="side-nav-item {{ request()->routeIs('banners.*') || request()->routeIs('blogs.*') ? 'menuitem-active' : '' }}">
 
             <a data-bs-toggle="collapse" href="#marketingMenu"
-                aria-expanded="{{ request()->routeIs('banners.*') ? 'true' : 'false' }}"
+                aria-expanded="{{ request()->routeIs('banners.*') || request()->routeIs('blogs.*') ? 'true' : 'false' }}"
                 aria-controls="marketingMenu" class="side-nav-link">
 
                 <span class="menu-icon">
@@ -291,34 +299,44 @@
                 <span class="menu-arrow"></span>
             </a>
 
-            <div class="collapse {{ request()->routeIs('banners.*') ? 'show' : '' }}"
+            <div class="collapse {{ request()->routeIs('banners.*') || request()->routeIs('blogs.*') ? 'show' : '' }}"
                 id="marketingMenu">
 
                 <ul class="sub-menu">
 
+                    @permission('banners.view')
                     <li class="side-nav-item {{ request()->routeIs('banners.*') ? 'active' : '' }}">
                         <a href="{{ route('banners.index') }}" class="side-nav-link">
                             <span class="menu-text">Banners</span>
                         </a>
                     </li>
+                    @endpermission
+
+                    @permission('blogs.view')
+                    <li class="side-nav-item {{ request()->routeIs('blogs.*') ? 'active' : '' }}">
+                        <a href="{{ route('blogs.index') }}" class="side-nav-link">
+                            <span class="menu-text">Blog</span>
+                        </a>
+                    </li>
+                    @endpermission
 
                 </ul>
             </div>
         </li>
-        @endpermission
+        @endif
 
         {{-- =========================
     ADMINISTRATION MENU
 ========================= --}}
 
-        @if (auth()->check() && (auth()->user()->hasAnyPermission(['users.view', 'roles.view']) ||
+        @if (auth()->check() && (auth()->user()->hasAnyPermission(['users.view', 'roles.view', 'pages.view']) ||
         auth()->user()->hasRole('admin') || auth()->user()->isSuperAdmin()))
         <li class="side-nav-title mt-2">Administration</li>
 
-        <li class="side-nav-item {{ request()->routeIs('settings.*') ? 'menuitem-active' : '' }}">
+        <li class="side-nav-item {{ request()->routeIs('settings.*') || request()->routeIs('pages.*') ? 'menuitem-active' : '' }}">
 
             <a data-bs-toggle="collapse" href="#settingsMenu"
-                aria-expanded="{{ request()->routeIs('settings.*') ? 'true' : 'false' }}"
+                aria-expanded="{{ request()->routeIs('settings.*') || request()->routeIs('pages.*') ? 'true' : 'false' }}"
                 aria-controls="settingsMenu" class="side-nav-link">
 
                 <span class="menu-icon">
@@ -339,6 +357,13 @@
                             <span class="menu-text">App Settings</span>
                         </a>
                     </li>
+                    @permission('pages.view')
+                    <li class="side-nav-item {{ request()->routeIs('pages.*') ? 'active' : '' }}">
+                        <a href="{{ route('pages.index') }}" class="side-nav-link">
+                            <span class="menu-text">Pages</span>
+                        </a>
+                    </li>
+                    @endpermission
                 </ul>
             </div>
         </li>

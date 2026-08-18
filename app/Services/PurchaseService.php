@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Barcode;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
@@ -17,7 +19,7 @@ use InvalidArgumentException;
  * Purchase orchestration. The controller hands off the whole request
  * payload here; this class owns:
  *
- *   - transactional save (purchase + lines + inventory rows)
+ *   - transactional save (purchase + lines + inventory rows + products)
  *   - invoice number generation (per-supplier-per-month sequence)
  *   - line/row total reconciliation (server is source of truth)
  *   - status transitions (draft -> posted -> cancelled)
@@ -25,12 +27,23 @@ use InvalidArgumentException;
  * Stock is NOT a separate table — purchase_products IS the stock ledger.
  * Posting only flips Purchase::status, which lets stock queries filter
  * via `whereHas('line.purchase', fn($q) => $q->posted())`.
+ *
+ * As of the "purchase creates its own products" change: a purchase line
+ * no longer points at a pre-existing catalogue product. It's a template
+ * (title, category, gemstone fields) that gets stamped onto a brand-new
+ * Product for every inventory row generated under it — one row is
+ * always exactly one product. Box lines generate one row per box (Pack
+ * Qty drives the count); Piece lines always generate exactly one row,
+ * with the physical count captured on that row's own qty field instead
+ * so several identical pieces can share a single product. See
+ * syncLines().
  */
 class PurchaseService
 {
     public function __construct(
         private PurchaseRepository $repo,
         private StockService       $stock,
+        private BarcodeService     $barcodes,
     ) {}
 
     /* ─── Public API ───────────────────────────────────────── */
@@ -48,21 +61,31 @@ class PurchaseService
      *   'status'         => 'draft'|'posted',
      *   'lines' => [
      *     [
-     *       'product_id'    => int,
-     *       'type'          => 'piece'|'unit'|'carton',
-     *       'package_name'  => string|null,
-     *       'package_qty'   => int,
-     *       'unit_contains' => int|null,
-     *       'remarks'       => string|null,
+     *       'category_id'        => int,
+     *       'title'              => string,
+     *       'short_description'  => string|null,
+     *       'full_description'   => string|null,
+     *       'country_of_origin_id' => int|null,
+     *       'notes_tags'         => string|null,
+     *       'website_price'      => float|null,   // seeds the created product(s)' listing price
+     *       'carat_weight'       => float|null,   // line-level default
+     *       'stone_type'         => string|null,
+     *       'colour_grade'       => string|null,
+     *       'clarity_grade'      => string|null,
+     *       'cut_shape'          => string|null,
+     *       'treatment'          => string|null,
+     *       'type'               => 'piece'|'box',
+     *       'package_name'       => string|null,
+     *       'package_qty'        => int,          // row count for 'box'; forced to 1 for 'piece'
+     *       'remarks'            => string|null,
      *       'rows' => [
      *         [
      *           'qty'              => int,
-     *           'barcode'          => string|null,
+     *           'carat_weight'     => float|null,  // per-row override
+     *           'barcode'          => string|null, // receiving-dock scan, not the product's retail barcode
      *           'rack_id'          => int|null,
      *           'serial_number'    => string|null,
      *           'price'            => float,
-     *           'tax_percent'      => float,
-     *           'discount_percent' => float,
      *           'expiry_date'      => 'YYYY-MM-DD'|null,
      *           'manufacture_date' => 'YYYY-MM-DD'|null,
      *           'remarks'          => string|null,
@@ -110,12 +133,12 @@ class PurchaseService
     /**
      * Update an existing purchase. Behaviour depends on status:
      *
-     *   - Draft:   full line-item replace (existing behaviour).
-     *   - Posted:  full line-item replace too, but the inventory ledger
-     *              must be kept in sync — see updatePostedLines(). Only
-     *              reachable when Purchase::editBlockReason() is null
-     *              (no sales against this purchase's stock yet, and
-     *              within the configurable edit window).
+     *   - Draft:   lines/rows are diff-synced in place (see syncLines()).
+     *   - Posted:  same diff-sync, but the inventory ledger must be kept
+     *              in sync too — see updatePostedLines(). Only reachable
+     *              when Purchase::editBlockReason() is null (no sales
+     *              against this purchase's stock yet, and within the
+     *              configurable edit window).
      *   - Other (cancelled): lightweight note/paid_amount only, as a
      *              defensive fallback — the controller's editBlockReason()
      *              gate normally prevents reaching here at all.
@@ -141,16 +164,13 @@ class PurchaseService
             $purchase->tax_type      = $data['tax_type']      ?? $purchase->tax_type;
             $purchase->note          = $data['note']          ?? $purchase->note;
             $purchase->paid_amount   = (float) ($data['paid_amount'] ?? 0);
-
-            // Hard reset of children — cheapest correct strategy. Safe for
-            // drafts: no stock movements exist yet to reference these rows.
-            $purchase->lines()->each(function (PurchaseLine $l) {
-                $l->rows()->forceDelete();
-                $l->forceDelete();
-            });
-
             $purchase->save();
 
+            // NOTE: this used to hard-delete every line/row before
+            // rebuilding from scratch. It can't anymore — a draft's rows
+            // may already have created products that picked up photos or
+            // a description while the invoice itself was still being
+            // finalised. syncLines() diffs instead of wiping.
             $this->syncLines($purchase, $data['lines'] ?? []);
             $this->recalculate($purchase);
 
@@ -172,12 +192,12 @@ class PurchaseService
      *      from the purchase's location (e.g. via a stock transfer).
      *   2. Emit OUT "purchase_cancel" movements reversing every current
      *      piece at the OLD location.
-     *   3. Soft-delete the old lines/rows (kept for ledger history —
-     *      they remain valid FK targets for the movements above).
-     *   4. Update header fields and rebuild lines/rows from the new
-     *      payload via syncLines() + recalculate().
-     *   5. Emit fresh IN "purchase" movements for the new rows at the
-     *      (possibly updated) location.
+     *   3. Update header fields and diff-sync lines/rows from the new
+     *      payload via syncLines() + recalculate() — rows the client
+     *      echoes back by id keep their product; only genuinely new or
+     *      removed rows touch a product record.
+     *   4. Emit fresh IN "purchase" movements for the current rows at
+     *      the (possibly updated) location.
      */
     private function updatePostedLines(Purchase $purchase, array $data): Purchase
     {
@@ -207,7 +227,9 @@ class PurchaseService
             }
         }
 
-        // 2. Reverse every current piece at the old location.
+        // 2. Reverse every current piece at the old location. Reads each
+        //    row's OWN product_id — every row is its own product now, the
+        //    line no longer carries one shared product_id.
         foreach ($purchase->lines as $line) {
             foreach ($line->rows as $row) {
                 $qty = (int) $row->qty;
@@ -217,7 +239,7 @@ class PurchaseService
 
                 $this->stock->record([
                     'purchase_product_id' => $row->id,
-                    'product_id'          => $line->product_id,
+                    'product_id'          => $row->product_id,
                     'location_id'         => $oldLocationId,
                     'direction'           => StockMovement::DIRECTION_OUT,
                     'qty'                 => $qty,
@@ -231,14 +253,7 @@ class PurchaseService
             }
         }
 
-        // 3. Soft-delete the old lines/rows — kept for ledger history, but
-        //    excluded from $purchase->lines() / recalculate() going forward.
-        foreach ($purchase->lines as $line) {
-            $line->rows()->delete();
-            $line->delete();
-        }
-
-        // 4. Header fields + rebuild lines from the new payload.
+        // 3. Header fields + diff-sync lines/rows from the new payload.
         $purchase->purchase_date = $data['purchase_date'] ?? $purchase->purchase_date;
         $purchase->location_id   = $data['location_id']   ?? $purchase->location_id;
         $purchase->tax_type      = $data['tax_type']      ?? $purchase->tax_type;
@@ -249,8 +264,8 @@ class PurchaseService
         $this->syncLines($purchase, $data['lines'] ?? []);
         $this->recalculate($purchase);
 
-        // 5. Post fresh IN movements for the new rows at the (possibly
-        //    updated) location.
+        // 4. Post fresh IN movements for the current rows at the
+        //    (possibly updated) location.
         $newLocationId = (int) ($purchase->location_id ?: $oldLocationId);
         $purchase->load('lines.rows');
 
@@ -263,7 +278,7 @@ class PurchaseService
 
                 $this->stock->record([
                     'purchase_product_id' => $row->id,
-                    'product_id'          => $line->product_id,
+                    'product_id'          => $row->product_id,
                     'location_id'         => $newLocationId,
                     'direction'           => StockMovement::DIRECTION_IN,
                     'qty'                 => $qty,
@@ -330,13 +345,21 @@ class PurchaseService
         });
     }
 
+    /**
+     * Delete a purchase entirely. Retires every row it created via the
+     * same safety check as removing a single row on edit (see
+     * retireRow()) — a purchase whose products have already picked up
+     * photos or a website listing won't be silently deleted out from
+     * under them; it throws instead, so the caller can unlink those
+     * products first if that's really what's wanted.
+     */
     public function delete(Purchase $purchase): void
     {
         DB::transaction(function () use ($purchase) {
-            // Cascading soft-deletes don't propagate automatically;
-            // walk the tree.
             $purchase->lines()->each(function (PurchaseLine $l) {
-                $l->rows()->delete();
+                foreach ($l->rows()->get() as $row) {
+                    $this->retireRow($row);
+                }
                 $l->delete();
             });
             $purchase->delete();
@@ -346,97 +369,285 @@ class PurchaseService
     /* ─── Internal helpers ─────────────────────────────────── */
 
     /**
-     * Persist all lines + their inventory rows. Server expands carton
-     * quantities into one inventory row per inner pack even if the
-     * client somehow under-populated `rows[]`.
+     * Persist all lines + their inventory rows/products for a purchase,
+     * diffing against whatever the purchase already has rather than
+     * wiping and rebuilding. This is the one piece of the "purchase
+     * creates its own products" change that isn't purely additive: a
+     * blind delete-and-recreate (the old behaviour for every edit) would
+     * destroy any product a row already created the moment that product
+     * picks up a photo, a description, or a website listing between the
+     * purchase being entered and someone fixing a typo on the invoice.
+     *
+     * Matching is by the `id` the client echoes back for rows/lines it
+     * already has — PurchaseRepository::find() round-trips them and the
+     * create/edit Vue app sends them back unchanged. Anything without an
+     * id is new. Anything the client no longer sends is removed.
+     *
+     *   - Existing LINE (id matches): template fields updated in place.
+     *     NOT re-stamped onto already-created products — those become
+     *     independent of the line the moment they exist. Only new rows
+     *     added under this line are stamped from the (possibly
+     *     just-edited) template.
+     *   - Existing ROW (id matches): the purchase_product's mutable
+     *     fields (qty, price, rack, dates, remarks, barcode) are updated
+     *     in place. product_id and lot_code are left untouched. Carat
+     *     weight is also pushed onto the linked product — correcting a
+     *     weighed figure after the fact is the one field genuinely meant
+     *     to stay in sync post-creation.
+     *   - New ROW (no id): creates a Product, one auto-generated primary
+     *     EAN-13 Barcode (so the "every product needs one" rule holds
+     *     without staff having to do anything), and the purchase_product
+     *     linking them.
+     *   - Removed ROW (existing id, absent from payload): soft-deletes
+     *     the purchase_product and, if safe (see productSafeToRetire()),
+     *     the linked product too. Throws instead of silently orphaning a
+     *     product someone has already started working on.
+     *   - Removed LINE (existing id, absent from payload): same, for
+     *     every row under it, then the line itself.
      */
     private function syncLines(Purchase $purchase, array $lines): void
     {
         // Loaded once — feeds PurchaseProduct::generateLotCode() below.
         $supplier = $purchase->supplier;
 
-        foreach ($lines as $lineData) {
-            /** @var Product $product */
-            $product = Product::findOrFail($lineData['product_id']);
+        $existingLines = $purchase->lines()->with('rows')->get()->keyBy('id');
+        $seenLineIds   = [];
 
-            $type        = $lineData['type']        ?? PurchaseLine::TYPE_PIECE;
+        foreach ($lines as $lineData) {
+            $lineId       = $lineData['id'] ?? null;
+            $existingLine = $lineId ? $existingLines->get((int) $lineId) : null;
+
+            /** @var Category $category */
+            $category = Category::findOrFail($lineData['category_id']);
+
+            $type        = $lineData['type'] ?? PurchaseLine::TYPE_PIECE;
             $packageQty  = max(1, (int) ($lineData['package_qty'] ?? 1));
             $packageName = $lineData['package_name']
                 ?? ($type === PurchaseLine::TYPE_PIECE ? 'Piece' : 'Box');
 
-            $unitContains = ($type === PurchaseLine::TYPE_BOX)
-                ? (int) ($product->inner_pack_contains ?? 1)
+            // Box lines fan out into one inventory row (one product) per
+            // box — Pack Qty drives the row count directly. Piece lines
+            // are always exactly one row; the physical count lives on
+            // that row's own qty field instead, so several identical
+            // pieces can share one product. Enforced here regardless of
+            // what the client sent — Pack Qty is disabled client-side for
+            // Piece, but the server stays the source of truth.
+            if ($type === PurchaseLine::TYPE_PIECE) {
+                $packageQty = 1;
+            }
+            $totalQty = ($type === PurchaseLine::TYPE_PIECE) ? 1 : $packageQty;
+
+            $caratDefault = isset($lineData['carat_weight']) && $lineData['carat_weight'] !== ''
+                ? (float) $lineData['carat_weight']
                 : null;
 
-            // Total pieces: for box lines, multiply package_qty × unit_contains.
-            $totalQty = match ($type) {
-                PurchaseLine::TYPE_BOX   => $packageQty * (int) ($product->inner_pack_contains ?? 1),
-                default                  => $packageQty,
-            };
-
-            $line = new PurchaseLine([
-                'product_id'    => $product->id,
-                'type'          => $type,
-                'package_name'  => $packageName,
-                'package_qty'   => $packageQty,
-                'total_qty'     => $totalQty,
-                'unit_contains' => $unitContains,
-                'remarks'       => $lineData['remarks'] ?? null,
-            ]);
-            $purchase->lines()->save($line);
-
-            $rows = $lineData['rows'] ?? [];
-
-            // Guard: if the client didn't send enough rows for a box line,
-            // fabricate the missing ones with the row[0] template.
-            $expectedRows = match ($type) {
-                PurchaseLine::TYPE_BOX => $packageQty,
-                default                => max(1, count($rows) ?: 1),
-            };
-
-            $template = $rows[0] ?? [
-                'qty'              => $unitContains ?? 1,
-                'carat_weight'     => null,
-                'barcode'          => null,
-                'rack_id'          => null,
-                'serial_number'    => null,
-                'price'            => 0,
-                'tax_percent'      => 0,
-                'discount_percent' => 0,
-                'expiry_date'      => null,
-                'manufacture_date' => null,
-                'remarks'          => null,
+            $lineFields = [
+                'category_id'       => $category->id,
+                'title'             => $lineData['title'],
+                'short_description' => $lineData['short_description'] ?? null,
+                'full_description'  => $lineData['full_description']  ?? null,
+                'country_of_origin_id' => $lineData['country_of_origin_id'] ?? null,
+                'notes_tags'        => $lineData['notes_tags']        ?? null,
+                'website_price'     => isset($lineData['website_price']) && $lineData['website_price'] !== ''
+                    ? (float) $lineData['website_price']
+                    : null,
+                'carat_weight'      => $caratDefault,
+                'stone_type'        => $lineData['stone_type']   ?? null,
+                'colour_grade'      => $lineData['colour_grade'] ?? null,
+                'clarity_grade'     => $lineData['clarity_grade'] ?? null,
+                'cut_shape'         => $lineData['cut_shape']    ?? null,
+                'treatment'         => $lineData['treatment']    ?? null,
+                'type'              => $type,
+                'package_name'      => $packageName,
+                'package_qty'       => $packageQty,
+                'total_qty'         => $totalQty,
+                'unit_contains'     => null,
+                'remarks'           => $lineData['remarks'] ?? null,
             ];
 
-            for ($i = 0; $i < $expectedRows; $i++) {
-                $r = $rows[$i] ?? $template;
+            if ($existingLine) {
+                $existingLine->fill($lineFields);
+                $existingLine->save();
+                $line = $existingLine;
+            } else {
+                $line = new PurchaseLine($lineFields);
+                $purchase->lines()->save($line);
+            }
+            $seenLineIds[] = $line->id;
 
-                // Per-row money math — server is the source of truth.
-                // Net = carat_weight × price (tax and discount not used).
-                $qty             = max(0, (int) ($r['qty'] ?? ($unitContains ?? 1)));
-                $caratWeight     = isset($r['carat_weight']) && $r['carat_weight'] !== '' ? (float) $r['carat_weight'] : null;
-                $price           = (float) ($r['price'] ?? 0);
+            $rowsPayload  = $lineData['rows'] ?? [];
+            $existingRows = $existingLine ? $existingLine->rows->keyBy('id') : collect();
+            $seenRowIds   = [];
 
-                $row = new PurchaseProduct([
-                    'qty'              => $qty,
-                    'carat_weight'     => $caratWeight,
-                    'barcode'          => $r['barcode']          ?? null,
-                    'lot_code'         => PurchaseProduct::generateLotCode($supplier, $product),
-                    'rack_id'          => $r['rack_id']          ?? null,
-                    'serial_number'    => $r['serial_number']    ?? null,
-                    'price'            => $price,
-                    'tax_percent'      => 0,
-                    'tax_amount'       => 0,
-                    'discount_percent' => 0,
-                    'discount_amount'  => 0,
-                    'expiry_date'      => $r['expiry_date']      ?? null,
-                    'manufacture_date' => $r['manufacture_date'] ?? null,
-                    'remarks'          => $r['remarks']          ?? null,
-                ]);
+            for ($i = 0; $i < $totalQty; $i++) {
+                $r     = $rowsPayload[$i] ?? [];
+                $rowId = $r['id'] ?? null;
+                $existingRow = $rowId ? $existingRows->get((int) $rowId) : null;
 
-                $line->rows()->save($row);
+                $qty         = max(0, (int) ($r['qty'] ?? 1));
+                $caratWeight = isset($r['carat_weight']) && $r['carat_weight'] !== ''
+                    ? (float) $r['carat_weight']
+                    : $caratDefault;
+                // Per-row selling price, falling back to the line's
+                // default (set in the Add Item form) when the row hasn't
+                // been given its own value — same fallback shape as
+                // carat weight above. A box of 10 rarely sells for one
+                // uniform price, so this is editable per row in the table.
+                $websitePrice = isset($r['website_price']) && $r['website_price'] !== ''
+                    ? (float) $r['website_price']
+                    : $lineFields['website_price'];
+                $price = (float) ($r['price'] ?? 0);
+
+                if ($existingRow) {
+                    $existingRow->fill([
+                        'qty'              => $qty,
+                        'carat_weight'     => $caratWeight,
+                        'barcode'          => $r['barcode'] ?? null,
+                        'rack_id'          => $r['rack_id'] ?? null,
+                        'serial_number'    => $r['serial_number'] ?? null,
+                        'price'            => $price,
+                        'website_price'    => $websitePrice,
+                        'expiry_date'      => $r['expiry_date'] ?? null,
+                        'manufacture_date' => $r['manufacture_date'] ?? null,
+                        'remarks'          => $r['remarks'] ?? null,
+                    ]);
+                    $existingRow->save();
+                    $seenRowIds[] = $existingRow->id;
+
+                    // Carat weight and selling price are the two fields
+                    // genuinely meant to stay synced onto the product
+                    // after creation — re-weighing a stone or repricing one
+                    // item in a batch are both normal corrections during
+                    // a purchase edit.
+                    if ($existingRow->product_id) {
+                        $productUpdates = [];
+                        if ($caratWeight !== null) {
+                            $productUpdates['carat_weight'] = $caratWeight;
+                        }
+                        if ($websitePrice !== null) {
+                            $productUpdates['website_price'] = $websitePrice;
+                        }
+                        if ($productUpdates) {
+                            Product::where('id', $existingRow->product_id)->update($productUpdates);
+                        }
+                    }
+                } else {
+                    $product = Product::create([
+                        'title'             => $line->title,
+                        'sku'               => Product::generateSku($category),
+                        'category_id'       => $category->id,
+                        'short_description' => $line->short_description,
+                        'full_description'  => $line->full_description,
+                        'country_of_origin_id' => $line->country_of_origin_id,
+                        'notes_tags'        => $line->notes_tags,
+                        'status'            => Product::STATUS_DRAFT,
+                        'pack_type'         => Product::PACK_TYPE_PIECE,
+                        'website_price'     => $websitePrice,
+                        'carat_weight'      => $caratWeight,
+                        'stone_type'        => $line->stone_type,
+                        'colour_grade'      => $line->colour_grade,
+                        'clarity_grade'     => $line->clarity_grade,
+                        'cut_shape'         => $line->cut_shape,
+                        'treatment'         => $line->treatment,
+                        'website_enabled'   => false,
+                        'featured_product'  => false,
+                    ]);
+
+                    Barcode::create([
+                        'product_id'      => $product->id,
+                        'barcode_value'   => $this->barcodes->generateUniqueEan13(),
+                        'barcode_format'  => Barcode::FORMAT_EAN_13,
+                        'barcode_label'   => null,
+                        'is_primary'      => true,
+                        'sequence_number' => 1,
+                    ]);
+
+                    $row = new PurchaseProduct([
+                        'product_id'       => $product->id,
+                        'qty'              => $qty,
+                        'carat_weight'     => $caratWeight,
+                        'barcode'          => $r['barcode'] ?? null,
+                        'lot_code'         => PurchaseProduct::generateLotCode($supplier, $category),
+                        'rack_id'          => $r['rack_id'] ?? null,
+                        'serial_number'    => $r['serial_number'] ?? null,
+                        'price'            => $price,
+                        'website_price'    => $websitePrice,
+                        'tax_percent'      => 0,
+                        'tax_amount'       => 0,
+                        'discount_percent' => 0,
+                        'discount_amount'  => 0,
+                        'expiry_date'      => $r['expiry_date'] ?? null,
+                        'manufacture_date' => $r['manufacture_date'] ?? null,
+                        'remarks'          => $r['remarks'] ?? null,
+                    ]);
+                    $line->rows()->save($row);
+                    $seenRowIds[] = $row->id;
+                }
+            }
+
+            if ($existingLine) {
+                foreach ($existingRows->keys()->diff($seenRowIds) as $rid) {
+                    $this->retireRow($existingRows->get($rid));
+                }
             }
         }
+
+        foreach ($existingLines->keys()->diff($seenLineIds) as $lid) {
+            $line = $existingLines->get($lid);
+            foreach ($line->rows as $row) {
+                $this->retireRow($row);
+            }
+            $line->delete();
+        }
+    }
+
+    /**
+     * Soft-delete a purchase_product row and, if it's safe to, the
+     * product it created. "Safe" means nobody has done anything to the
+     * product beyond what row-creation auto-generated for it — no
+     * photos, no website listing, no extra barcodes beyond the one
+     * auto-created one. If the product has been touched, refuse rather
+     * than silently orphan someone's work; they need to unlink or delete
+     * it from the Products screen first.
+     */
+    private function retireRow(PurchaseProduct $row): void
+    {
+        $product = $row->product_id ? Product::find($row->product_id) : null;
+
+        if ($product && ! $this->productSafeToRetire($product)) {
+            throw new InvalidArgumentException(
+                "Cannot remove this item: its product \"{$product->title}\" (SKU {$product->sku}) already has "
+                . 'photos, an extra barcode, or a website listing. Unlink or delete it from the Products screen '
+                . 'first, then try again.'
+            );
+        }
+
+        $row->delete();
+
+        if ($product) {
+            $product->delete();
+        }
+    }
+
+    private function productSafeToRetire(Product $product): bool
+    {
+        if ($product->website_enabled) {
+            return false;
+        }
+        if ($product->getFirstMedia(Product::MEDIA_COLLECTION_PRIMARY)) {
+            return false;
+        }
+        if ($product->getMedia(Product::MEDIA_COLLECTION_GALLERY)->isNotEmpty()) {
+            return false;
+        }
+        if ($product->getFirstMedia(Product::MEDIA_COLLECTION_CERTIFICATE)) {
+            return false;
+        }
+        if ($product->barcodes()->count() > 1) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

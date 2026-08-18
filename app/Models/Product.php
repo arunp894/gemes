@@ -107,6 +107,7 @@ class Product extends Model implements HasMedia
         'short_description',
         'full_description',
         'country_of_origin',
+        'country_of_origin_id',
         'notes_tags',
         'status',
         // Packaging
@@ -158,6 +159,7 @@ class Product extends Model implements HasMedia
     protected $casts = [
         'status'              => 'boolean',
         'category_id'         => 'integer',
+        'country_of_origin_id' => 'integer',
         'carat_weight'        => 'decimal:3',
         'outer_pack_contains' => 'integer',
         'inner_pack_contains' => 'integer',
@@ -206,6 +208,36 @@ class Product extends Model implements HasMedia
                 }
             }
         });
+    }
+
+    /* -----------------------------------------------------------------
+     |  Identifiers
+     | -----------------------------------------------------------------
+     */
+
+    /**
+     * Next SKU for a product auto-created from a purchase line, scoped
+     * to the chosen category. Same shape as Purchase::generateInvoiceNumber()
+     * and PurchaseProduct::generateLotCode(): sanitized prefix + a
+     * zero-padded sequence, checked against withTrashed() so a value is
+     * never reused. Must be called inside the same transaction as the
+     * product's save() to stay collision-safe — PurchaseService::syncLines()
+     * already runs inside one.
+     */
+    public static function generateSku(Category $category): string
+    {
+        $letters = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $category->code));
+        $stub    = ($letters !== '' ? $letters : 'GEN') . '-';
+
+        $max = self::withTrashed()
+            ->where('sku', 'like', $stub . '%')
+            ->pluck('sku')
+            ->map(fn ($sku) => (int) substr($sku, strlen($stub)))
+            ->max();
+
+        $next = ((int) $max) + 1;
+
+        return $stub . str_pad((string) $next, 5, '0', STR_PAD_LEFT);
     }
 
     /* -----------------------------------------------------------------
@@ -324,17 +356,13 @@ class Product extends Model implements HasMedia
     }
 
     /**
-     * Scope: products whose category (or its top-level parent) is flagged
-     * as a gemstone category. Uses the `is_gemstone` boolean stored on
-     * the categories table.
+     * Scope: products whose category is flagged as a gemstone category.
+     * Uses the `is_gemstone` boolean stored directly on the categories table.
      */
     public function scopeGemstones($query)
     {
         return $query->whereHas('category', function ($q) {
-            $q->where('is_gemstone', true)
-              ->orWhereHas('parent', function ($qq) {
-                  $qq->where('is_gemstone', true);
-              });
+            $q->where('is_gemstone', true);
         });
     }
 
@@ -345,6 +373,11 @@ class Product extends Model implements HasMedia
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function countryOfOrigin(): BelongsTo
+    {
+        return $this->belongsTo(CountryOfOrigin::class);
     }
 
     public function barcodes(): HasMany
@@ -370,6 +403,18 @@ class Product extends Model implements HasMedia
     public function purchaseLines(): HasMany
     {
         return $this->hasMany(PurchaseLine::class);
+    }
+
+    /**
+     * The single inventory row this product was generated from, when it
+     * was created as a byproduct of a purchase (as of the purchase
+     * creates-its-own-products flow). Null for products created directly
+     * on the Products screen, or for pre-existing products from before
+     * that flow existed.
+     */
+    public function purchaseProduct(): HasOne
+    {
+        return $this->hasOne(PurchaseProduct::class);
     }
 
     /* -----------------------------------------------------------------
@@ -473,22 +518,10 @@ class Product extends Model implements HasMedia
 
     /**
      * Returns true if this product belongs to a gemstone-family category.
-     * Walks up the category hierarchy: a child category inherits its
-     * top-level parent's `is_gemstone` flag; a top-level category checks
-     * its own flag.
      */
     public function isGemstone(): bool
     {
-        $this->loadMissing('category.parent');
-
-        $category = $this->category;
-        if (! $category) {
-            return false;
-        }
-
-        $top = $category->parent ?? $category;
-
-        return (bool) $top->is_gemstone;
+        return $this->category ? (bool) $this->category->is_gemstone : false;
     }
 
     /**
@@ -498,15 +531,5 @@ class Product extends Model implements HasMedia
     public function hasPrimaryImage(): bool
     {
         return $this->getFirstMedia(self::MEDIA_COLLECTION_PRIMARY) !== null;
-    }
-
-    /**
-     * Returns the top-level category — walks up from this product's
-     * category to its top-level parent, if it has one.
-     */
-    public function getTopCategoryAttribute(): ?Category
-    {
-        $this->loadMissing('category.parent');
-        return $this->category?->parent ?? $this->category;
     }
 }

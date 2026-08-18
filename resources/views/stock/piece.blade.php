@@ -14,8 +14,8 @@
             <div>
                 <h4 class="page-main-title m-0">
                     Piece <code>#{{ $purchaseProduct->id }}</code>
-                    @if ($purchaseProduct->line && $purchaseProduct->line->product)
-                        <span class="text-muted fw-normal fs-sm ms-1">— {{ $purchaseProduct->line->product->title }}</span>
+                    @if ($purchaseProduct->resolved_product)
+                        <span class="text-muted fw-normal fs-sm ms-1">— {{ $purchaseProduct->resolved_product->title }}</span>
                     @endif
                 </h4>
                 <small class="text-muted">Per-piece movement history</small>
@@ -25,10 +25,10 @@
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('stock.index') }}">Stock</a></li>
-                @if ($purchaseProduct->line && $purchaseProduct->line->product)
+                @if ($purchaseProduct->resolved_product)
                     <li class="breadcrumb-item">
-                        <a href="{{ route('stock.product', $purchaseProduct->line->product) }}">
-                            {{ Str::limit($purchaseProduct->line->product->title, 20) }}
+                        <a href="{{ route('stock.product', $purchaseProduct->resolved_product) }}">
+                            {{ Str::limit($purchaseProduct->resolved_product->title, 20) }}
                         </a>
                     </li>
                 @endif
@@ -51,15 +51,15 @@
                 </div>
                 <div class="card-body">
                     <dl class="row mb-0 small">
-                        @if ($purchaseProduct->line && $purchaseProduct->line->product)
+                        @if ($purchaseProduct->resolved_product)
                             <dt class="col-5 text-muted">Product</dt>
                             <dd class="col-7">
-                                <a href="{{ route('products.show', $purchaseProduct->line->product) }}" class="text-primary">
-                                    {{ $purchaseProduct->line->product->title }}
+                                <a href="{{ route('products.show', $purchaseProduct->resolved_product) }}" class="text-primary">
+                                    {{ $purchaseProduct->resolved_product->title }}
                                 </a>
                             </dd>
                             <dt class="col-5 text-muted">SKU</dt>
-                            <dd class="col-7"><code>{{ $purchaseProduct->line->product->sku }}</code></dd>
+                            <dd class="col-7"><code>{{ $purchaseProduct->resolved_product->sku }}</code></dd>
                         @endif
                         <dt class="col-5 text-muted">Barcode</dt>
                         <dd class="col-7"><code>{{ $purchaseProduct->barcode ?? '—' }}</code></dd>

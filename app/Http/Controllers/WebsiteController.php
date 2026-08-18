@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Banner;
+use App\Models\Blog;
 use App\Models\Category;
+use App\Models\Page;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -33,7 +35,6 @@ class WebsiteController extends Controller
 
         // Gemstone categories for "Shop by Collection" strip
         $categories = Category::where('is_gemstone', true)
-            ->whereNull('parent_id')          // top-level only
             ->withCount(['products' => fn ($q) => $q->where('website_enabled', true)->where('status', 1)])
             ->orderBy('display_order')
             ->limit(6)
@@ -79,14 +80,12 @@ class WebsiteController extends Controller
         // Build base query
         $query = Product::websiteEnabled()
             ->active()
-            ->with(['category.parent', 'media']);
+            ->with(['category', 'media']);
 
         // Filter by category (match on category code, case-insensitive)
         if ($categorySlug) {
             $query->whereHas('category', function ($q) use ($categorySlug) {
-                $code = strtoupper($categorySlug);
-                $q->where('code', $code)
-                  ->orWhereHas('parent', fn ($p) => $p->where('code', $code));
+                $q->where('code', strtoupper($categorySlug));
             });
         }
 
@@ -113,7 +112,6 @@ class WebsiteController extends Controller
 
         // Sidebar categories
         $categories = Category::where('is_gemstone', true)
-            ->whereNull('parent_id')
             ->withCount(['products' => fn ($q) => $q->where('website_enabled', true)->where('status', 1)])
             ->orderBy('display_order')
             ->get();
@@ -138,18 +136,13 @@ class WebsiteController extends Controller
         // 404 if not visible on website
         abort_if(! $product->website_enabled || ! $product->status, 404);
 
-        $product->load(['category.parent', 'barcodes', 'media']);
+        $product->load(['category', 'barcodes', 'media']);
 
-        // Related products — same top-level category, excluding current
+        // Related products — same category, excluding current
         $relatedProducts = Product::websiteEnabled()
             ->active()
             ->where('id', '!=', $product->id)
-            ->whereHas('category', function ($q) use ($product) {
-                // Match same category OR same parent category
-                $parentId = $product->category?->parent_id ?? $product->category_id;
-                $q->where('parent_id', $parentId)
-                  ->orWhere('id', $parentId);
-            })
+            ->where('category_id', $product->category_id)
             ->with(['category', 'media'])
             ->limit(4)
             ->get();
@@ -162,5 +155,34 @@ class WebsiteController extends Controller
             'relatedProducts',
             'productBanner',
         ));
+    }
+
+    // ── Blog ────────────────────────────────────────────────────
+
+    public function blogIndex(): View
+    {
+        $posts = Blog::published()->latest()->paginate(9);
+
+        return view('website.blog.index', compact('posts'));
+    }
+
+    public function blogShow(Blog $blog): View
+    {
+        abort_if(! $blog->isActive(), 404);
+
+        $relatedPosts = Blog::published()
+            ->where('id', '!=', $blog->id)
+            ->latest()
+            ->limit(3)
+            ->get();
+
+        return view('website.blog.show', compact('blog', 'relatedPosts'));
+    }
+
+    // ── Static pages (About Us, Terms & Conditions, ...) ────────────
+
+    public function pageShow(Page $page): View
+    {
+        return view('website.page', compact('page'));
     }
 }

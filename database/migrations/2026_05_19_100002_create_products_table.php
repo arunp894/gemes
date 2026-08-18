@@ -9,14 +9,12 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * Products table. category_id points to a LEAF category (i.e. a record
-     * in `categories` whose parent_id is NOT null). The top-level category
-     * is derivable via the relationship and is denormalised only on the
-     * Product model accessors.
+     * Products table. category_id points to a category (categories are a
+     * flat, single-level list).
      *
      * Status convention mirrors Category: boolean column, 0 = Draft, 1 = Active.
      * Gemstone-specific fields are all nullable; they are populated only when
-     * the chosen category belongs to a gemstone-family parent.
+     * the chosen category has is_gemstone = true.
      */
     public function up(): void
     {

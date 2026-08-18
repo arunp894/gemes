@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -38,7 +39,6 @@ class Category extends Model implements HasMedia
         'name',
         'code',
         'description',
-        'parent_id',
         'display_order',
         'status',
         'is_gemstone',
@@ -54,7 +54,6 @@ class Category extends Model implements HasMedia
     protected $casts = [
         'status'        => 'boolean',
         'display_order' => 'integer',
-        'parent_id'     => 'integer',
         'is_gemstone'   => 'boolean',
     ];
 
@@ -132,25 +131,10 @@ class Category extends Model implements HasMedia
         return $query->orderBy('display_order', 'asc')->orderBy('name', 'asc');
     }
 
-    public function scopeTopLevel($query)
-    {
-        return $query->whereNull('parent_id');
-    }
-
     /* -----------------------------------------------------------------
      |  Relationships
      | -----------------------------------------------------------------
      */
-    public function parent(): BelongsTo
-    {
-        return $this->belongsTo(self::class, 'parent_id');
-    }
-
-    public function children(): HasMany
-    {
-        return $this->hasMany(self::class, 'parent_id');
-    }
-
     public function products(): HasMany
     {
         return $this->hasMany(\App\Models\Product::class, 'category_id');
@@ -164,6 +148,14 @@ class Category extends Model implements HasMedia
     public function updater(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class, 'updated_by');
+    }
+
+    /**
+     * Suppliers who deal in this category. Inverse of Supplier::categories().
+     */
+    public function suppliers(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\Supplier::class, 'category_supplier')->withTimestamps();
     }
 
     /* -----------------------------------------------------------------

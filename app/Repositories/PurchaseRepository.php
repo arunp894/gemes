@@ -28,8 +28,13 @@ class PurchaseRepository
         return Purchase::with([
             'supplier',
             'location:id,name,location_code,type',
+            // Historical lines still carry the old shared product via
+            // lines.product; new-style lines carry it per-row instead —
+            // each row is its own product now.
             'lines.product:id,title,sku,pack_type,outer_pack_name,outer_pack_contains,inner_pack_name,inner_pack_contains',
+            'lines.category:id,name,is_gemstone',
             'lines.rows.rack:id,code,name',
+            'lines.rows.product:id,title,sku,status,website_enabled',
         ])->find($id);
     }
 

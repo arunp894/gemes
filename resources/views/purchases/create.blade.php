@@ -86,63 +86,141 @@
                     </div>
                 </div>
 
-                {{-- ──────── Barcode / Product picker ──────── --}}
+                {{-- ──────── Add Item ──────── --}}
                 <div class="card">
                     <div class="card-header border-light d-flex align-items-center gap-2">
-                        <i class="ti ti-barcode fs-18 text-primary"></i>
-                        <h5 class="card-title mb-0">Scan or Search Product</h5>
+                        <i class="ti ti-plus fs-18 text-primary"></i>
+                        <h5 class="card-title mb-0">Add Item</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row g-2 align-items-end">
+                        <div class="row g-2">
 
-                            <div class="col-md-5">
-                                <label class="form-label">Barcode <small class="text-muted">Scanning a barcode adds the product to the table.</small></label>
-                                <input ref="barcodeInput" type="text" class="form-control form-control-lg"
-                                       v-model="barcodeInput"
-                                       placeholder="Scan or type barcode then Enter"
-                                       @keyup.enter.prevent="onBarcodeEnter"
-                                       autofocus>
-                                
-                            </div>
-
-                            <div class="col-md-5">
-                                <label class="form-label">Search by name / SKU</label>
-                                <div class="position-relative">
-                                    <input type="text" class="form-control" v-model="productSearch"
-                                           placeholder="e.g. Cigarette or SKU-001"
-                                           @input="onSearchInput" @focus="onSearchInput">
-
-                                    <ul v-if="searchResults.length"
-                                        class="list-group position-absolute w-100 mt-1 shadow-sm"
-                                        style="z-index: 1050; max-height: 280px; overflow-y: auto;">
-                                        <li v-for="p in searchResults" :key="p.id"
-                                            class="list-group-item list-group-item-action"
-                                            @mousedown.prevent="addProduct(p)" style="cursor: pointer;">
-                                            <div class="d-flex justify-content-between">
-                                                <div>
-                                                    <div class="fw-semibold">@{{ p.title }}</div>
-                                                    <small class="text-muted">SKU: @{{ p.sku }} · @{{ p.packaging.pack_type }}</small>
-                                                </div>
-                                                <span class="badge bg-light text-dark align-self-center">
-                                                    @{{ packBadge(p.packaging) }}
-                                                </span>
-                                            </div>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                            
                             <div class="col-md-2">
-                                <button type="button" class="btn btn-soft-secondary w-100" style="color: white;"
-                                        @click="resetForm" :disabled="form.lines.length === 0">
-                                    <i class="ti ti-refresh me-1"></i> Clear
-                                </button>
+                                <label class="form-label">Category <span class="text-danger">*</span></label>
+                                <select class="form-select" v-model.number="addForm.category_id"
+                                        :class="{ 'is-invalid': addErrors.category_id }"
+                                        :disabled="!form.supplier_id">
+                                    <option :value="null">— Select category —</option>
+                                    <option v-for="c in categoryOptions" :key="c.id" :value="c.id">@{{ c.name }}</option>
+                                </select>
+                                <div class="invalid-feedback">@{{ addErrors.category_id }}</div>
+                                <small class="text-muted" v-if="!form.supplier_id">Pick a supplier first.</small>
+                                <small class="text-muted" v-else-if="supplierCategories.length">Filtered to this supplier.</small>
                             </div>
 
-                            <div class="col-12" v-if="scannerMessage">
-                                <div class="alert mb-0 py-2" :class="scannerAlertClass">
-                                    <i :class="scannerIconClass"></i>
-                                    @{{ scannerMessage }}
+                            <div class="col-md-3">
+                                <label class="form-label">Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" v-model="addForm.title" maxlength="200"
+                                       :class="{ 'is-invalid': addErrors.title }"
+                                       placeholder="e.g. Paraiba Tourmaline, loose">
+                                <div class="invalid-feedback">@{{ addErrors.title }}</div>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Type</label>
+                                <select class="form-select" v-model="addForm.type" @change="onAddFormTypeChange">
+                                    <option value="piece">Piece</option>
+                                    <option value="box">Box</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-1">
+                                <label class="form-label">Qty <span class="text-danger">*</span></label>
+                                <input type="number" min="1" class="form-control" v-model.number="addForm.package_qty"
+                                       :disabled="addForm.type === 'piece'"
+                                       :class="{ 'is-invalid': addErrors.package_qty }">
+                                <div class="invalid-feedback">@{{ addErrors.package_qty }}</div>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Country of Origin</label>
+                                <select class="form-select" v-model.number="addForm.country_of_origin_id">
+                                    <option :value="null">— Select —</option>
+                                    <option v-for="o in countriesOfOrigin" :key="o.id" :value="o.id">@{{ o.name }}</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Selling Price</label>
+                                <input type="number" step="0.01" min="0" class="form-control"
+                                       v-model.number="addForm.website_price" placeholder="optional">
+                                <small class="text-muted">Set later if unsure.</small>
+                            </div>
+
+                            {{-- Gemstone panel: shown only when the chosen category is flagged is_gemstone --}}
+                            <template v-if="addFormIsGemstone">
+                                <div class="col-12"><hr class="my-1"></div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Carat Weight <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.001" min="0.001" class="form-control"
+                                               v-model.number="addForm.carat_weight"
+                                               :class="{ 'is-invalid': addErrors.carat_weight }">
+                                        <span class="input-group-text">ct</span>
+                                        <div class="invalid-feedback">@{{ addErrors.carat_weight }}</div>
+                                    </div>
+                                    <small class="text-muted">Default; editable per row below.</small>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Stone Type <span class="text-danger">*</span></label>
+                                    <select class="form-select" v-model="addForm.stone_type"
+                                            :class="{ 'is-invalid': addErrors.stone_type }">
+                                        <option :value="null">— Select —</option>
+                                        @foreach (\App\Models\Product::STONE_TYPES as $type)
+                                            <option value="{{ $type }}">{{ $type }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="invalid-feedback">@{{ addErrors.stone_type }}</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Treatment <span class="text-danger">*</span></label>
+                                    <select class="form-select" v-model="addForm.treatment"
+                                            :class="{ 'is-invalid': addErrors.treatment }">
+                                        <option :value="null">— Select —</option>
+                                        @foreach (\App\Models\Product::TREATMENTS as $treatment)
+                                            <option value="{{ $treatment }}">{{ $treatment }}</option>
+                                        @endforeach
+                                    </select>
+                                    <div class="invalid-feedback">@{{ addErrors.treatment }}</div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Cut / Shape</label>
+                                    <select class="form-select" v-model="addForm.cut_shape">
+                                        <option :value="null">— Select —</option>
+                                        @foreach (\App\Models\Product::CUT_SHAPES as $shape)
+                                            <option value="{{ $shape }}">{{ $shape }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Clarity Grade</label>
+                                    <select class="form-select" v-model="addForm.clarity_grade">
+                                        <option :value="null">— Select —</option>
+                                        @foreach (\App\Models\Product::CLARITY_GRADES as $clarity)
+                                            <option value="{{ $clarity }}">{{ $clarity }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Colour Grade</label>
+                                    <input type="text" class="form-control" v-model="addForm.colour_grade"
+                                           maxlength="100" placeholder="e.g. Vivid Blue">
+                                </div>
+                            </template>
+
+                            <div class="col-12 d-flex align-items-center gap-2 mt-2">
+                                <button type="button" class="btn btn-primary" @click="addLine">
+                                    <i class="ti ti-plus me-1"></i> Add to Purchase
+                                </button>
+                                <small class="text-muted" v-if="addForm.package_qty > 1">
+                                    Creates @{{ addForm.package_qty }} separate products, one per @{{ addForm.type }} — each gets its own photos and listing afterward.
+                                </small>
+                            </div>
+
+                            <div class="col-12" v-if="formMessage">
+                                <div class="alert mb-0 py-2" :class="formAlertClass">
+                                    <i :class="formIconClass"></i>
+                                    @{{ formMessage }}
                                 </div>
                             </div>
                         </div>
@@ -172,8 +250,8 @@
     'suppliersJson'   => $suppliers->toJson(),
     'locationsJson'   => $locations->toJson(),
     'racksJson'       => $racks->toJson(),
-    'lookupUrl'       => route('purchases.lookup-barcode'),
-    'searchUrl'       => route('purchases.search-products'),
+    'categoriesJson'  => $categories->toJson(),
+    'countriesOfOriginJson' => $countriesOfOrigin->toJson(),
     'previewUrl'      => route('purchases.preview-invoice-number'),
     'lotCodePreviewUrl' => route('purchases.preview-lot-code'),
     'submitUrl'       => route('purchases.store'),

@@ -71,6 +71,34 @@
                 {{-- ─────────────────  Contact  ───────────────── --}}
                 <div class="card">
                     <div class="card-header border-light">
+                        <h5 class="card-title mb-0">Categories</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted fs-xs mb-2">
+                            Which categories does this supplier deal in? Used to filter the category
+                            list when adding items from this supplier on a purchase. Leave all
+                            unchecked to allow every category.
+                        </p>
+                        <div class="row g-2">
+                            @forelse ($categories as $cat)
+                                <div class="col-md-3 col-sm-4 col-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" :value="{{ $cat->id }}"
+                                            v-model="form.category_ids" id="cat_{{ $cat->id }}">
+                                        <label class="form-check-label" for="cat_{{ $cat->id }}">
+                                            {{ $cat->name }}
+                                        </label>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="col-12 text-muted fs-xs">No active categories yet.</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header border-light">
                         <h5 class="card-title mb-0">Contact</h5>
                     </div>
                     <div class="card-body">
@@ -262,6 +290,7 @@
                     opening_balance: {{ (float) $supplier->opening_balance }},
                     credit_limit:    {{ (float) $supplier->credit_limit }},
                     status:          {{ $supplier->status ? 'true' : 'false' }},
+                    category_ids:    @json($selectedCategoryIds),
                 },
                 errors: {},
                 submitting: false,
@@ -298,10 +327,13 @@
                             fd.append('status', v ? 1 : 0);
                         } else if (k === 'supplier_code') {
                             // immutable on edit — skip
+                        } else if (k === 'category_ids') {
+                            // appended separately below
                         } else if (v !== null && v !== undefined) {
                             fd.append(k, v);
                         }
                     });
+                    this.form.category_ids.forEach((id) => fd.append('category_ids[]', id));
 
                     try {
                         const res = await fetch('{{ route('suppliers.update', $supplier) }}', {

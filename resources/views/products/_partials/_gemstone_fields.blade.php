@@ -1,6 +1,6 @@
-{{-- Gemstone-specific fields panel. Shown only when the chosen subcategory's
-     parent code is in the gemstone group (see Product::GEMSTONE_PARENT_CODES).
-     Visibility is controlled by `isGemstone` on the productApp Vue instance. --}}
+{{-- Gemstone-specific fields panel. Shown only when the chosen category has
+     is_gemstone = true. Visibility is controlled by `isGemstone` on the
+     productApp Vue instance. --}}
 
 <div class="card mb-3" v-show="isGemstone">
     <div class="card-header d-flex align-items-center justify-content-between">

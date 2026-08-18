@@ -1,9 +1,13 @@
 {{-- Inline multi-row product table.
 
      Layout strategy (driven by `line.rows.length`, not `line.type`):
-       - Each LINE renders a "parent" <tr> with the product name, type pill,
-         and Pack Qty input. Pack Qty == desired inventory-row count for
-         BOTH Piece and Box lines (rebuildRows() keeps line.rows in sync).
+       - Each LINE renders a "parent" <tr> with the item's title/category,
+         type pill, and Pack Qty input. Pack Qty drives inventory-row
+         count for BOX lines only (rebuildRows() keeps line.rows in
+         sync) — each row becomes its own product on save. PIECE lines
+         are always exactly one row; Pack Qty is disabled for them and
+         the physical count goes on that row's own Qty field instead, so
+         several identical pieces can share one product.
        - When a line has exactly ONE row, the parent row also carries that
          row's qty / carat / barcode / rack / price inputs inline.
        - When a line has MORE THAN ONE row, the parent row instead shows
@@ -12,12 +16,15 @@
          emitted directly below the parent INSIDE THE SAME <tbody>, one per
          inventory row. Child rows use a faint left indent so the hierarchy
          is obvious without nested tables.
+       - A row that already created a product (edit mode, `row._product`
+         set) shows its SKU as a small badge instead of "New" — that
+         product is reused on save, not recreated.
 --}}
 
 <div class="card">
     <div class="card-header border-light d-flex align-items-center gap-2">
         <i class="ti ti-list-details fs-18 text-primary"></i>
-        <h5 class="card-title mb-0">Purchase Lines</h5>
+        <h5 class="card-title mb-0">Purchase Items</h5>
         <span class="badge bg-soft-primary text-primary ms-2">@{{ form.lines.length }} lines</span>
     </div>
 
@@ -26,7 +33,7 @@
             <thead class="bg-light bg-opacity-25 text-uppercase fs-xxs">
                 <tr>
                     <th style="width: 32px;">#</th>
-                    <th>Product</th>
+                    <th>Item</th>
                     <th style="width: 110px;">Type</th>
                     <th style="width: 110px;">Pack Qty</th>
                     <th style="width: 90px;">Qty</th>
@@ -35,8 +42,8 @@
                     <th style="width: 130px;">Lot Code</th>
                     {{-- Rack column hidden --}}
                     <th style="width: 110px;">Price</th>
+                    <th style="width: 110px;">Selling Price</th>
                     {{-- Tax % and Disc % hidden --}}
-                    {{-- <th v-if="false" style="width: 130px;">Expiry</th> --}}
                     <th style="width: 110px;" class="text-end">Line Total</th>
                     <th style="width: 40px;"></th>
                 </tr>
@@ -62,8 +69,8 @@
 </td>
 
                         <td>
-                            <div class="fw-semibold">@{{ line._product.title }}</div>
-                            <small class="text-muted">SKU: @{{ line._product.sku }}</small>
+                            <div class="fw-semibold">@{{ line.title }}</div>
+                            <small class="text-muted">@{{ categoryName(line.category_id) }}</small>
                         </td>
 
 <td>
@@ -73,27 +80,27 @@
         <option value="piece">Piece</option>
         <option value="box">Box</option>
     </select>
-    <div v-if="line.type === 'box'" class="small text-muted mt-1">
-        1 Box = @{{ line._product.packaging.inner_pack_contains || 1 }} pcs
-    </div>
 </td>
 
-                        {{-- Pack Qty: how many outermost packs (cartons / units / pieces) --}}
+                        {{-- Pack Qty: number of inventory rows/products this line
+                             produces. Disabled for Piece — a Piece line is always
+                             exactly one row; the physical count goes on that row's
+                             own Qty field instead. --}}
                         <td>
                             <div class="input-group input-group-sm">
                                 <input type="number" min="1" class="form-control"
                                        v-model.number="line.package_qty"
+                                       :disabled="line.type === 'piece'"
                                        @change="rebuildRows(li)"
                                        @keydown.enter.prevent="focusFirstRow(li)">
                                 <span class="input-group-text">
-                                    @{{ line.type === 'piece' ? 'pcs' : (line._product.packaging.outer_pack_name || 'ctn') }}
+                                    @{{ line.type === 'piece' ? 'pcs' : 'box' }}
                                 </span>
                             </div>
                         </td>
 
-                        {{-- Single-row lines (most Piece lines, or a Box line with
-                             Pack Qty = 1): hoist row[0]'s inputs straight into the
-                             parent row. --}}
+                        {{-- Single-row lines (Pack Qty = 1): hoist row[0]'s
+                             inputs straight into the parent row. --}}
                         <template v-if="line.rows.length === 1">
                             <td>
                                 <input type="number" min="0" class="form-control form-control-sm"
@@ -118,11 +125,11 @@
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
                                        v-model.number="line.rows[0].price">
                             </td>
+                            <td>
+                                <input type="number" step="0.01" min="0" class="form-control form-control-sm"
+                                       v-model.number="line.rows[0].website_price" placeholder="optional">
+                            </td>
                             {{-- Tax % and Disc % inputs hidden --}}
-                            {{-- <td v-if="false">
-                                <input type="date" class="form-control form-control-sm"
-                                       v-model="line.rows[0].expiry_date">
-                            </td> --}}
                             <td class="text-end fw-semibold">@{{ formatMoney(rowNet(line.rows[0])) }}</td>
                             <td class="text-center">
                                 <button type="button" class="btn btn-sm btn-soft-danger" @click="removeLine(li)">
@@ -131,10 +138,10 @@
                             </td>
                         </template>
 
-                        {{-- Multi-row lines (Pack Qty > 1, either type): aggregate
+                        {{-- Multi-row lines (Pack Qty > 1): aggregate
                              readouts + expand/collapse toggle for the child rows. --}}
                         <template v-else>
-                            <td colspan="6" class="bg-light bg-opacity-25"
+                            <td colspan="7" class="bg-light bg-opacity-25"
     style="cursor: pointer;"
     @click="toggleExpand(li)">
                                 <div class="d-flex flex-wrap gap-3 small">
@@ -166,7 +173,11 @@
 
                             <td class="ps-4 small text-muted bg-light bg-opacity-25">
                                 <i class="ti ti-corner-down-right me-1"></i>
-                                @{{ line.type === 'piece' ? 'Piece' : (line._product.packaging.inner_pack_name || 'Box') }} #@{{ ri + 1 }}
+                                @{{ line.package_name }} #@{{ ri + 1 }}
+                                <span v-if="row._product" class="badge badge-soft-success ms-1" :title="row._product.title">
+                                    @{{ row._product.sku }}
+                                </span>
+                                <span v-else class="badge badge-soft-secondary ms-1">New</span>
                             </td>
 
                             <td class="bg-light bg-opacity-25"></td>
@@ -197,11 +208,11 @@
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
                                        v-model.number="row.price">
                             </td>
+                            <td>
+                                <input type="number" step="0.01" min="0" class="form-control form-control-sm"
+                                       v-model.number="row.website_price" placeholder="optional">
+                            </td>
                             {{-- Tax % and Disc % inputs hidden --}}
-                            {{-- <td>
-                                <input type="date" class="form-control form-control-sm"
-                                       v-model="row.expiry_date">
-                            </td> --}}
                             <td class="text-end small fw-semibold">@{{ formatMoney(rowNet(row)) }}</td>
                             <td></td>
                         </tr>
@@ -210,9 +221,9 @@
                 </template>
 
                 <tr v-if="form.lines.length === 0">
-                    <td colspan="11" class="text-center text-muted py-4">
-                        <i class="ti ti-barcode fs-22 d-block mb-1 text-muted"></i>
-                        Scan a barcode or search for a product to begin.
+                    <td colspan="12" class="text-center text-muted py-4">
+                        <i class="ti ti-package fs-22 d-block mb-1 text-muted"></i>
+                        Add an item above to begin.
                     </td>
                 </tr>
             </tbody>

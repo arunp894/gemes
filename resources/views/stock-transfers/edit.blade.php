@@ -113,7 +113,10 @@
                                 <tr v-for="(line, idx) in form.lines" :key="idx"
                                     :class="{ 'table-warning': line.qty > line.on_hand }">
                                     <td>
-                                        <div class="fw-semibold">@{{ line.product_title }}</div>
+                                        <div class="fw-semibold">
+                                            @{{ line.product_title }}
+                                            <span v-if="line.is_group" class="badge badge-soft-info fs-xxs ms-1">group of @{{ line.on_hand }}</span>
+                                        </div>
                                         <small class="text-muted">SKU: @{{ line.product_sku }}</small>
                                     </td>
                                     <td><code class="small">@{{ line.barcode || '—' }}</code></td>
@@ -204,6 +207,7 @@ $(function () {
                 to_location_id:   @json($transfer->to_location_id),
                 note:             @json($transfer->note),
                 lines: @json($transfer->lines->map(fn ($l) => [
+                    'is_group'            => false,
                     'purchase_product_id' => $l->purchase_product_id,
                     'product_id'          => $l->product_id,
                     'product_title'       => optional($l->product)->title,
@@ -239,6 +243,13 @@ $(function () {
                 // We don't have a bulk endpoint, so just iterate the
                 // lines and pull each piece's on_hand individually. For
                 // a draft transfer this is a handful of requests.
+                //
+                // lookupByBarcode() now returns the AGGREGATE on-hand
+                // across every row sharing that barcode (needed for the
+                // box-group scan flow below) -- an existing line here
+                // still names one specific purchase_product_id, so pull
+                // that one row's own balance out of the returned
+                // breakdown instead of using the aggregate figure.
                 for (const line of this.form.lines) {
                     if (!line.barcode) continue;
                     try {
@@ -252,10 +263,9 @@ $(function () {
                         );
                         const data = await res.json();
                         if (res.ok && data.ok) {
-                            // qty in draft was already deducted from on_hand
-                            // when posted; for draft transfers no movements
-                            // exist yet so on_hand reflects true source stock.
-                            this.$set(line, 'on_hand', data.piece.on_hand);
+                            const mine = (data.piece.pieces || [])
+                                .find((p) => p.purchase_product_id === line.purchase_product_id);
+                            this.$set(line, 'on_hand', mine ? mine.balance : 0);
                         }
                     } catch (_) {}
                 }
@@ -293,22 +303,37 @@ $(function () {
                         return;
                     }
 
-                    const existing = this.form.lines.find(
-                        (l) => l.purchase_product_id === data.piece.purchase_product_id
-                    );
+                    const p = data.piece;
+                    const isBox = p.type === 'box' && p.pieces && p.pieces.length > 1;
+                    const existing = this.form.lines.find((l) => l.barcode === p.barcode);
+
                     if (existing) {
                         if (existing.qty < existing.on_hand) existing.qty += 1;
+                    } else if (isBox) {
+                        this.form.lines.push({
+                            is_group:      true,
+                            barcode:       p.barcode,
+                            type:          p.type,
+                            product_title: p.product_title,
+                            product_sku:   p.product_sku,
+                            on_hand:       p.on_hand,
+                            qty:           1,
+                            pieces:        p.pieces,
+                            to_rack_id:    null,
+                            notes:         '',
+                        });
                     } else {
                         this.form.lines.push({
-                            purchase_product_id: data.piece.purchase_product_id,
-                            product_id:          data.piece.product_id,
-                            product_title:       data.piece.product_title,
-                            product_sku:         data.piece.product_sku,
-                            barcode:             data.piece.barcode,
-                            on_hand:             data.piece.on_hand,
-                            qty:                 1,
-                            to_rack_id:          null,
-                            notes:               '',
+                            is_group:             false,
+                            purchase_product_id:  p.purchase_product_id,
+                            product_id:           p.product_id,
+                            product_title:        p.product_title,
+                            product_sku:          p.product_sku,
+                            barcode:              p.barcode,
+                            on_hand:              p.on_hand,
+                            qty:                  1,
+                            to_rack_id:           null,
+                            notes:                '',
                         });
                     }
 
@@ -324,6 +349,26 @@ $(function () {
 
             removeLine(idx) { this.form.lines.splice(idx, 1); },
 
+            // Same FIFO walk as the create form: expands one grouped
+            // cart row into the distinct purchase_product_id picks that
+            // actually get submitted. Single-piece lines pass through
+            // unchanged.
+            allocatePicks(line) {
+                if (!line.is_group) {
+                    return [{ purchase_product_id: line.purchase_product_id, qty: Number(line.qty) || 1 }];
+                }
+                let remaining = Number(line.qty) || 0;
+                const picks = [];
+                for (const p of line.pieces) {
+                    if (remaining <= 0) break;
+                    const take = Math.min(p.balance, remaining);
+                    if (take <= 0) continue;
+                    picks.push({ purchase_product_id: p.purchase_product_id, qty: take });
+                    remaining -= take;
+                }
+                return picks;
+            },
+
             async submit() {
                 this.serverError = null;
                 this.wasValidated = true;
@@ -335,12 +380,12 @@ $(function () {
                     from_location_id: this.form.from_location_id,
                     to_location_id:   this.form.to_location_id,
                     note:             this.form.note,
-                    lines: this.form.lines.map((l) => ({
-                        purchase_product_id: l.purchase_product_id,
-                        qty:                 Number(l.qty) || 1,
+                    lines: this.form.lines.flatMap((l) => this.allocatePicks(l).map((pick) => ({
+                        purchase_product_id: pick.purchase_product_id,
+                        qty:                 pick.qty,
                         to_rack_id:          l.to_rack_id || null,
                         notes:               l.notes || null,
-                    })),
+                    }))),
                 };
 
                 try {

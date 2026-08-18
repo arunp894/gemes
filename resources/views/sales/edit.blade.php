@@ -344,12 +344,15 @@ $(function () {
                         this.scannerMessage = data.message || 'Not found.'; return;
                     }
                     const p = data.product, inv = data.inventory;
+                    const defaultPrice = (p.website_price !== null && p.website_price !== undefined)
+                        ? Number(p.website_price)
+                        : (inv && inv.cost_price ? +(Number(inv.cost_price) * 1.3).toFixed(2) : 0);
                     this.form.lines.push({
                         product_id: p.id, product_title: p.title, product_sku: p.sku,
                         purchase_product_id: inv ? inv.purchase_product_id : null,
                         barcode: data.barcode || null,
                         qty: 1,
-                        unit_price: inv && inv.cost_price ? +(Number(inv.cost_price) * 1.3).toFixed(2) : 0,
+                        unit_price: defaultPrice,
                         cost_price: inv ? Number(inv.cost_price || 0) : 0,
                         tax_percent: 0, discount_percent: 0,
                     });
@@ -373,7 +376,9 @@ $(function () {
                 this.form.lines.push({
                     product_id: p.id, product_title: p.title, product_sku: p.sku,
                     purchase_product_id: null, barcode: null,
-                    qty: 1, unit_price: 0, cost_price: 0,
+                    qty: 1,
+                    unit_price: (p.website_price !== null && p.website_price !== undefined) ? Number(p.website_price) : 0,
+                    cost_price: 0,
                     tax_percent: 0, discount_percent: 0,
                 });
                 this.productSearch = ''; this.searchResults = [];

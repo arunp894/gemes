@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Location;
 use App\Models\Product;
 use App\Models\Purchase;
@@ -33,7 +34,8 @@ class StockController extends Controller
     public function index(Request $request): View
     {
         return view('stock.index', [
-            'locations' => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'is_default']),
+            'locations'  => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'is_default']),
+            'categories' => Category::active()->ordered()->get(['id', 'name']),
         ]);
     }
 
@@ -48,6 +50,7 @@ class StockController extends Controller
     public function data(Request $request): JsonResponse
     {
         $locationId = (int) $request->query('location_id', 0);
+        $categoryId = (int) $request->query('category_id', 0);
 
         // Subquery aggregating in/out by product+location; then join to
         // products and locations for labels.
@@ -55,16 +58,23 @@ class StockController extends Controller
             . "ELSE -stock_movements.qty END)";
 
         $base = DB::table('stock_movements')
-            ->join('products',  'products.id',  '=', 'stock_movements.product_id')
-            ->join('locations', 'locations.id', '=', 'stock_movements.location_id')
+            ->join('products',      'products.id',      '=', 'stock_movements.product_id')
+            ->join('locations',     'locations.id',      '=', 'stock_movements.location_id')
+            ->leftJoin('categories', 'categories.id',     '=', 'products.category_id')
             ->whereNull('stock_movements.deleted_at')
-            ->groupBy('stock_movements.product_id', 'stock_movements.location_id', 'products.title', 'products.sku', 'locations.name', 'locations.location_code')
+            ->groupBy(
+                'stock_movements.product_id', 'stock_movements.location_id',
+                'products.title', 'products.sku', 'products.category_id',
+                'categories.name', 'locations.name', 'locations.location_code'
+            )
             ->select([
                 'stock_movements.product_id',
                 'stock_movements.location_id',
-                'products.title  as product_title',
-                'products.sku    as product_sku',
-                'locations.name  as location_name',
+                'products.title       as product_title',
+                'products.sku         as product_sku',
+                'products.category_id as category_id',
+                'categories.name      as category_name',
+                'locations.name       as location_name',
                 'locations.location_code',
                 DB::raw($signedSql . ' as on_hand'),
             ])
@@ -72,6 +82,9 @@ class StockController extends Controller
 
         if ($locationId) {
             $base->where('stock_movements.location_id', $locationId);
+        }
+        if ($categoryId) {
+            $base->where('products.category_id', $categoryId);
         }
 
         return DataTables::query($base)
@@ -81,7 +94,8 @@ class StockController extends Controller
             )
             ->addColumn('product_label', fn ($row) =>
                 '<div class="fw-semibold">' . e($row->product_title) . '</div>'
-                . '<small class="text-muted">SKU: ' . e($row->product_sku) . '</small>'
+                . '<small class="text-muted">SKU: ' . e($row->product_sku)
+                . ($row->category_name ? ' &middot; ' . e($row->category_name) : '') . '</small>'
             )
             ->addColumn('location_label', fn ($row) =>
                 e($row->location_name) . ' <small class="text-muted">(' . e($row->location_code) . ')</small>'
@@ -101,6 +115,58 @@ class StockController extends Controller
             })
             ->rawColumns(['on_hand', 'product_label', 'location_label', 'action'])
             ->toJson();
+    }
+
+    /* ─── Category rollup ──────────────────────────────────── */
+
+    /**
+     * Total on-hand + distinct product count per category, respecting
+     * the same location filter as the main table. Every purchase now
+     * mints its own Product (1:1 with the physical piece/box), so the
+     * per-product table above lists one row per item rather than one
+     * per style -- this is the "how much of X do I have" answer that
+     * gives back, grouped at the category level instead.
+     *
+     * Not DataTables-paginated: there are only ever a handful of
+     * categories, so one small query on page load (and again on location
+     * change) is simpler than standing up a second server-side table.
+     */
+    public function categoryData(Request $request): JsonResponse
+    {
+        $locationId = (int) $request->query('location_id', 0);
+
+        $signedSql = "SUM(CASE WHEN stock_movements.direction = 'in' THEN stock_movements.qty "
+            . "ELSE -stock_movements.qty END)";
+
+        // Per-product balance first -- matches the on-hand table's own
+        // math -- then rolled up to category, so a product sitting at
+        // exactly zero doesn't count toward that category's product count.
+        $perProduct = DB::table('stock_movements')
+            ->join('products', 'products.id', '=', 'stock_movements.product_id')
+            ->whereNull('stock_movements.deleted_at')
+            ->when($locationId, fn ($q) => $q->where('stock_movements.location_id', $locationId))
+            ->groupBy('products.id', 'products.category_id')
+            ->select([
+                'products.id          as product_id',
+                'products.category_id as category_id',
+                DB::raw($signedSql . ' as on_hand'),
+            ])
+            ->havingRaw($signedSql . ' <> 0');
+
+        $rows = DB::query()
+            ->fromSub($perProduct, 'p')
+            ->join('categories', 'categories.id', '=', 'p.category_id')
+            ->groupBy('categories.id', 'categories.name')
+            ->select([
+                'categories.id   as category_id',
+                'categories.name as category_name',
+                DB::raw('SUM(p.on_hand) as on_hand'),
+                DB::raw('COUNT(*) as product_count'),
+            ])
+            ->orderByDesc('on_hand')
+            ->get();
+
+        return response()->json(['ok' => true, 'categories' => $rows]);
     }
 
     /* ─── Per-product ledger ──────────────────────────────── */
@@ -169,7 +235,7 @@ class StockController extends Controller
 
     public function piece(PurchaseProduct $purchaseProduct): View
     {
-        $purchaseProduct->load(['line.product', 'line.purchase']);
+        $purchaseProduct->load(['product', 'line.product', 'line.purchase']);
 
         $movements = StockMovement::query()
             ->where('purchase_product_id', $purchaseProduct->id)

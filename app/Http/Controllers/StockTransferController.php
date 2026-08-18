@@ -6,6 +6,7 @@ use App\Http\Requests\StoreStockTransferRequest;
 use App\Http\Requests\UpdateStockTransferRequest;
 use App\Models\Barcode;
 use App\Models\Location;
+use App\Models\PurchaseLine;
 use App\Models\PurchaseProduct;
 use App\Models\Rack;
 use App\Models\StockMovement;
@@ -195,8 +196,13 @@ class StockTransferController extends Controller
 
     /**
      * Barcode lookup constrained to "what's currently at this source
-     * location". Returns the piece + its on-hand balance so the UI can
-     * cap the qty input and refuse zero-stock scans.
+     * location". A barcode can match MULTIPLE purchase_products rows --
+     * it's the receiving-dock scan value captured at purchase entry, not
+     * the unique per-product retail barcode, so every row generated from
+     * the same box (or piece) line commonly shares one. Returns the
+     * aggregate on-hand across every matching row plus the line's type,
+     * so the create/edit form can offer a quantity for box groups instead
+     * of always adding a single unit.
      */
     public function lookupByBarcode(Request $request): JsonResponse
     {
@@ -207,11 +213,17 @@ class StockTransferController extends Controller
             return response()->json(['ok' => false, 'message' => 'Barcode and source location are required.'], 422);
         }
 
-        $pp = PurchaseProduct::with(['line.product:id,title,sku'])
+        $pieces = PurchaseProduct::with([
+                'product:id,title,sku',
+                'line:id,title,type,product_id',
+                'line.product:id,title,sku',
+            ])
             ->where('barcode', $value)
-            ->first();
+            ->get()
+            ->filter(fn (PurchaseProduct $pp) => $pp->resolved_product !== null)
+            ->values();
 
-        if (! $pp || ! $pp->line || ! $pp->line->product) {
+        if ($pieces->isEmpty()) {
             // Fallback to the product-level barcode mapping. This won't
             // know the specific piece, so transfer can't proceed via this
             // path alone (transfers require per-piece). Surface the issue.
@@ -225,23 +237,37 @@ class StockTransferController extends Controller
             return response()->json(['ok' => false, 'message' => "No piece found for barcode '{$value}'."], 404);
         }
 
-        $onHand = $this->stock->onHandForPiece((int) $pp->id, $fromLocationId);
+        $available = $this->stock->availablePiecesForBarcode($value, $fromLocationId);
+        $onHand    = array_sum($available);
+        $first     = $pieces->first();
+
         if ($onHand <= 0) {
             return response()->json([
                 'ok'      => false,
-                'message' => "{$pp->line->product->title} has no stock at the selected source location.",
+                'message' => "{$first->resolved_product->title} has no stock at the selected source location.",
             ], 404);
         }
 
         return response()->json([
-            'ok'       => true,
-            'piece'    => [
-                'purchase_product_id' => $pp->id,
-                'product_id'          => $pp->line->product->id,
-                'product_title'       => $pp->line->product->title,
-                'product_sku'         => $pp->line->product->sku,
-                'barcode'             => $pp->barcode,
+            'ok'    => true,
+            'piece' => [
+                'purchase_product_id' => $first->id,
+                'product_id'          => $first->resolved_product->id,
+                'product_title'       => $first->resolved_product->title,
+                'product_sku'         => $first->resolved_product->sku,
+                'barcode'             => $value,
+                'type'                => $first->line->type ?? PurchaseLine::TYPE_PIECE,
                 'on_hand'             => $onHand,
+                // FIFO-ordered breakdown of every distinct row sharing this
+                // barcode with stock at the source location. The create/
+                // edit form walks this client-side once the user picks how
+                // many to take -- the server re-validates per-row on-hand
+                // again at post() regardless, so this list is a UX
+                // convenience, not the safety boundary.
+                'pieces' => collect($available)->map(fn ($bal, $ppId) => [
+                    'purchase_product_id' => (int) $ppId,
+                    'balance'             => (int) $bal,
+                ])->values(),
             ],
         ]);
     }

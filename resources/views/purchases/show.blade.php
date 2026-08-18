@@ -117,6 +117,7 @@
                                     <th>Lot Code</th>
                                     {{-- Rack column hidden --}}
                                     <th class="text-end">Price</th>
+                                    <th class="text-end">Selling Price</th>
                                     {{-- Tax and Disc columns hidden --}}
                                     <th class="text-end">Net</th>
                                     <th style="width:90px;">Copies</th>
@@ -124,24 +125,25 @@
                             </thead>
                             <tbody>
                                 @foreach ($purchase->lines as $i => $line)
-                                    {{-- Parent row --}}
+                                    {{-- Parent row — the line is a product-creation template now, not a
+                                         single product, since each row below created its own. --}}
                                     <tr class="table-light">
                                         <td></td>
                                         <td class="fw-semibold">{{ $i + 1 }}</td>
                                         <td colspan="2">
-                                            <div class="fw-semibold">{{ $line->product?->title }}</div>
-                                            <small class="text-muted">SKU: {{ $line->product?->sku }}</small>
+                                            <div class="fw-semibold">{{ $line->title ?? $line->product?->title }}</div>
+                                            <small class="text-muted">{{ $line->category?->name ?? ('SKU: ' . $line->product?->sku) }}</small>
                                         </td>
                                         <td>
                                             <strong>{{ $line->package_qty }}</strong>
                                             <small class="text-muted">{{ $line->package_name }}</small>
                                         </td>
-                                        <td colspan="5"></td>
+                                        <td colspan="6"></td>
                                         <td class="text-end fw-bold">{{ number_format((float) $line->total, 2) }}</td>
                                         <td></td>
                                     </tr>
 
-                                    {{-- Child rows (one per inventory unit) --}}
+                                    {{-- Child rows (one per inventory unit — one per product) --}}
                                     @foreach ($line->rows as $ri => $row)
                                         <tr>
                                             <td class="text-center">
@@ -151,6 +153,9 @@
                                             <td class="ps-4 text-muted small">
                                                 <i class="ti ti-corner-down-right me-1"></i>
                                                 {{ $line->package_name }} #{{ $ri + 1 }}
+                                                @if ($row->product)
+                                                    <br><code class="fs-xxs">{{ $row->product->sku }}</code>
+                                                @endif
                                             </td>
                                             <td colspan="2"></td>
                                             <td>{{ $row->qty }}</td>
@@ -159,6 +164,7 @@
                                             <td><code class="small">{{ $row->lot_code ?: '—' }}</code></td>
                                             {{-- Rack column hidden --}}
                                             <td class="text-end">{{ number_format((float) $row->price, 2) }}</td>
+                                            <td class="text-end">{{ $row->website_price !== null ? number_format((float) $row->website_price, 2) : '—' }}</td>
                                             {{-- Tax and Disc columns hidden --}}
                                             <td class="text-end">{{ number_format($row->net(), 2) }}</td>
                                             <td>

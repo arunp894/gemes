@@ -22,8 +22,10 @@ class DatabaseSeeder extends Seeder
      *                         before any stock or purchase seeds.
      *   6. Suppliers        -- demo suppliers for purchase testing.
      *   7. Categories       -- gemstone category hierarchy.
-     *   8. Racks            -- storage racks in the main warehouse.
-     *   9. WalkInCustomer   -- default customer for the sales terminal.
+     *   8. CountriesOfOrigin -- gemstone origin-country lookup list.
+     *   9. Racks            -- storage racks in the main warehouse.
+     *   10. WalkInCustomer   -- default customer for the sales terminal.
+     *   11. Pages            -- About Us / Terms & Conditions content.
      */
     public function run(): void
     {
@@ -35,9 +37,11 @@ class DatabaseSeeder extends Seeder
             LocationSeeder::class,
             SupplierSeeder::class,
             CategorySeeder::class,
+            CountryOfOriginSeeder::class,
             RackSeeder::class,
             WalkInCustomerSeeder::class,
             WebsiteDataSeeder::class,
+            PageSeeder::class,
         ]);
     }
 }

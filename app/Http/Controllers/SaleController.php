@@ -359,14 +359,22 @@ class SaleController extends Controller
 
         // Strategy 1: exact match in purchase_products (the inventory row).
         $pp = PurchaseProduct::with([
-            'line.product:id,title,sku',
+            'product:id,title,sku,website_price',
+            'line.product:id,title,sku,website_price',
             'line.purchase:id,status',
         ])
             ->where('barcode', $value)
             ->whereNull('deleted_at')
             ->first();
 
-        if ($pp && $pp->line && $pp->line->product) {
+        // resolved_product prefers the row's own direct product link and
+        // falls back to the line's shared product for historical rows —
+        // see PurchaseProduct::getResolvedProductAttribute(). Reading
+        // ->line->product directly here would return null for every row
+        // created after purchases started making their own products.
+        if ($pp && $pp->resolved_product) {
+            $product = $pp->resolved_product;
+
             // Live on-hand from the ledger, summed across all locations.
             // Stock is one global pool; the sale's location is recorded on
             // the sale but does not gate availability.
@@ -376,9 +384,14 @@ class SaleController extends Controller
                 'ok'       => true,
                 'source'   => 'inventory',
                 'product'  => [
-                    'id'    => $pp->line->product->id,
-                    'title' => $pp->line->product->title,
-                    'sku'   => $pp->line->product->sku,
+                    'id'            => $product->id,
+                    'title'         => $product->title,
+                    'sku'           => $product->sku,
+                    // Seeded at purchase time (see purchase_products.website_price);
+                    // null when staff left it blank there and hasn't set one on
+                    // the product since — the terminal falls back to a cost-based
+                    // estimate in that case.
+                    'website_price' => $product->website_price !== null ? (float) $product->website_price : null,
                 ],
                 'inventory' => [
                     'purchase_product_id' => $pp->id,
@@ -394,7 +407,7 @@ class SaleController extends Controller
 
         // Strategy 2: registered barcode that hasn't been linked to a
         // specific purchase row — still useful, just no cost / qty info.
-        $bc = Barcode::with('product:id,title,sku')->where('barcode_value', $value)->first();
+        $bc = Barcode::with('product:id,title,sku,website_price')->where('barcode_value', $value)->first();
         if ($bc && $bc->product) {
             $onHand = $this->stock->onHandForProductGlobal((int) $bc->product->id);
 
@@ -402,9 +415,10 @@ class SaleController extends Controller
                 'ok'      => true,
                 'source'  => 'product_barcode',
                 'product' => [
-                    'id'    => $bc->product->id,
-                    'title' => $bc->product->title,
-                    'sku'   => $bc->product->sku,
+                    'id'            => $bc->product->id,
+                    'title'         => $bc->product->title,
+                    'sku'           => $bc->product->sku,
+                    'website_price' => $bc->product->website_price !== null ? (float) $bc->product->website_price : null,
                 ],
                 'inventory' => [
                     'purchase_product_id' => null,
@@ -429,7 +443,7 @@ class SaleController extends Controller
         $term = trim((string) $request->query('q', ''));
 
         $q = Product::query()
-            ->select(['id', 'title', 'sku'])
+            ->select(['id', 'title', 'sku', 'website_price'])
             ->limit(15);
 
         if ($term !== '') {
@@ -444,9 +458,10 @@ class SaleController extends Controller
         return response()->json([
             'ok'    => true,
             'items' => $q->get()->map(fn(Product $p) => [
-                'id'    => $p->id,
-                'title' => $p->title,
-                'sku'   => $p->sku,
+                'id'            => $p->id,
+                'title'         => $p->title,
+                'sku'           => $p->sku,
+                'website_price' => $p->website_price !== null ? (float) $p->website_price : null,
             ]),
         ]);
     }

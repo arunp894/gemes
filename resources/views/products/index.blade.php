@@ -59,7 +59,7 @@
                         <div class="app-search">
                             <select id="productCategoryFilter" class="form-select form-control my-1 my-md-0">
                                 <option value="">All Categories</option>
-                                @foreach ($topCategories as $cat)
+                                @foreach ($categories as $cat)
                                     <option value="{{ $cat->id }}">{{ $cat->name }}</option>
                                 @endforeach
                             </select>

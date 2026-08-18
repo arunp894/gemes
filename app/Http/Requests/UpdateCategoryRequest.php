@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Category;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,10 +14,6 @@ class UpdateCategoryRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if ($this->has('parent_id') && $this->input('parent_id') === '') {
-            $this->merge(['parent_id' => null]);
-        }
-
         // Coerce the gemstone checkbox to a boolean so the rule accepts it
         // whether the form sends '1', 'true', or omits it entirely.
         $this->merge([
@@ -51,28 +46,7 @@ class UpdateCategoryRequest extends FormRequest
                     ->ignore($categoryId)
                     ->whereNull('deleted_at'),
             ],
-            // parent_id: nullable. Must reference an active TOP-LEVEL category
-            // OTHER than this one (no self-parenting). If THIS category has
-            // children, it cannot itself become a child (would create 3 levels).
-            'parent_id' => [
-                'nullable',
-                'integer',
-                Rule::exists('categories', 'id')
-                    ->whereNull('deleted_at')
-                    ->whereNull('parent_id')
-                    ->where('status', 1)
-                    ->where(function ($q) use ($categoryId) {
-                        $q->where('id', '!=', $categoryId);
-                    }),
-                function ($attribute, $value, $fail) use ($categoryId) {
-                    if (! $value || ! $categoryId) {
-                        return;
-                    }
-                    if (Category::where('parent_id', $categoryId)->exists()) {
-                        $fail('This category has subcategories, so it cannot itself become a subcategory.');
-                    }
-                },
-            ],
+            // parent_id removed — categories are a flat, single-level list.
             'description'   => ['nullable', 'string', 'max:1000'],
             'display_order' => ['nullable', 'integer', 'min:0', 'max:99999'],
             'status'        => ['required', 'boolean'],
@@ -88,7 +62,6 @@ class UpdateCategoryRequest extends FormRequest
             'name.unique'      => 'Category name already exists.',
             'code.unique'      => 'Category code already exists.',
             'code.regex'       => 'Category code may only contain letters, numbers, and underscores (no spaces).',
-            'parent_id.exists' => 'The selected parent category is invalid or inactive.',
             'image.max'        => 'The image must not be larger than 2 MB.',
             'image.mimes'      => 'The image must be a JPG or PNG file.',
         ];
@@ -99,7 +72,6 @@ class UpdateCategoryRequest extends FormRequest
         return [
             'name'          => 'Category Name',
             'code'          => 'Category Code',
-            'parent_id'     => 'Parent Category',
             'display_order' => 'Display Order',
             'is_gemstone'   => 'Gemstone Category',
             'image'         => 'Category Image',

@@ -15,25 +15,20 @@ use Yajra\DataTables\Facades\DataTables;
 class CategoryController extends Controller
 {
     /**
-     * Display the listing page (top-level categories only).
-     * Also passes the parent dropdown options for the quick-add modal.
+     * Display the listing page.
      */
     public function index(): View
     {
-        $parents = Category::active()->topLevel()->ordered()->get(['id', 'name']);
-        return view('categories.index', compact('parents'));
+        return view('categories.index');
     }
 
     /**
      * DataTables AJAX endpoint.
-     * Returns ONLY top-level categories (parent_id IS NULL).
      * Each row includes children_count from the self-referential relation.
      */
     public function data(Request $request): JsonResponse
     {
-        $query = Category::query()
-            ->topLevel()
-            ->withCount('children');
+        $query = Category::query();
 
         return DataTables::of($query)
             ->addColumn('checkbox', function (Category $category) {
@@ -116,8 +111,7 @@ class CategoryController extends Controller
      */
     public function create(): View
     {
-        $parents = Category::active()->topLevel()->ordered()->get(['id', 'name']);
-        return view('categories.create', compact('parents'));
+        return view('categories.create');
     }
 
     /**
@@ -132,13 +126,9 @@ class CategoryController extends Controller
                 'name'          => $data['name'],
                 'code'          => strtoupper($data['code']),
                 'description'   => $data['description'] ?? null,
-                'parent_id'     => $data['parent_id'] ?? null,
                 'display_order' => $data['display_order'] ?? 0,
                 'status'        => (bool) $data['status'],
-                // is_gemstone is only meaningful for top-level categories,
-                // but storing it uniformly keeps the column predictable and
-                // lets the UI hide/show the checkbox without server gymnastics.
-                'is_gemstone'   => empty($data['parent_id']) ? (bool) ($data['is_gemstone'] ?? false) : false,
+                'is_gemstone'   => (bool) ($data['is_gemstone'] ?? false),
             ]);
 
             if ($request->hasFile('image')) {
@@ -168,8 +158,7 @@ class CategoryController extends Controller
      */
     public function show(Category $category): View
     {
-        $category->load(['creator', 'updater', 'parent']);
-        $category->loadCount('children');
+        $category->load(['creator', 'updater']);
         return view('categories.show', compact('category'));
     }
 
@@ -178,17 +167,7 @@ class CategoryController extends Controller
      */
     public function edit(Category $category): View
     {
-        // Available parents = active top-level categories EXCLUDING self.
-        $parents = Category::active()
-            ->topLevel()
-            ->where('id', '!=', $category->id)
-            ->ordered()
-            ->get(['id', 'name']);
-
-        // If this category has children, it cannot become a child itself.
-        $hasChildren = $category->children()->exists();
-
-        return view('categories.edit', compact('category', 'parents', 'hasChildren'));
+        return view('categories.edit', compact('category'));
     }
 
     /**
@@ -204,23 +183,8 @@ class CategoryController extends Controller
                 'description'   => $data['description'] ?? null,
                 'display_order' => $data['display_order'] ?? 0,
                 'status'        => (bool) $data['status'],
+                'is_gemstone'   => (bool) ($data['is_gemstone'] ?? false),
             ];
-
-            // Only update parent_id if the request actually sent it.
-            if (array_key_exists('parent_id', $data)) {
-                $payload['parent_id'] = $data['parent_id'] ?: null;
-            }
-
-            // is_gemstone only applies to top-level categories. If this
-            // category currently has a parent OR is being moved under a
-            // parent, force the flag false. Otherwise persist the form value.
-            $effectiveParentId = array_key_exists('parent_id', $payload)
-                ? $payload['parent_id']
-                : $category->parent_id;
-
-            $payload['is_gemstone'] = empty($effectiveParentId)
-                ? (bool) ($data['is_gemstone'] ?? false)
-                : false;
 
             $category->fill($payload)->save();
 
@@ -251,23 +215,9 @@ class CategoryController extends Controller
 
     /**
      * Soft-delete a category.
-     * Per spec: a category with linked children (subcategories) or products
-     * cannot be deleted — it must be deactivated instead.
      */
     public function destroy(Category $category, Request $request): JsonResponse|RedirectResponse
     {
-        $childCount = $category->children()->count();
-
-        if ($childCount > 0) {
-            $message = 'Cannot delete: this category has ' . $childCount . ' subcategor'
-                . ($childCount === 1 ? 'y' : 'ies') . '. Deactivate it instead.';
-
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json(['success' => false, 'message' => $message], 422);
-            }
-            return back()->with('error', $message);
-        }
-
         $category->delete();
 
         if ($request->wantsJson() || $request->ajax()) {

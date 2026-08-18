@@ -30,25 +30,10 @@
                     <form id="categoryForm" class="needs-validation" novalidate @submit.prevent="submitForm($event)">
                         @csrf
 
-                        {{-- Parent --}}
-                        <div class="mb-3">
-                            <label for="parent_id" class="form-label">Parent Category</label>
-                            <select class="form-select" id="parent_id" name="parent_id" v-model="form.parent_id">
-                                <option :value="null">— None (Top-Level Category) —</option>
-                                @foreach ($parents as $p)
-                                    <option value="{{ $p->id }}">{{ $p->name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted">
-                                Leave blank to create a <strong>top-level category</strong>.
-                                Pick a parent to create a <strong>subcategory</strong> instead.
-                            </small>
-                        </div>
-
                         {{-- Name --}}
                         <div class="mb-3">
                             <label for="name" class="form-label">
-                                @{{ form.parent_id ? 'Subcategory Name' : 'Category Name' }}
+                                Category Name
                                 <span class="text-danger">*</span>
                             </label>
                             <input type="text" class="form-control"
@@ -103,8 +88,8 @@
                             </div>
                         </div>
 
-                        {{-- Gemstone-Type flag (top-level only) --}}
-                        <div class="mb-3" v-show="!form.parent_id">
+                        {{-- Gemstone-Type flag --}}
+                        <div class="mb-3">
                             <label class="form-label d-block">Gemstone Category</label>
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="is_gemstone"
@@ -154,12 +139,10 @@
                 <div class="card-body">
                     <h5 class="header-title">Tips</h5>
                     <ul class="text-muted small mb-0 ps-3">
-                        <li><strong>Top-level vs subcategory:</strong> the Parent Category dropdown decides. Leave blank for top-level.</li>
                         <li>Names must be unique across the platform.</li>
                         <li>Codes cannot contain spaces; underscores are allowed.</li>
-                        <li>Subcategory codes typically follow <code>PARENT_CHILD</code> (e.g. <code>GEM_RUB</code>).</li>
                         <li>Inactive categories stay linked to existing products.</li>
-                        <li>Categories with linked subcategories or products cannot be deleted &mdash; deactivate them instead.</li>
+                        <li>Categories with linked products cannot be deleted &mdash; deactivate them instead.</li>
                     </ul>
                 </div>
             </div>
@@ -176,7 +159,6 @@
         el: '#categoryCreateApp',
         data: {
             form: {
-                parent_id: null,
                 name: '',
                 code: '',
                 description: '',
@@ -237,17 +219,12 @@
                 this.submitting = true;
 
                 const fd = new FormData();
-                if (this.form.parent_id) fd.append('parent_id', this.form.parent_id);
                 fd.append('name', this.form.name);
                 fd.append('code', this.form.code);
                 fd.append('description', this.form.description || '');
                 fd.append('display_order', this.form.display_order || 0);
                 fd.append('status', this.form.status ? 1 : 0);
-                // Only send is_gemstone when creating a top-level category;
-                // for subcategories the controller forces it false anyway.
-                if (!this.form.parent_id) {
-                    fd.append('is_gemstone', this.form.is_gemstone ? 1 : 0);
-                }
+                fd.append('is_gemstone', this.form.is_gemstone ? 1 : 0);
                 if (this.imageFile) fd.append('image', this.imageFile);
 
                 try {

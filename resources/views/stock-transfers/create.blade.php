@@ -132,7 +132,10 @@
                                 <tr v-for="(line, idx) in form.lines" :key="idx"
                                     :class="{ 'table-warning': line.qty > line.on_hand }">
                                     <td>
-                                        <div class="fw-semibold">@{{ line.product_title }}</div>
+                                        <div class="fw-semibold">
+                                            @{{ line.product_title }}
+                                            <span v-if="line.is_group" class="badge badge-soft-info fs-xxs ms-1">group of @{{ line.on_hand }}</span>
+                                        </div>
                                         <small class="text-muted">SKU: @{{ line.product_sku }}</small>
                                     </td>
                                     <td><code class="small">@{{ line.barcode || '—' }}</code></td>
@@ -257,7 +260,13 @@ $(function () {
                 return this.form.lines.reduce((s, l) => s + (Number(l.qty) || 0), 0);
             },
             distinctProducts() {
-                const ids = new Set(this.form.lines.map((l) => l.product_id));
+                // Count distinct pieces actually being moved, not cart
+                // rows -- a box-group row expands into several distinct
+                // purchase_product_id picks at submit time.
+                const ids = new Set();
+                this.form.lines.forEach((l) => {
+                    this.allocatePicks(l).forEach((p) => ids.add(p.purchase_product_id));
+                });
                 return ids.size;
             },
             canPost() {
@@ -309,25 +318,46 @@ $(function () {
                         return;
                     }
 
-                    // If piece already in cart, bump qty (capped at on_hand).
-                    const existing = this.form.lines.find(
-                        (l) => l.purchase_product_id === data.piece.purchase_product_id
-                    );
+                    // Box lines can have several distinct purchase_products
+                    // rows sharing one dock barcode (one per box, 1:1 with
+                    // its own product) -- group those under a single cart
+                    // row with a quantity, instead of only ever reaching the
+                    // first one. Piece lines keep the old one-scan-one-unit
+                    // behaviour: each scan is a specific, individually
+                    // verified piece.
+                    const p = data.piece;
+                    const isBox = p.type === 'box' && p.pieces && p.pieces.length > 1;
+                    const existing = this.form.lines.find((l) => l.barcode === p.barcode);
+
                     if (existing) {
                         if (existing.qty < existing.on_hand) {
                             existing.qty += 1;
                         }
+                    } else if (isBox) {
+                        this.form.lines.push({
+                            is_group:      true,
+                            barcode:       p.barcode,
+                            type:          p.type,
+                            product_title: p.product_title,
+                            product_sku:   p.product_sku,
+                            on_hand:       p.on_hand,
+                            qty:           1,
+                            pieces:        p.pieces,
+                            to_rack_id:    null,
+                            notes:         '',
+                        });
                     } else {
                         this.form.lines.push({
-                            purchase_product_id: data.piece.purchase_product_id,
-                            product_id:          data.piece.product_id,
-                            product_title:      data.piece.product_title,
-                            product_sku:        data.piece.product_sku,
-                            barcode:            data.piece.barcode,
-                            on_hand:            data.piece.on_hand,
-                            qty:                1,
-                            to_rack_id:         null,
-                            notes:              '',
+                            is_group:             false,
+                            purchase_product_id:  p.purchase_product_id,
+                            product_id:           p.product_id,
+                            product_title:        p.product_title,
+                            product_sku:          p.product_sku,
+                            barcode:              p.barcode,
+                            on_hand:              p.on_hand,
+                            qty:                  1,
+                            to_rack_id:           null,
+                            notes:                '',
                         });
                     }
 
@@ -344,6 +374,26 @@ $(function () {
             },
 
             removeLine(idx) { this.form.lines.splice(idx, 1); },
+
+            // Expands one grouped cart row into the distinct
+            // purchase_product_id picks that actually get submitted --
+            // FIFO across line.pieces, capped at the chosen qty. A
+            // single-piece line just passes itself through.
+            allocatePicks(line) {
+                if (!line.is_group) {
+                    return [{ purchase_product_id: line.purchase_product_id, qty: Number(line.qty) || 1 }];
+                }
+                let remaining = Number(line.qty) || 0;
+                const picks = [];
+                for (const p of line.pieces) {
+                    if (remaining <= 0) break;
+                    const take = Math.min(p.balance, remaining);
+                    if (take <= 0) continue;
+                    picks.push({ purchase_product_id: p.purchase_product_id, qty: take });
+                    remaining -= take;
+                }
+                return picks;
+            },
 
             validate() {
                 this.errors = {};
@@ -378,12 +428,12 @@ $(function () {
                     to_location_id:   this.form.to_location_id,
                     status,
                     note:             this.form.note,
-                    lines: this.form.lines.map((l) => ({
-                        purchase_product_id: l.purchase_product_id,
-                        qty:                 Number(l.qty) || 1,
+                    lines: this.form.lines.flatMap((l) => this.allocatePicks(l).map((pick) => ({
+                        purchase_product_id: pick.purchase_product_id,
+                        qty:                 pick.qty,
                         to_rack_id:          l.to_rack_id || null,
                         notes:               l.notes || null,
-                    })),
+                    }))),
                 };
 
                 try {

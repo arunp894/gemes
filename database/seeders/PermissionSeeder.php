@@ -28,6 +28,18 @@ class PermissionSeeder extends Seeder
             ['slug' => 'subcategories.edit',       'name' => 'Edit Subcategories',       'module' => 'subcategories'],
             ['slug' => 'subcategories.delete',     'name' => 'Delete Subcategories',     'module' => 'subcategories'],
 
+            // ----- Countries of Origin module -----
+            ['slug' => 'country-origins.view',     'name' => 'View Countries of Origin', 'module' => 'country-origins'],
+            ['slug' => 'country-origins.create',   'name' => 'Create Countries of Origin', 'module' => 'country-origins'],
+            ['slug' => 'country-origins.edit',     'name' => 'Edit Countries of Origin', 'module' => 'country-origins'],
+            ['slug' => 'country-origins.delete',   'name' => 'Delete Countries of Origin', 'module' => 'country-origins'],
+
+            // ----- Pages module (About Us, Terms & Conditions, ...) -----
+            ['slug' => 'pages.view',               'name' => 'View Pages',               'module' => 'pages'],
+            ['slug' => 'pages.create',             'name' => 'Create Pages',             'module' => 'pages'],
+            ['slug' => 'pages.edit',               'name' => 'Edit Pages',               'module' => 'pages'],
+            ['slug' => 'pages.delete',             'name' => 'Delete Pages',             'module' => 'pages'],
+
             // ----- Products module -----
             ['slug' => 'products.view',            'name' => 'View Products',            'module' => 'products'],
             ['slug' => 'products.create',          'name' => 'Create Products',          'module' => 'products'],
@@ -90,6 +102,12 @@ class PermissionSeeder extends Seeder
             ['slug' => 'banners.create',           'name' => 'Create Banners',            'module' => 'banners'],
             ['slug' => 'banners.edit',             'name' => 'Edit Banners',              'module' => 'banners'],
             ['slug' => 'banners.delete',           'name' => 'Delete Banners',            'module' => 'banners'],
+
+            // ----- Blog module -----
+            ['slug' => 'blogs.view',               'name' => 'View Blog Posts',           'module' => 'blogs'],
+            ['slug' => 'blogs.create',             'name' => 'Create Blog Posts',         'module' => 'blogs'],
+            ['slug' => 'blogs.edit',               'name' => 'Edit Blog Posts',           'module' => 'blogs'],
+            ['slug' => 'blogs.delete',             'name' => 'Delete Blog Posts',         'module' => 'blogs'],
 
             // ----- Barcodes -----
             ['slug' => 'barcodes.view',            'name' => 'View Barcodes',            'module' => 'barcodes'],

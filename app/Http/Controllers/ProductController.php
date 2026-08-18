@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Models\Barcode;
 use App\Models\Category;
 use App\Models\Channel;
+use App\Models\CountryOfOrigin;
 use App\Models\Product;
 use App\Services\BarcodeService;
 use Illuminate\Http\JsonResponse;
@@ -28,35 +29,27 @@ class ProductController extends Controller
 
     /**
      * Display the product listing page.
-     * Renders dropdown options for filters (top-level categories, statuses).
+     * Renders dropdown options for filters (categories, statuses).
      */
     public function index(): View
     {
-        $topCategories = Category::active()->topLevel()->ordered()->get(['id', 'name']);
-        return view('products.index', compact('topCategories'));
+        $categories = Category::active()->ordered()->get(['id', 'name']);
+        return view('products.index', compact('categories'));
     }
 
     /**
      * Yajra DataTables AJAX endpoint.
-     * Supports filters: category_id (top-level), subcategory_id (leaf),
-     * status (0/1), website_enabled (0/1), featured (0/1), search.
+     * Supports filters: category_id, status (0/1), website_enabled (0/1),
+     * featured (0/1), search.
      */
     public function data(Request $request): JsonResponse
     {
         $query = Product::query()
-            ->with(['category.parent', 'primaryBarcode']);
+            ->with(['category', 'primaryBarcode']);
 
-        // Filter: top-level category (matches the category's parent_id).
+        // Filter: category (direct match).
         if ($request->filled('category_id')) {
-            $topId = (int) $request->input('category_id');
-            $query->whereHas('category', function ($q) use ($topId) {
-                $q->where('parent_id', $topId);
-            });
-        }
-
-        // Filter: leaf subcategory direct match.
-        if ($request->filled('subcategory_id')) {
-            $query->where('category_id', (int) $request->input('subcategory_id'));
+            $query->where('category_id', (int) $request->input('category_id'));
         }
 
         // Filter: product status.
@@ -175,9 +168,10 @@ class ProductController extends Controller
     public function create(): View
     {
         return view('products.create', [
-            'topCategories' => Category::active()->topLevel()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
-            'channels'      => Channel::active()->ordered()->get(['id', 'name', 'code']),
-            'product'       => null,
+            'categories' => Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
+            'channels'   => Channel::active()->ordered()->get(['id', 'name', 'code']),
+            'countriesOfOrigin' => CountryOfOrigin::active()->ordered()->get(['id', 'name']),
+            'product'    => null,
         ]);
     }
 
@@ -219,7 +213,7 @@ class ProductController extends Controller
     public function show(Product $product): View
     {
         $product->load([
-            'category.parent',
+            'category',
             'barcodes.channels',
             'creator',
             'updater',
@@ -231,25 +225,15 @@ class ProductController extends Controller
     public function edit(Product $product): View
     {
         $product->load([
-            'category.parent',
+            'category',
             'barcodes.channels',
         ]);
 
-        // For the subcategory cascading dropdown: provide the matching top
-        // category id so the front-end can preselect it.
-        $topCategoryId = $product->category?->parent_id ?? $product->category_id;
-
-        $subcategories = Category::active()
-            ->where('parent_id', $product->category?->parent_id)
-            ->ordered()
-            ->get(['id', 'name']);
-
         return view('products.edit', [
-            'product'         => $product,
-            'topCategories'   => Category::active()->topLevel()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
-            'channels'        => Channel::active()->ordered()->get(['id', 'name', 'code']),
-            'topCategoryId'   => $topCategoryId,
-            'subcategories'   => $subcategories,
+            'product'    => $product,
+            'categories' => Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
+            'channels'   => Channel::active()->ordered()->get(['id', 'name', 'code']),
+            'countriesOfOrigin' => CountryOfOrigin::active()->ordered()->get(['id', 'name']),
         ]);
     }
 
@@ -400,25 +384,8 @@ class ProductController extends Controller
     }
 
     /* =================================================================
-     |  AJAX helpers — cascading dropdown + barcode utilities
+     |  AJAX helpers — barcode utilities
      | ================================================================= */
-
-    /**
-     * Returns active subcategories under a given top-level category, for
-     * the cascading Category → Subcategory dropdown on the product form.
-     */
-    public function subcategoriesByParent(Category $category): JsonResponse
-    {
-        $subcategories = Category::active()
-            ->where('parent_id', $category->id)
-            ->ordered()
-            ->get(['id', 'name', 'code']);
-
-        return response()->json([
-            'success' => true,
-            'data'    => $subcategories,
-        ]);
-    }
 
     /**
      * Returns a freshly-generated unique EAN-13.
@@ -500,7 +467,7 @@ class ProductController extends Controller
             'category_id'       => $data['category_id'] ?? null,
             'short_description' => $data['short_description'] ?? null,
             'full_description'  => $data['full_description'] ?? null,
-            'country_of_origin' => $data['country_of_origin'] ?? null,
+            'country_of_origin_id' => $data['country_of_origin_id'] ?? null,
             'notes_tags'        => $data['notes_tags'] ?? null,
             'status'            => (bool) ($data['status'] ?? false),
 

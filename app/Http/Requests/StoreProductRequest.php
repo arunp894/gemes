@@ -67,7 +67,7 @@ class StoreProductRequest extends FormRequest
 
             'short_description' => ['nullable', 'string', 'max:500'],
             'full_description'  => ['nullable', 'string'],
-            'country_of_origin' => ['nullable', 'string', 'max:100'],
+            'country_of_origin_id' => ['nullable', 'integer', Rule::exists('countries_of_origin', 'id')->whereNull('deleted_at')],
             'notes_tags'        => ['nullable', 'string', 'max:1000'],
             'status'            => ['required', 'boolean'],
 
@@ -129,8 +129,8 @@ class StoreProductRequest extends FormRequest
 
     /**
      * Conditional gemstone field requirements.
-     * If the chosen subcategory's top-level parent has `is_gemstone = true`,
-     * carat_weight / stone_type / treatment become required.
+     * If the chosen category has `is_gemstone = true`, carat_weight /
+     * stone_type / treatment become required.
      */
     protected function validateGemstoneFields(Validator $v): void
     {
@@ -139,14 +139,8 @@ class StoreProductRequest extends FormRequest
             return; // already errored on category_id rule
         }
 
-        $category = Category::with('parent')->find($categoryId);
-        if (! $category) {
-            return;
-        }
-
-        $top = $category->parent ?? $category;
-
-        if (! (bool) $top->is_gemstone) {
+        $category = Category::find($categoryId);
+        if (! $category || ! (bool) $category->is_gemstone) {
             return;
         }
 
@@ -234,7 +228,7 @@ class StoreProductRequest extends FormRequest
         return [
             'sku.unique'           => 'SKU already exists. Choose a different SKU.',
             'sku.regex'            => 'SKU may only contain letters, numbers, hyphens, and underscores (no spaces).',
-            'category_id.exists'   => 'Please choose a valid Subcategory.',
+            'category_id.exists'   => 'Please choose a valid category.',
             'primary_image.max'    => 'Primary image must not be larger than 5 MB.',
             'primary_image.mimes'  => 'Primary image must be a JPG or PNG file.',
             'gallery_images.max'   => 'You may upload at most ' . Product::MAX_GALLERY_IMAGES . ' gallery images.',
@@ -249,10 +243,10 @@ class StoreProductRequest extends FormRequest
         return [
             'title'              => 'Product Title',
             'sku'                => 'SKU',
-            'category_id'        => 'Subcategory',
+            'category_id'        => 'Category',
             'short_description'  => 'Short Description',
             'full_description'   => 'Full Description',
-            'country_of_origin'  => 'Country of Origin',
+            'country_of_origin_id' => 'Country of Origin',
             'carat_weight'       => 'Carat Weight',
             'stone_type'         => 'Stone Type',
             'colour_grade'       => 'Colour Grade',

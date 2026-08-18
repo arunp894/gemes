@@ -247,6 +247,60 @@ class StockService
     }
 
     /**
+     * Pieces sharing a given receiving-dock barcode that have positive
+     * balance at the given location. Multiple purchase_products rows can
+     * carry the same barcode -- it's the dock-scan value captured at
+     * purchase entry, not the unique per-product retail barcode in the
+     * `barcodes` table -- which is exactly what lets a box line's many
+     * 1:1 rows be found and partially transferred as a group.
+     *
+     * Returns [purchase_product_id => balance], oldest piece first (FIFO).
+     */
+    public function availablePiecesForBarcode(string $barcode, int $locationId): array
+    {
+        $pieceIds = PurchaseProduct::where('barcode', $barcode)->pluck('id');
+        if ($pieceIds->isEmpty()) {
+            return [];
+        }
+
+        $rows = StockMovement::query()
+            ->selectRaw('purchase_product_id, '
+                . 'SUM(CASE WHEN direction = ? THEN qty ELSE 0 END) as in_qty, '
+                . 'SUM(CASE WHEN direction = ? THEN qty ELSE 0 END) as out_qty',
+                [StockMovement::DIRECTION_IN, StockMovement::DIRECTION_OUT])
+            ->whereIn('purchase_product_id', $pieceIds)
+            ->where('location_id', $locationId)
+            ->groupBy('purchase_product_id')
+            ->get();
+
+        $available = [];
+        foreach ($rows as $r) {
+            $bal = (int) $r->in_qty - (int) $r->out_qty;
+            if ($bal > 0) {
+                $available[(int) $r->purchase_product_id] = $bal;
+            }
+        }
+        if (empty($available)) {
+            return [];
+        }
+
+        $order = PurchaseProduct::whereIn('id', array_keys($available))
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->pluck('id')
+            ->toArray();
+
+        $ordered = [];
+        foreach ($order as $id) {
+            if (isset($available[$id])) {
+                $ordered[$id] = $available[$id];
+            }
+        }
+
+        return $ordered;
+    }
+
+    /**
      * Have we already recorded movements for this source document?
      * Idempotency guard — call before re-posting to avoid double-booking.
      */
@@ -345,7 +399,9 @@ class StockService
                     }
                     $this->record([
                         'purchase_product_id' => $row->id,
-                        'product_id'          => $line->product_id,
+                        // Every row is its own product now (one row = one
+                        // product) — read it off the row, not the line.
+                        'product_id'          => $row->product_id,
                         'location_id'         => $locationId,
                         'direction'           => StockMovement::DIRECTION_IN,
                         'qty'                 => (int) $row->qty,
