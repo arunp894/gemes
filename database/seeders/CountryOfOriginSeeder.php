@@ -5,35 +5,61 @@ namespace Database\Seeders;
 use App\Models\CountryOfOrigin;
 use Illuminate\Database\Seeder;
 
-/**
- * Common gemstone-origin countries, weighted toward Sukaina Gems'
- * specialties (Paraiba Tourmaline: Mozambique/Brazil/Nigeria; Tanzanite:
- * Tanzania only). Idempotent — safe to re-run.
- */
 class CountryOfOriginSeeder extends Seeder
 {
     public function run(): void
     {
         $countries = [
-            'Mozambique',
-            'Tanzania',
-            'Brazil',
-            'Nigeria',
-            'Madagascar',
-            'Sri Lanka',
-            'Myanmar (Burma)',
-            'Zambia',
+            'Himalayan',
             'Kenya',
+            'Nigeria',
+            'Mexico',
+            'Switzerland',
+            'Zambia',
+            'Cambodia',
+            'Ceylon – Sri Lanka',
+            'Pakistan',
+            'Tanzania',
+            'Burma (Myanmar)',
+            'Siberia',
+            'Spain',
+            'Tanzania – Merelani Hills',
             'Thailand',
+            'Turkey',
+            'United States',
+            'Sri Lanka',
+            'Nepal',
+            'Namibia',
+            'Ireland',
+            'Indonesia',
+            'Germany',
+            'Czech Republic',
+            'Congo',
+            'Cambodia',
             'Colombia',
+            'Bolivia',
+            'Australia',
+            'Africa',
             'Afghanistan',
+            'Canada',
+            'Russia',
+            'Mexico',
             'India',
+            'Vietnam',
+            'Madagascar',
+            'Ethiopia',
+            'Brazil',
+            'Mozambique',
+            'Tanzania – United Republic of',
         ];
 
         foreach ($countries as $i => $name) {
             CountryOfOrigin::updateOrCreate(
                 ['name' => $name],
-                ['status' => true, 'display_order' => $i],
+                [
+                    'status' => true,
+                    'display_order' => $i + 1,
+                ],
             );
         }
     }
