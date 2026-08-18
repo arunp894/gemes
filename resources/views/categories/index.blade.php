@@ -14,7 +14,7 @@
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="#">Catalogue</a></li>                
+                <li class="breadcrumb-item"><a href="#">Stones</a></li>                
             </ol>
         </div>
     </div>

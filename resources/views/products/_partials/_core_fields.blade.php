@@ -28,12 +28,12 @@
 
             {{-- Category --}}
             <div class="col-md-6">
-                <label for="category_id" class="form-label">Category <span class="text-danger">*</span></label>
+                <label for="category_id" class="form-label">Stone <span class="text-danger">*</span></label>
                 <select id="category_id" name="category_id" class="form-select"
                     v-model="form.category_id"
                     :class="{ 'is-invalid': errors.category_id }"
                     @change="recomputeGemstone">
-                    <option :value="null">— Select Category —</option>
+                    <option :value="null">— Select Stones —</option>
                     @foreach ($categories as $cat)
                         <option value="{{ $cat->id }}"
                             data-gemstone="{{ $cat->is_gemstone ? '1' : '0' }}">{{ $cat->name }}</option>

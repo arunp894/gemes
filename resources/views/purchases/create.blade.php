@@ -25,7 +25,7 @@
             {{-- ╔════════════════════════════════════════════════════╗
                                  LEFT  COLUMN
                 ╚════════════════════════════════════════════════════╝ --}}
-            <div class="col-xl-9">
+            <div class="col-xl-10">
 
                 {{-- ──────── Header card ──────── --}}
                 <div class="card">
@@ -96,11 +96,11 @@
                         <div class="row g-2">
 
                             <div class="col-md-2">
-                                <label class="form-label">Category <span class="text-danger">*</span></label>
+                                <label class="form-label">Stone <span class="text-danger">*</span></label>
                                 <select class="form-select" v-model.number="addForm.category_id"
                                         :class="{ 'is-invalid': addErrors.category_id }"
                                         :disabled="!form.supplier_id">
-                                    <option :value="null">— Select category —</option>
+                                    <option :value="null">— Select Stone —</option>
                                     <option v-for="c in categoryOptions" :key="c.id" :value="c.id">@{{ c.name }}</option>
                                 </select>
                                 <div class="invalid-feedback">@{{ addErrors.category_id }}</div>
@@ -235,7 +235,7 @@
             {{-- ╔════════════════════════════════════════════════════╗
                                   RIGHT COLUMN — SUMMARY
                 ╚════════════════════════════════════════════════════╝ --}}
-            <div class="col-xl-3">
+            <div class="col-xl-2">
                 @include('purchases._partials._summary_card')
             </div>
 

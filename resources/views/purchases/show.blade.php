@@ -62,7 +62,7 @@
     <div class="row g-3">
 
         {{-- ─── Left: invoice ─── --}}
-        <div class="col-xl-9">
+        <div class="col-xl-10">
             <div class="card">
                 <div class="card-body">
 
@@ -187,7 +187,7 @@
         </div>
 
         {{-- ─── Right: summary ─── --}}
-        <div class="col-xl-3">
+        <div class="col-xl-2">
             <div class="card position-sticky" style="top: 1rem;">
                 <div class="card-header border-light">
                     <h5 class="card-title mb-0">Summary</h5>
