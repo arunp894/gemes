@@ -33,6 +33,7 @@ class PurchaseRepository
             // each row is its own product now.
             'lines.product:id,title,sku,pack_type,outer_pack_name,outer_pack_contains,inner_pack_name,inner_pack_contains',
             'lines.category:id,name,is_gemstone',
+            'lines.countryOfOrigin:id,name',
             'lines.rows.rack:id,code,name',
             'lines.rows.product:id,title,sku,status,website_enabled',
             'payments' => fn ($q) => $q->orderBy('payment_date')->orderBy('id'),

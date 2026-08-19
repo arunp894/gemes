@@ -98,28 +98,40 @@
                                 <small class="text-muted" v-if="supplierCategories.length">Filtered to this supplier.</small>
                             </div>
 
-                            <div class="col-md-3">
-                                <label class="form-label">Title <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" v-model="addForm.title" maxlength="200"
-                                       :class="{ 'is-invalid': addErrors.title }"
-                                       placeholder="e.g. Paraiba Tourmaline, loose">
-                                <div class="invalid-feedback">@{{ addErrors.title }}</div>
-                            </div>
-
                             <div class="col-md-2">
-                                <label class="form-label">Type</label>
-                                <select class="form-select" v-model="addForm.type" @change="onAddFormTypeChange">
-                                    <option value="piece">Piece</option>
-                                    <option value="box">Box</option>
-                                </select>
+                                <label class="form-label">Title</label>
+                                <input type="text" class="form-control" v-model="addForm.title" maxlength="200"
+                                       placeholder="e.g. Paraiba Tourmaline, loose (optional)">
                             </div>
 
                             <div class="col-md-1">
-                                <label class="form-label">Qty <span class="text-danger">*</span></label>
+                                <label class="form-label">Pcs <span class="text-danger">*</span></label>
                                 <input type="number" min="1" class="form-control" v-model.number="addForm.package_qty"
-                                       :disabled="addForm.type === 'piece'"
                                        :class="{ 'is-invalid': addErrors.package_qty }">
                                 <div class="invalid-feedback">@{{ addErrors.package_qty }}</div>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Carat Weight <span class="text-danger" v-if="addFormIsGemstone">*</span></label>
+                                <div class="input-group">
+                                    <input type="number" step="0.001" min="0.001" class="form-control"
+                                           v-model.number="addForm.carat_weight"
+                                           :class="{ 'is-invalid': addErrors.carat_weight }">
+                                    <span class="input-group-text">ct</span>
+                                    <div class="invalid-feedback">@{{ addErrors.carat_weight }}</div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label class="form-label">Barcode</label>
+                                <input type="text" class="form-control" v-model="addForm.barcode"
+                                       placeholder="scan/type, optional">
+                            </div>
+
+                            <div class="col-md-1">
+                                <label class="form-label">Price</label>
+                                <input type="number" step="0.01" min="0" class="form-control"
+                                       v-model.number="addForm.price" placeholder="optional">
                             </div>
 
                             <div class="col-md-2">
@@ -151,17 +163,6 @@
 
                             <template v-if="addFormIsGemstone">
                                 <div class="col-12"><hr class="my-1"></div>
-                                <div class="col-md-2">
-                                    <label class="form-label">Carat Weight <span class="text-danger">*</span></label>
-                                    <div class="input-group">
-                                        <input type="number" step="0.001" min="0.001" class="form-control"
-                                               v-model.number="addForm.carat_weight"
-                                               :class="{ 'is-invalid': addErrors.carat_weight }">
-                                        <span class="input-group-text">ct</span>
-                                        <div class="invalid-feedback">@{{ addErrors.carat_weight }}</div>
-                                    </div>
-                                    <small class="text-muted">Default; editable per row below.</small>
-                                </div>
                                 <div class="col-md-2">
                                     <label class="form-label">Stone Type <span class="text-danger">*</span></label>
                                     <select class="form-select" v-model="addForm.stone_type"
@@ -214,7 +215,7 @@
                                     <i class="ti ti-plus me-1"></i> Add to Purchase
                                 </button>
                                 <small class="text-muted" v-if="addForm.package_qty > 1">
-                                    Creates @{{ addForm.package_qty }} separate products, one per @{{ addForm.type }} — each gets its own photos and listing afterward.
+                                    Creates @{{ addForm.package_qty }} separate products — each gets its own photos and listing afterward.
                                 </small>
                             </div>
 

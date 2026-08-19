@@ -110,9 +110,8 @@
                                     </th>
                                     <th>#</th>
                                     <th>Product</th>
-                                    <th>Type</th>
-                                    <th>Pack Qty</th>
-                                    <th>Qty</th>
+                                    <th>Country of Origin</th>
+                                    <th>Pcs</th>
                                     <th class="text-end">Carat</th>
                                     <th>Barcode</th>
                                     <th>Lot Code</th>
@@ -131,14 +130,11 @@
                                     <tr class="table-light">
                                         <td></td>
                                         <td class="fw-semibold">{{ $i + 1 }}</td>
-                                        <td colspan="2">
+                                        <td>
                                             <div class="fw-semibold">{{ $line->title ?? $line->product?->title }}</div>
                                             <small class="text-muted">{{ $line->category?->name ?? ('SKU: ' . $line->product?->sku) }}</small>
                                         </td>
-                                        <td>
-                                            <strong>{{ $line->package_qty }}</strong>
-                                            <small class="text-muted">{{ $line->package_name }}</small>
-                                        </td>
+                                        <td class="small">{{ $line->countryOfOrigin?->name ?? '—' }}</td>
                                         <td colspan="6"></td>
                                         <td class="text-end fw-bold">{{ number_format((float) $line->total, 2) }}</td>
                                         <td></td>
@@ -153,12 +149,12 @@
                                             <td></td>
                                             <td class="ps-4 text-muted small">
                                                 <i class="ti ti-corner-down-right me-1"></i>
-                                                {{ $line->package_name }} #{{ $ri + 1 }}
+                                                Pcs #{{ $ri + 1 }}
                                                 @if ($row->product)
                                                     <br><code class="fs-xxs">{{ $row->product->sku }}</code>
                                                 @endif
                                             </td>
-                                            <td colspan="2"></td>
+                                            <td></td>
                                             <td>{{ $row->qty }}</td>
                                             <td class="text-end small">{{ $row->carat_weight !== null ? rtrim(rtrim(number_format((float) $row->carat_weight, 3), '0'), '.') : '—' }}</td>
                                             <td><code class="small">{{ $row->barcode ?: '—' }}</code></td>

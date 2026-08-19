@@ -483,9 +483,14 @@ class PurchaseService
                 ? (float) $lineData['carat_weight']
                 : null;
 
+            // Title is optional on the Add Item form — fall back to the
+            // category name so purchase_lines.title (and every product
+            // this line stamps out below) never ends up blank.
+            $title = trim((string) ($lineData['title'] ?? ''));
+
             $lineFields = [
                 'category_id'       => $category->id,
-                'title'             => $lineData['title'],
+                'title'             => $title !== '' ? $title : $category->name,
                 'short_description' => $lineData['short_description'] ?? null,
                 'full_description'  => $lineData['full_description']  ?? null,
                 'country_of_origin_id' => $lineData['country_of_origin_id'] ?? null,

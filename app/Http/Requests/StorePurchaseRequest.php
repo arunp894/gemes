@@ -47,7 +47,7 @@ class StorePurchaseRequest extends FormRequest
                 'required', 'integer',
                 Rule::exists('categories', 'id')->whereNull('deleted_at')->where('status', 1),
             ],
-            'lines.*.title'              => ['required', 'string', 'max:200'],
+            'lines.*.title'              => ['nullable', 'string', 'max:200'],
             'lines.*.short_description'  => ['nullable', 'string', 'max:500'],
             'lines.*.full_description'   => ['nullable', 'string'],
             'lines.*.country_of_origin_id' => ['nullable', 'integer', Rule::exists('countries_of_origin', 'id')->whereNull('deleted_at')],
@@ -136,7 +136,6 @@ class StorePurchaseRequest extends FormRequest
     {
         return [
             'lines.required'             => 'Add at least one item to the purchase.',
-            'lines.*.title.required'     => 'Give each item a title before saving.',
             'lines.*.category_id.required' => 'Choose a category for each item.',
             'lines.*.rows.required'      => 'Each item needs at least one inventory row.',
             'lines.*.rows.*.qty.min'     => 'Quantity must be zero or more.',

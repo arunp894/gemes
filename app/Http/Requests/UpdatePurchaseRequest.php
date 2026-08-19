@@ -61,7 +61,7 @@ class UpdatePurchaseRequest extends FormRequest
                 'required', 'integer',
                 Rule::exists('categories', 'id')->whereNull('deleted_at')->where('status', 1),
             ],
-            'lines.*.title'              => ['required', 'string', 'max:200'],
+            'lines.*.title'              => ['nullable', 'string', 'max:200'],
             'lines.*.short_description'  => ['nullable', 'string', 'max:500'],
             'lines.*.full_description'   => ['nullable', 'string'],
             'lines.*.country_of_origin_id' => ['nullable', 'integer', Rule::exists('countries_of_origin', 'id')->whereNull('deleted_at')],

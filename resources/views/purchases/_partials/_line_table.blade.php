@@ -1,13 +1,14 @@
 {{-- Inline multi-row product table.
 
      Layout strategy (driven by `line.rows.length`, not `line.type`):
-       - Each LINE renders a "parent" <tr> with the item's title/category,
-         type pill, and Pack Qty input. Pack Qty drives inventory-row
-         count for BOX lines only (rebuildRows() keeps line.rows in
-         sync) — each row becomes its own product on save. PIECE lines
-         are always exactly one row; Pack Qty is disabled for them and
-         the physical count goes on that row's own Qty field instead, so
-         several identical pieces can share one product.
+       - Each LINE renders a "parent" <tr> with the item's title/category
+         and country of origin. Pack Qty (hidden from this table; set via
+         the Add Item form's Pcs field) drives inventory-row count for
+         BOX lines — each row becomes its own product on save. PIECE
+         lines are always exactly one row; several identical pieces can
+         share one product via that row's own Qty field instead. Type and
+         Pack Qty stay on the line under the hood (still sent to the
+         server) but aren't shown or editable here anymore.
        - When a line has exactly ONE row, the parent row also carries that
          row's qty / carat / barcode / rack / price inputs inline.
        - When a line has MORE THAN ONE row, the parent row instead shows
@@ -34,9 +35,8 @@
                 <tr>
                     <th style="width: 32px;">#</th>
                     <th>Item</th>
-                    <th style="width: 110px;">Type</th>
-                    <th style="width: 110px;">Pack Qty</th>
-                    <th style="width: 90px;">Qty</th>
+                    <th style="width: 140px;">Country of Origin</th>
+                    <th style="width: 90px;">Pcs</th>
                     <th style="width: 100px;">Carat</th>
                     <th style="width: 170px;">Barcode</th>
                     <th style="width: 130px;">Lot Code</th>
@@ -84,31 +84,7 @@
                             </div>
                         </td>
 
-<td>
-    <select class="form-select form-select-sm"
-            v-model="line.type"
-            @change="rebuildRows(li)">
-        <option value="piece">Piece</option>
-        <option value="box">Box</option>
-    </select>
-</td>
-
-                        {{-- Pack Qty: number of inventory rows/products this line
-                             produces. Disabled for Piece — a Piece line is always
-                             exactly one row; the physical count goes on that row's
-                             own Qty field instead. --}}
-                        <td>
-                            <div class="input-group input-group-sm">
-                                <input type="number" min="1" class="form-control"
-                                       v-model.number="line.package_qty"
-                                       :disabled="line.type === 'piece'"
-                                       @change="rebuildRows(li)"
-                                       @keydown.enter.prevent="focusFirstRow(li)">
-                                <span class="input-group-text">
-                                    @{{ line.type === 'piece' ? 'pcs' : 'box' }}
-                                </span>
-                            </div>
-                        </td>
+                        <td class="small">@{{ countryOfOriginName(line.country_of_origin_id) }}</td>
 
                         {{-- Single-row lines (Pack Qty = 1): hoist row[0]'s
                              inputs straight into the parent row. --}}
@@ -184,14 +160,13 @@
 
                             <td class="ps-4 small text-muted bg-light bg-opacity-25">
                                 <i class="ti ti-corner-down-right me-1"></i>
-                                @{{ line.package_name }} #@{{ ri + 1 }}
+                                Pcs #@{{ ri + 1 }}
                                 <span v-if="row._product" class="badge badge-soft-success ms-1" :title="row._product.title">
                                     @{{ row._product.sku }}
                                 </span>
                                 <span v-else class="badge badge-soft-secondary ms-1">New</span>
                             </td>
 
-                            <td class="bg-light bg-opacity-25"></td>
                             <td class="bg-light bg-opacity-25"></td>
 
                             <td>
@@ -232,7 +207,7 @@
                 </template>
 
                 <tr v-if="form.lines.length === 0">
-                    <td colspan="12" class="text-center text-muted py-4">
+                    <td colspan="11" class="text-center text-muted py-4">
                         <i class="ti ti-package fs-22 d-block mb-1 text-muted"></i>
                         Add an item above to begin.
                     </td>

@@ -228,7 +228,7 @@
                 type: 'GET',
             },
             // dom: render table + (info+paginate) into a hidden wrapper; we'll move them via initComplete
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'checkbox',            name: 'checkbox',                  orderable: false, searchable: false, className: 'ps-3' },
@@ -255,7 +255,7 @@
             initComplete: function () {
                 // Move DataTables-rendered info & pagination into our card-footer slots
                 $('#categoriesInfoSlot').append($('#categoriesTable_info'));
-                $('#categoriesPaginationSlot').append($('#categoriesTable_paginate'));
+                $('#categoriesPaginationSlot').append($('.datatables-tail'));
             },
         });
 

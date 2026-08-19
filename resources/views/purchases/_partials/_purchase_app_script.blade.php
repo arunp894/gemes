@@ -57,25 +57,31 @@
             website_price: null,
             website_enabled: false,
             carat_weight:  null,
+            barcode:       '',
+            price:         null,
             stone_type:    null,
             colour_grade:  '',
             clarity_grade: null,
             cut_shape:     null,
             treatment:     null,
-            type:          'piece',
+            // Type is no longer chosen in the UI (Add Item's Type selector
+            // is hidden) — default to 'box' so the Pcs (package_qty) field
+            // stays enabled and drives row count, instead of the 'piece'
+            // default which locks it at 1.
+            type:          'box',
             package_qty:   1,
         };
     }
 
-    function emptyRow(caratDefault, websitePriceDefault) {
+    function emptyRow(caratDefault, websitePriceDefault, barcodeDefault, priceDefault) {
         return {
             id:               null,
             qty:              1,
             carat_weight:     (caratDefault !== undefined && caratDefault !== null) ? caratDefault : null,
-            barcode:          '',
+            barcode:          (barcodeDefault !== undefined && barcodeDefault !== null && barcodeDefault !== '') ? barcodeDefault : '',
             rack_id:          null,
             serial_number:    null,
-            price:            0,
+            price:            (priceDefault !== undefined && priceDefault !== null && priceDefault !== '') ? priceDefault : 0,
             website_price:    (websitePriceDefault !== undefined && websitePriceDefault !== null) ? websitePriceDefault : null,
             tax_percent:      0,
             discount_percent: 0,
@@ -274,6 +280,10 @@
                 const c = this.categories.find(c => c.id === id);
                 return c ? c.name : '—';
             },
+            countryOfOriginName(id) {
+                const o = this.countriesOfOrigin.find(o => o.id === id);
+                return o ? o.name : '—';
+            },
 
             /* Payments (create mode only) */
 
@@ -398,7 +408,6 @@
                 this.addErrors = {};
 
                 if (!this.addForm.category_id) this.addErrors.category_id = 'Required';
-                if (!this.addForm.title || !this.addForm.title.trim()) this.addErrors.title = 'Required';
 
                 // Piece lines are always a single inventory row/product —
                 // the physical count goes on that row's own Qty field
@@ -423,16 +432,25 @@
                     ? parseFloat(this.addForm.carat_weight) : null;
                 const websitePriceDefault = (this.addForm.website_price !== null && this.addForm.website_price !== '')
                     ? parseFloat(this.addForm.website_price) : null;
+                const barcodeDefault = (this.addForm.barcode || '').trim();
+                const priceDefault = (this.addForm.price !== null && this.addForm.price !== '')
+                    ? parseFloat(this.addForm.price) : null;
 
                 const rows = [];
                 for (let i = 0; i < qty; i++) {
-                    rows.push(emptyRow(caratDefault, websitePriceDefault));
+                    rows.push(emptyRow(caratDefault, websitePriceDefault, barcodeDefault, priceDefault));
                 }
+
+                // Title is optional — fall back to the category name so a
+                // line never shows blank in the items table or invoice.
+                const lineTitle = (this.addForm.title && this.addForm.title.trim())
+                    ? this.addForm.title.trim()
+                    : this.categoryName(this.addForm.category_id);
 
                 this.form.lines.push({
                     id:                 null,
                     category_id:        this.addForm.category_id,
-                    title:              this.addForm.title.trim(),
+                    title:              lineTitle,
                     short_description:  null,
                     full_description:   null,
                     country_of_origin_id: this.addForm.country_of_origin_id || null,
@@ -457,7 +475,7 @@
                 const newIdx = this.form.lines.length - 1;
                 this.flashLine(newIdx);
                 this.refreshLotCodePreview(newIdx);
-                this.setMessage('success', `Added "${this.form.lines[newIdx].title}" (${qty} ${this.form.lines[newIdx].package_name.toLowerCase()}${qty === 1 ? '' : 's'}).`);
+                this.setMessage('success', `Added "${this.form.lines[newIdx].title}" (${qty} pc${qty === 1 ? '' : 's'}).`);
                 this.addForm = emptyAddForm();
             },
             onAddFormTypeChange() {
