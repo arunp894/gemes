@@ -465,6 +465,8 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:stock-transfers.view')->name('data');
         Route::get('/lookup-barcode', [StockTransferController::class, 'lookupByBarcode'])
             ->middleware('permission:stock-transfers.create')->name('lookup-barcode');
+        Route::get('/search-pieces', [StockTransferController::class, 'searchPieces'])
+            ->middleware('permission:stock-transfers.create')->name('search-pieces');
         Route::post('/{stockTransfer}/post', [StockTransferController::class, 'post'])
             ->whereNumber('stockTransfer')->middleware('permission:stock-transfers.post')->name('post');
         Route::post('/{stockTransfer}/receive', [StockTransferController::class, 'receive'])

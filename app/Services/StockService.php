@@ -332,7 +332,7 @@ class StockService
         // Schema invariants enforced here, not in DB constraints, so
         // we get clean PHP errors with context.
         if (! isset($data['purchase_product_id'], $data['product_id'], $data['location_id'])) {
-            throw new InvalidArgumentException('record(): purchase_product_id, product_id, and location_id are required.');
+            throw new InvalidArgumentException('record(): purchase_product_id, product_id, and location_id are all required.');
         }
         if (! isset($data['direction']) || ! in_array($data['direction'], StockMovement::DIRECTIONS, true)) {
             throw new InvalidArgumentException("record(): direction must be 'in' or 'out'.");

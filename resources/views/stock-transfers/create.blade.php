@@ -73,30 +73,47 @@
                     </div>
                 </div>
 
-                {{-- Scanner --}}
+                {{-- Search (lot code / barcode / product) --}}
                 <div class="card">
                     <div class="card-header border-light d-flex align-items-center gap-2">
-                        <i class="ti ti-barcode fs-18 text-primary"></i>
-                        <h5 class="card-title mb-0">Scan Piece</h5>
+                        <i class="ti ti-search fs-18 text-primary"></i>
+                        <h5 class="card-title mb-0">Search Stock</h5>
                     </div>
                     <div class="card-body">
-                        <div class="row g-2 align-items-end">
+                        <div class="row g-2 mb-3" v-if="form.from_location_id">
                             <div class="col-md-8">
-                                <label class="form-label">
-                                    Barcode
-                                    <small class="text-muted">Scans only match pieces present at the source location.</small>
-                                </label>
-                                <input ref="barcodeInput" type="text" class="form-control form-control-lg"
-                                    v-model="barcodeInput"
-                                    :disabled="!form.from_location_id"
-                                    :placeholder="form.from_location_id ? 'Scan barcode and press Enter' : 'Select source location first'"
-                                    @keyup.enter.prevent="onBarcodeEnter">
+                                <input ref="searchInput" type="text" class="form-control" v-model="searchTerm"
+                                    placeholder="Lot code / barcode / product title…" @keyup.enter="searchPieces">
                             </div>
-                            <div class="col-md-4" v-if="scannerMessage">
-                                <div class="alert mb-0 py-2" :class="scannerAlertClass">
-                                    <i :class="scannerIconClass" class="me-1"></i>@{{ scannerMessage }}
-                                </div>
+                            <div class="col-md-auto">
+                                <button type="button" class="btn btn-soft-primary" :disabled="searching" @click="searchPieces">
+                                    <i class="ti ti-search me-1"></i> Search
+                                </button>
                             </div>
+                        </div>
+                        <div class="text-muted small" v-else>Select a source location above to search stock.</div>
+
+                        <div class="table-responsive" v-if="searchResults.length">
+                            <table class="table table-sm align-middle">
+                                <thead class="bg-light bg-opacity-25 thead-sm">
+                                    <tr class="text-uppercase fs-xxs">
+                                        <th>Lot Code</th><th>Product</th>
+                                        <th class="text-end">On Hand</th><th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="r in searchResults" :key="r.purchase_product_id">
+                                        <td><code>@{{ r.lot_code || r.barcode || ('#' + r.purchase_product_id) }}</code></td>
+                                        <td>@{{ r.product_title }}</td>
+                                        <td class="text-end">@{{ r.on_hand }}</td>
+                                        <td class="text-end">
+                                            <button type="button" class="btn btn-sm btn-soft-success" @click="addPieceFromSearch(r)" :disabled="isPieceAdded(r.purchase_product_id)">
+                                                <i class="ti ti-plus"></i> @{{ isPieceAdded(r.purchase_product_id) ? 'Added' : 'Add' }}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -112,7 +129,7 @@
 
                     <div v-if="form.lines.length === 0" class="card-body text-center text-muted py-5">
                         <i class="ti ti-package-off fs-1 d-block mb-2"></i>
-                        Scan a barcode to add pieces to this transfer.
+                        Search stock above to add pieces to this transfer.
                     </div>
 
                     <div v-else class="table-responsive">
@@ -123,7 +140,6 @@
                                     <th>Barcode</th>
                                     <th class="text-end" style="width: 10%;">On Hand</th>
                                     <th class="text-end" style="width: 10%;">Qty</th>
-                                    <th style="width: 18%;">To Rack</th>
                                     <th>Notes</th>
                                     <th class="text-center" style="width: 1%;"></th>
                                 </tr>
@@ -136,9 +152,9 @@
                                             @{{ line.product_title }}
                                             <span v-if="line.is_group" class="badge badge-soft-info fs-xxs ms-1">group of @{{ line.on_hand }}</span>
                                         </div>
-                                        <small class="text-muted">SKU: @{{ line.product_sku }}</small>
+                                        <small class="text-muted" v-if="line.product_sku">SKU: @{{ line.product_sku }}</small>
                                     </td>
-                                    <td><code class="small">@{{ line.barcode || '—' }}</code></td>
+                                    <td><code class="small">@{{ line.barcode || line.lot_code || '—' }}</code></td>
                                     <td class="text-end">@{{ line.on_hand }}</td>
                                     <td>
                                         <input type="number" min="1" :max="line.on_hand" step="1"
@@ -147,14 +163,6 @@
                                         <small v-if="line.qty > line.on_hand" class="d-block text-danger">
                                             <i class="ti ti-alert-triangle"></i> exceeds on-hand
                                         </small>
-                                    </td>
-                                    <td>
-                                        <select class="form-select form-select-sm" v-model.number="line.to_rack_id">
-                                            <option :value="null">— None —</option>
-                                            <option v-for="r in racks" :key="r.id" :value="r.id">
-                                                @{{ r.code }} — @{{ r.name }}
-                                            </option>
-                                        </select>
                                     </td>
                                     <td>
                                         <input type="text" class="form-control form-control-sm"
@@ -237,10 +245,9 @@ $(function () {
             locations: @json($locations),
             racks:     @json($racks),
 
-            barcodeInput: '',
-            scannerMessage: '',
-            scannerAlertClass: 'alert-info',
-            scannerIconClass: 'ti ti-info-circle',
+            searchTerm: '',
+            searchResults: [],
+            searching: false,
 
             form: {
                 transfer_date:    new Date().toISOString().slice(0, 10),
@@ -277,7 +284,7 @@ $(function () {
             },
         },
         mounted() {
-            this.$nextTick(() => this.$refs.barcodeInput?.focus());
+            this.$nextTick(() => this.$refs.searchInput?.focus());
         },
         methods: {
             locationNameById(id) {
@@ -294,83 +301,44 @@ $(function () {
                     }
                     this.form.lines = [];
                 }
-                this.$nextTick(() => this.$refs.barcodeInput?.focus());
+                this.searchResults = [];
+                this.$nextTick(() => this.$refs.searchInput?.focus());
             },
 
-            async onBarcodeEnter() {
-                const code = this.barcodeInput.trim();
-                if (!code || !this.form.from_location_id) return;
-                this.scannerMessage = '';
+            searchPieces() {
+                if (!this.form.from_location_id) return;
+                this.searching = true;
+                const params = new URLSearchParams({
+                    from_location_id: String(this.form.from_location_id),
+                    search:           this.searchTerm,
+                });
+                fetch(`{{ route('stock-transfers.search-pieces') }}?${params.toString()}`, { headers: { 'Accept': 'application/json' } })
+                    .then(r => r.json())
+                    .then(res => { this.searchResults = res.ok ? res.items : []; })
+                    .finally(() => { this.searching = false; });
+            },
 
-                try {
-                    const params = new URLSearchParams({
-                        barcode:          code,
-                        from_location_id: String(this.form.from_location_id),
-                    });
-                    const url = `{{ route('stock-transfers.lookup-barcode') }}?${params.toString()}`;
-                    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                    const data = await res.json();
+            isPieceAdded(purchaseProductId) {
+                return this.form.lines.some((l) => l.purchase_product_id === purchaseProductId);
+            },
 
-                    if (!res.ok || !data.ok) {
-                        this.scannerAlertClass = 'alert-danger';
-                        this.scannerIconClass  = 'ti ti-alert-circle';
-                        this.scannerMessage    = data.message || 'Barcode not found.';
-                        return;
-                    }
-
-                    // Box lines can have several distinct purchase_products
-                    // rows sharing one dock barcode (one per box, 1:1 with
-                    // its own product) -- group those under a single cart
-                    // row with a quantity, instead of only ever reaching the
-                    // first one. Piece lines keep the old one-scan-one-unit
-                    // behaviour: each scan is a specific, individually
-                    // verified piece.
-                    const p = data.piece;
-                    const isBox = p.type === 'box' && p.pieces && p.pieces.length > 1;
-                    const existing = this.form.lines.find((l) => l.barcode === p.barcode);
-
-                    if (existing) {
-                        if (existing.qty < existing.on_hand) {
-                            existing.qty += 1;
-                        }
-                    } else if (isBox) {
-                        this.form.lines.push({
-                            is_group:      true,
-                            barcode:       p.barcode,
-                            type:          p.type,
-                            product_title: p.product_title,
-                            product_sku:   p.product_sku,
-                            on_hand:       p.on_hand,
-                            qty:           1,
-                            pieces:        p.pieces,
-                            to_rack_id:    null,
-                            notes:         '',
-                        });
-                    } else {
-                        this.form.lines.push({
-                            is_group:             false,
-                            purchase_product_id:  p.purchase_product_id,
-                            product_id:           p.product_id,
-                            product_title:        p.product_title,
-                            product_sku:          p.product_sku,
-                            barcode:              p.barcode,
-                            on_hand:              p.on_hand,
-                            qty:                  1,
-                            to_rack_id:           null,
-                            notes:                '',
-                        });
-                    }
-
-                    this.barcodeInput = '';
-                    this.scannerAlertClass = 'alert-success';
-                    this.scannerIconClass  = 'ti ti-check';
-                    this.scannerMessage    = `Added: ${data.piece.product_title} (on hand: ${data.piece.on_hand})`;
-                    setTimeout(() => { this.scannerMessage = ''; }, 1800);
-                } catch (err) {
-                    this.scannerAlertClass = 'alert-danger';
-                    this.scannerIconClass  = 'ti ti-alert-circle';
-                    this.scannerMessage    = 'Network error during lookup.';
-                }
+            // Adds a piece straight into the cart, defaulting qty to the
+            // full on-hand balance found.
+            addPieceFromSearch(r) {
+                if (this.isPieceAdded(r.purchase_product_id)) return;
+                this.form.lines.push({
+                    is_group:             false,
+                    purchase_product_id:  r.purchase_product_id,
+                    product_id:           r.product_id || null,
+                    product_title:        r.product_title,
+                    product_sku:          r.product_sku || null,
+                    barcode:              r.barcode || null,
+                    lot_code:             r.lot_code || null,
+                    on_hand:              r.on_hand,
+                    qty:                  r.on_hand,
+                    to_rack_id:           null,
+                    notes:                '',
+                });
             },
 
             removeLine(idx) { this.form.lines.splice(idx, 1); },

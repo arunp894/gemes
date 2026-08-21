@@ -517,6 +517,19 @@ class Product extends Model implements HasMedia
     }
 
     /**
+     * True if this product can currently be bought through the storefront
+     * -- listed, active, and has an online price set. CartController::add()
+     * checks these same three conditions individually (so it can give a
+     * specific reason back to the customer); this combined form is for
+     * cart/checkout re-validation (CartService), where a single yes/no is
+     * all that's needed. Keep both in sync if the rule ever changes.
+     */
+    public function isPurchasableOnline(): bool
+    {
+        return $this->isWebsiteEnabled() && $this->isActive() && (float) $this->website_price > 0;
+    }
+
+    /**
      * Returns true if this product belongs to a gemstone-family category.
      */
     public function isGemstone(): bool

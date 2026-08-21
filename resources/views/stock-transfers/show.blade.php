@@ -92,7 +92,6 @@
                                     <th>Product</th>
                                     <th>Barcode</th>
                                     <th class="text-end">Qty</th>
-                                    <th>To Rack</th>
                                     <th>Notes</th>
                                 </tr>
                             </thead>
@@ -101,28 +100,21 @@
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td>
-                                            <div class="fw-semibold">{{ optional($line->product)->title ?? '—' }}</div>
-                                            <small class="text-muted">SKU: {{ optional($line->product)->sku ?? '—' }}</small>
+                                            <div class="fw-semibold">{{ $line->product?->title }}</div>
+                                            <small class="text-muted">SKU: {{ $line->product?->sku }}</small>
                                         </td>
                                         <td>
                                             <code class="small">
                                                 <a href="{{ route('stock.piece', $line->purchase_product_id) }}">
-                                                    {{ optional($line->purchaseProduct)->barcode ?? '#' . $line->purchase_product_id }}
+                                                    {{ optional($line->purchaseProduct)->barcode ?? optional($line->purchaseProduct)->lot_code ?? '#' . $line->purchase_product_id }}
                                                 </a>
                                             </code>
                                         </td>
                                         <td class="text-end fw-semibold">{{ (int) $line->qty }}</td>
-                                        <td>
-                                            @if ($line->toRack)
-                                                {{ $line->toRack->code }} — {{ $line->toRack->name }}
-                                            @else
-                                                <span class="text-muted">—</span>
-                                            @endif
-                                        </td>
                                         <td><small>{{ $line->notes }}</small></td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="6" class="text-center text-muted py-4">No lines.</td></tr>
+                                    <tr><td colspan="5" class="text-center text-muted py-4">No lines.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>

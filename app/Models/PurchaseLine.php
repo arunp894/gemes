@@ -47,11 +47,12 @@ class PurchaseLine extends Model
         // Optional seed for the created product(s)' listing price — staff
         // can leave this blank and set it later per product instead.
         'website_price',
-        // Line-level "list on website" toggle. Unlike website_price this
-        // isn't just a seed — syncLines() re-applies it to every product
-        // already created under this line on every edit too, same as
-        // carat_weight. See PurchaseService::syncLines() for why status
-        // is promoted to Active alongside it.
+        // Line-level "list on website" HINT only (as of the packing
+        // split — see PurchaseService::syncLines()). A purchase line no
+        // longer creates or touches any Product directly; this value is
+        // just the default carried onto PackingSource::website_enabled
+        // when this raw stock is later packed (see PackingService),
+        // editable per-piece at that point.
         'website_enabled',
         'carat_weight',
         'stone_type',

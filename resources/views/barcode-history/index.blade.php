@@ -30,7 +30,7 @@
                         <div class="avatar-lg bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-2">
                             <i class="ti ti-scan fs-1 text-primary"></i>
                         </div>
-                        <h5 class="mb-1 fw-bold">Scan or Enter a Barcode / Lot Code</h5>
+                        <h5 class="mb-1 fw-bold">Scan or Enter a Barcode or Lot Code</h5>
                         <p class="text-muted small mb-0">
                             Point your scanner here, or type a barcode or lot code manually and press Enter
                         </p>
@@ -42,7 +42,7 @@
                         <input
                             type="text"
                             class="form-control border-start-0 text-center fw-semibold font-monospace fs-5"
-                            placeholder="Barcode or lot code, e.g. AM-001-001"
+                            placeholder="Barcode or lot code"
                             ref="barcodeInput"
                             v-model="barcodeInput"
                             @keyup.enter="search"
@@ -72,7 +72,7 @@
                     <div class="text-center mt-2">
                         <small class="text-muted">
                             <i class="ti ti-info-circle me-1"></i>
-                            Scanned barcodes auto-submit. Also matches purchase lot codes (SS-PPP-UUU). Supports EAN-13, EAN-8, UPC-A, Code 128, QR Code &amp; Custom formats.
+                            Scanned barcodes auto-submit. Also matches purchase lot codes (format: SS-CCC-UUU). Supports EAN-13, EAN-8, UPC-A, Code 128, QR Code &amp; Custom formats.
                         </small>
                     </div>
                 </div>
@@ -652,11 +652,11 @@
 
         data: function () {
             return {
-                barcodeInput: '',
-                loading:      false,
-                error:        null,
-                result:       null,
-                activeTab:    'purchases',
+                barcodeInput:    '',
+                loading:         false,
+                error:           null,
+                result:          null,
+                activeTab:       'purchases',
             };
         },
 

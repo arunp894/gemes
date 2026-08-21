@@ -7,6 +7,7 @@ use App\Models\Channel;
 use App\Models\Location;
 use App\Models\Sale;
 use App\Models\SaleLine;
+use App\Services\CartService;
 use App\Services\SettingService;
 use App\Services\StockService;
 use Carbon\Carbon;
@@ -33,6 +34,7 @@ class CheckoutController extends Controller
     public function __construct(
         private readonly SettingService $settings,
         private readonly StockService   $stock,
+        private readonly CartService    $cartService,
     ) {}
 
     /* ---------------------------------------------------------------
@@ -41,7 +43,16 @@ class CheckoutController extends Controller
 
     public function index(): View|\Illuminate\Http\RedirectResponse
     {
-        $cart  = session('sg_cart', []);
+        // Re-check every item against the product's CURRENT
+        // website_enabled/status/price before showing the payment page
+        // -- see CartController::index() for why (same rule, same
+        // CartService).
+        $result = $this->cartService->validate(session('sg_cart', []));
+        if ($result['removed']) {
+            session(['sg_cart' => $result['cart']]);
+        }
+
+        $cart  = $result['cart'];
         $total = array_sum(array_column($cart, 'subtotal'));
 
         if (empty($cart)) {
@@ -64,7 +75,7 @@ class CheckoutController extends Controller
         return view('website.checkout', compact(
             'cart', 'total', 'customer',
             'paypalEnabled', 'paypalClientId', 'paypalMode', 'currencyCode',
-        ));
+        ))->with('removedItems', $result['removed']);
     }
 
     /* ---------------------------------------------------------------
@@ -81,7 +92,20 @@ class CheckoutController extends Controller
             return response()->json(['error' => 'PayPal is not enabled.'], 422);
         }
 
-        $cart         = session('sg_cart', []);
+        // Hard gate before any money moves: re-check every cart item
+        // against the product's CURRENT website_enabled/status/price.
+        // Without this, a product pulled from the site after being added
+        // to the cart could still be paid for.
+        $result = $this->cartService->validate(session('sg_cart', []));
+        if ($result['removed']) {
+            session(['sg_cart' => $result['cart']]);
+            return response()->json([
+                'error' => 'The following item(s) are no longer available and were removed from your cart: '
+                    . implode(', ', $result['removed']) . '. Please review your cart and try again.',
+            ], 422);
+        }
+
+        $cart         = $result['cart'];
         $total        = array_sum(array_column($cart, 'subtotal'));
         $currencyCode = strtoupper($this->settings->get('currency_code', 'USD'));
 
@@ -225,6 +249,21 @@ class CheckoutController extends Controller
 
         if (empty($cart) || ! $customer) {
             return null;
+        }
+
+        // Payment is already captured for the full cart by this point, so
+        // items are NOT dropped here even if one became unavailable in the
+        // (usually seconds-long) window since createOrder() last checked --
+        // same "log but don't block" call as the stock-availability check
+        // below; the store fulfils manually rather than leaving the
+        // customer paid with nothing.
+        $availability = $this->cartService->validate($cart);
+        if ($availability['removed']) {
+            logger()->warning('Checkout: cart item(s) became unavailable between order creation and capture', [
+                'paypal_order_id' => $paypalOrderId,
+                'customer_id'     => $customer->id,
+                'items'           => $availability['removed'],
+            ]);
         }
 
         // Resolve the location for this online sale

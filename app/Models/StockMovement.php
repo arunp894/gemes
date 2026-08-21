@@ -216,7 +216,7 @@ class StockMovement extends Model
 
             self::REASON_SALE,
             self::REASON_TRANSFER_OUT,
-            self::REASON_ADJUSTMENT_OUT     => 'badge-soft-danger',
+            self::REASON_ADJUSTMENT_OUT      => 'badge-soft-danger',
 
             self::REASON_PURCHASE_CANCEL,
             self::REASON_TRANSFER_CANCEL_OUT => 'badge-soft-warning',

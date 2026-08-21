@@ -9,7 +9,6 @@ use App\Models\Location;
 use App\Models\PurchaseLine;
 use App\Models\PurchaseProduct;
 use App\Models\Rack;
-use App\Models\StockMovement;
 use App\Models\StockTransfer;
 use App\Repositories\StockTransferRepository;
 use App\Services\StockService;
@@ -129,10 +128,33 @@ class StockTransferController extends Controller
     {
         abort_unless($stockTransfer->isEditable(), 403, 'Only draft transfers can be edited.');
 
+        $transfer = $this->repo->find($stockTransfer->id);
+
+        // Pre-shape lines into what the create screen's Vue form already
+        // knows how to consume. on_hand is a placeholder here; the Vue
+        // app refreshes it for real once mounted (see
+        // refreshOnHandForExistingLines()).
+        $linesPayload = $transfer->lines->map(function ($l) {
+            return [
+                'is_group'             => false,
+                'purchase_product_id'  => $l->purchase_product_id,
+                'product_id'           => $l->product_id,
+                'product_title'        => optional($l->product)->title,
+                'product_sku'          => optional($l->product)->sku,
+                'barcode'              => $l->purchaseProduct?->barcode,
+                'lot_code'             => $l->purchaseProduct?->lot_code,
+                'qty'                  => (int) $l->qty,
+                'to_rack_id'           => $l->to_rack_id,
+                'notes'                => $l->notes,
+                'on_hand'              => 9999,
+            ];
+        })->values();
+
         return view('stock-transfers.edit', [
-            'transfer'  => $this->repo->find($stockTransfer->id),
-            'locations' => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'is_default']),
-            'racks'     => Rack::query()->orderBy('name')->get(['id', 'code', 'name']),
+            'transfer'     => $transfer,
+            'linesPayload' => $linesPayload,
+            'locations'    => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'is_default']),
+            'racks'        => Rack::query()->orderBy('name')->get(['id', 'code', 'name']),
         ]);
     }
 
@@ -271,5 +293,59 @@ class StockTransferController extends Controller
                 ])->values(),
             ],
         ]);
+    }
+
+    /**
+     * Text search for the create/edit form's picker: matches lot_code,
+     * barcode, or product title/SKU.
+     */
+    public function searchPieces(Request $request): JsonResponse
+    {
+        $locationId = (int) $request->query('from_location_id', 0);
+        $search     = trim((string) $request->query('search', ''));
+
+        if ($locationId <= 0) {
+            return response()->json(['ok' => false, 'message' => 'Source location is required.'], 422);
+        }
+
+        $q = PurchaseProduct::query()
+            ->with(['product:id,title,sku', 'line.category', 'line.product:id,title,sku']);
+
+        if ($search !== '') {
+            $q->where(function ($qq) use ($search) {
+                $qq->where('lot_code', 'like', "%{$search}%")
+                   ->orWhere('barcode', 'like', "%{$search}%")
+                   ->orWhereHas('product', function ($pq) use ($search) {
+                       $pq->where('title', 'like', "%{$search}%")
+                          ->orWhere('sku', 'like', "%{$search}%");
+                   });
+            });
+        }
+
+        $rows = $q->orderByDesc('id')->limit(50)->get();
+
+        $items = $rows->map(function (PurchaseProduct $row) use ($locationId) {
+            $onHand = $this->stock->onHandForPiece($row->id, $locationId);
+            if ($onHand <= 0) {
+                return null;
+            }
+
+            $product = $row->resolved_product;
+
+            return [
+                'purchase_product_id' => $row->id,
+                'lot_code'            => $row->lot_code,
+                'barcode'             => $row->barcode,
+                'product_id'          => $product?->id,
+                'product_title'       => $product?->title,
+                'product_sku'         => $product?->sku,
+                'category'            => $row->line?->category?->name,
+                'stone_type'          => $row->line?->stone_type,
+                'carat_weight'        => $row->carat_weight,
+                'on_hand'             => $onHand,
+            ];
+        })->filter()->values();
+
+        return response()->json(['ok' => true, 'items' => $items]);
     }
 }

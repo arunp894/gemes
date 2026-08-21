@@ -444,12 +444,21 @@ class SaleController extends Controller
     /**
      * Quick product search for the terminal picker. Mirrors the purchase
      * search but doesn't surface inventory rows in the results.
+     *
+     * Scoped to website_enabled products only -- these are the listed,
+     * finished items ready to sell (an item left disabled is typically
+     * still being finished/priced, same as why WebsiteController gates
+     * the public storefront on the same flag). A specific piece can
+     * still be pulled in directly via lookupByBarcode()/scan regardless
+     * of this flag, since that's an explicit lookup of something staff
+     * are physically holding, not a browse.
      */
     public function searchProducts(Request $request): JsonResponse
     {
         $term = trim((string) $request->query('q', ''));
 
         $q = Product::query()
+            ->websiteEnabled()
             ->select(['id', 'title', 'sku', 'website_price'])
             ->limit(15);
 

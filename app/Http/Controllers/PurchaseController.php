@@ -18,6 +18,7 @@ use App\Models\Supplier;
 use App\Repositories\PurchaseRepository;
 use App\Services\PurchaseService;
 use App\Services\SettingService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,32 +42,85 @@ class PurchaseController extends Controller
         return (int) $this->settings->get('purchase_edit_days', 10);
     }
 
+    /**
+     * Apply the shared index/data filters (status, payment status, date
+     * range, supplier, location) to a Purchase query. Used for both the
+     * DataTable rows and the summary cards so the cards always total
+     * exactly what the table is currently showing.
+     */
+    private function applyFilters(Builder $query, Request $request): Builder
+    {
+        if ($status = $request->query('status')) {
+            $query->where('status', $status);
+        }
+        if ($payStatus = $request->query('payment_status')) {
+            $query->where('payment_status', $payStatus);
+        }
+        if ($from = $request->query('date_from')) {
+            $query->whereDate('purchase_date', '>=', $from);
+        }
+        if ($to = $request->query('date_to')) {
+            $query->whereDate('purchase_date', '<=', $to);
+        }
+        if ($supplierId = $request->query('supplier_id')) {
+            $query->where('supplier_id', $supplierId);
+        }
+        if ($locationId = $request->query('location_id')) {
+            $query->where('location_id', $locationId);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Aggregate totals for the summary cards (invoice count, total
+     * value, paid, and outstanding), computed from an already-filtered
+     * query. Returns raw numerics; call sites format money via
+     * SettingService::formatMoney().
+     */
+    private function summaryStats(Builder $query): array
+    {
+        $row = (clone $query)
+            ->selectRaw('COUNT(*) as total_invoices, COALESCE(SUM(grand_total),0) as total_amount, COALESCE(SUM(paid_amount),0) as paid_amount, COALESCE(SUM(due_amount),0) as unpaid_amount')
+            ->first();
+
+        return [
+            'total_invoices' => (int) $row->total_invoices,
+            'total_amount'   => (float) $row->total_amount,
+            'paid_amount'    => (float) $row->paid_amount,
+            'unpaid_amount'  => (float) $row->unpaid_amount,
+        ];
+    }
+
     /* ─── List ─────────────────────────────────────────────── */
 
-    public function index(): View
+    public function index(Request $request): View
     {
-        return view('purchases.index');
+        $summary = $this->summaryStats($this->applyFilters(Purchase::query(), $request));
+
+        return view('purchases.index', [
+            'suppliers' => Supplier::active()->ordered()->get(['id', 'supplier_code', 'name', 'company_name']),
+            'locations' => Location::active()->ordered()->get(['id', 'location_code', 'name', 'type']),
+            'summary'   => [
+                'total_invoices' => $summary['total_invoices'],
+                'total_amount'   => $this->settings->formatMoney($summary['total_amount']),
+                'paid_amount'    => $this->settings->formatMoney($summary['paid_amount']),
+                'unpaid_amount'  => $this->settings->formatMoney($summary['unpaid_amount']),
+            ],
+        ]);
     }
 
     public function data(Request $request)
     {
-        $q = $this->repo->query();
+        $q = $this->applyFilters($this->repo->query(), $request);
 
-        if ($status = $request->query('status')) {
-            $q->where('status', $status);
-        }
-        if ($payStatus = $request->query('payment_status')) {
-            $q->where('payment_status', $payStatus);
-        }
-        if ($from = $request->query('date_from')) {
-            $q->whereDate('purchase_date', '>=', $from);
-        }
-        if ($to = $request->query('date_to')) {
-            $q->whereDate('purchase_date', '<=', $to);
-        }
-        if ($supplierId = $request->query('supplier_id')) {
-            $q->where('supplier_id', $supplierId);
-        }
+        $summaryRaw = $this->summaryStats($this->applyFilters(Purchase::query(), $request));
+        $summary    = [
+            'total_invoices' => $summaryRaw['total_invoices'],
+            'total_amount'   => $this->settings->formatMoney($summaryRaw['total_amount']),
+            'paid_amount'    => $this->settings->formatMoney($summaryRaw['paid_amount']),
+            'unpaid_amount'  => $this->settings->formatMoney($summaryRaw['unpaid_amount']),
+        ];
 
         return DataTables::eloquent($q)
             ->addIndexColumn()
@@ -126,6 +180,7 @@ class PurchaseController extends Controller
                 $html .= '</div>';
                 return $html;
             })
+            ->with('summary', $summary)
             ->rawColumns(['payment_badge', 'status_badge', 'actions', 'location_label'])
             ->toJson();
     }

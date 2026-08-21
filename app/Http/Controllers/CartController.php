@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Services\CartService;
 use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -32,7 +33,10 @@ class CartController extends Controller
 {
     private const SESSION_KEY = 'sg_cart';
 
-    public function __construct(private readonly SettingService $settings) {}
+    public function __construct(
+        private readonly SettingService $settings,
+        private readonly CartService    $cartService,
+    ) {}
 
     /* ---------------------------------------------------------------
      |  View Cart
@@ -40,9 +44,20 @@ class CartController extends Controller
 
     public function index(): View
     {
-        $cart  = $this->getCart();
+        // Re-check every item against the product's CURRENT
+        // website_enabled/status/price -- something added to the cart
+        // may have been pulled from the site (or repriced to "enquire
+        // only") since. Anything that no longer qualifies is dropped
+        // here and surfaced as a notice, rather than silently letting a
+        // stale item ride through to checkout.
+        $result = $this->cartService->validate($this->getCart());
+        if ($result['removed']) {
+            $this->saveCart($result['cart']);
+        }
+
+        $cart  = $result['cart'];
         $total = $this->cartTotal($cart);
-        return view('website.cart', compact('cart', 'total'));
+        return view('website.cart', compact('cart', 'total'))->with('removedItems', $result['removed']);
     }
 
     /* ---------------------------------------------------------------
@@ -164,7 +179,14 @@ class CartController extends Controller
 
     public function data(): JsonResponse
     {
-        $cart  = $this->getCart();
+        // Same re-check as index() -- the navbar drawer reads this too,
+        // so it shouldn't show an item that's been pulled from the site.
+        $result = $this->cartService->validate($this->getCart());
+        if ($result['removed']) {
+            $this->saveCart($result['cart']);
+        }
+
+        $cart  = $result['cart'];
         $total = $this->cartTotal($cart);
         $html  = '';
 

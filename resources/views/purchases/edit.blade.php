@@ -105,7 +105,15 @@
                             </div>
 
                             <div class="col-md-1">
-                                <label class="form-label">Pcs <span class="text-danger">*</span></label>
+                                <label class="form-label">Type <span class="text-danger">*</span></label>
+                                <select class="form-select" v-model="addForm.type">
+                                    <option value="box">Box</option>
+                                    <option value="piece">Piece</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-1">
+                                <label class="form-label">@{{ addForm.type === 'piece' ? 'Qty' : 'Pcs' }} <span class="text-danger">*</span></label>
                                 <input type="number" min="1" class="form-control" v-model.number="addForm.package_qty"
                                        :class="{ 'is-invalid': addErrors.package_qty }">
                                 <div class="invalid-feedback">@{{ addErrors.package_qty }}</div>
@@ -214,8 +222,11 @@
                                 <button type="button" class="btn btn-primary" @click="addLine">
                                     <i class="ti ti-plus me-1"></i> Add to Purchase
                                 </button>
-                                <small class="text-muted" v-if="addForm.package_qty > 1">
+                                <small class="text-muted" v-if="addForm.type === 'box' && addForm.package_qty > 1">
                                     Creates @{{ addForm.package_qty }} separate products — each gets its own photos and listing afterward.
+                                </small>
+                                <small class="text-muted" v-else-if="addForm.type === 'piece' && addForm.package_qty > 1">
+                                    @{{ addForm.package_qty }} identical pieces sharing one row/product.
                                 </small>
                             </div>
 

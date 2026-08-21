@@ -265,8 +265,8 @@ class Purchase extends Model
 
     /**
      * Has any piece of stock that originated from this purchase already
-     * been consumed by a sale? Editing a purchase whose stock has moved
-     * would desync the inventory ledger, so this is a hard block.
+     * been sold? Editing a purchase whose stock has moved would desync
+     * the inventory ledger, so this is a hard block.
      */
     public function hasSoldStock(): bool
     {

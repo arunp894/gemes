@@ -29,15 +29,14 @@ use InvalidArgumentException;
  * Posting only flips Purchase::status, which lets stock queries filter
  * via `whereHas('line.purchase', fn($q) => $q->posted())`.
  *
- * As of the "purchase creates its own products" change: a purchase line
- * no longer points at a pre-existing catalogue product. It's a template
- * (title, category, gemstone fields) that gets stamped onto a brand-new
- * Product for every inventory row generated under it — one row is
- * always exactly one product. Box lines generate one row per box (Pack
- * Qty drives the count); Piece lines always generate exactly one row,
- * with the physical count captured on that row's own qty field instead
- * so several identical pieces can share a single product. See
- * syncLines().
+ * A purchase line is a product-creation template (category, gemstone
+ * fields, cost, website visibility) applied to every inventory row
+ * generated under it — each row creates its own sellable Product
+ * directly, one-to-one, with its own new primary Barcode. Box lines fan
+ * out into one row (one product) per box (Pack Qty drives the row
+ * count); Piece lines are always exactly one row, with the physical
+ * count on that row's own qty field so several identical pieces can
+ * share one product. See syncLines().
  */
 class PurchaseService
 {
@@ -71,7 +70,9 @@ class PurchaseService
      *       'full_description'   => string|null,
      *       'country_of_origin_id' => int|null,
      *       'notes_tags'         => string|null,
-     *       'website_price'      => float|null,   // seeds the created product(s)' listing price
+     *       'website_price'      => float|null,   // seeds each generated row's own
+     *                                              // website_price, which is what actually
+     *                                              // gets stamped onto its Product
      *       'carat_weight'       => float|null,   // line-level default
      *       'stone_type'         => string|null,
      *       'colour_grade'       => string|null,
@@ -413,12 +414,11 @@ class PurchaseService
     /**
      * Persist all lines + their inventory rows/products for a purchase,
      * diffing against whatever the purchase already has rather than
-     * wiping and rebuilding. This is the one piece of the "purchase
-     * creates its own products" change that isn't purely additive: a
-     * blind delete-and-recreate (the old behaviour for every edit) would
-     * destroy any product a row already created the moment that product
-     * picks up a photo, a description, or a website listing between the
-     * purchase being entered and someone fixing a typo on the invoice.
+     * wiping and rebuilding. A blind delete-and-recreate on every edit
+     * would destroy any product a row already created the moment that
+     * product picks up a photo, a description, or a website listing
+     * between the purchase being entered and someone fixing a typo on
+     * the invoice.
      *
      * Matching is by the `id` the client echoes back for rows/lines it
      * already has — PurchaseRepository::find() round-trips them and the
@@ -487,10 +487,11 @@ class PurchaseService
             // category name so purchase_lines.title (and every product
             // this line stamps out below) never ends up blank.
             $title = trim((string) ($lineData['title'] ?? ''));
+            $title = $title !== '' ? $title : $category->name;
 
             $lineFields = [
                 'category_id'       => $category->id,
-                'title'             => $title !== '' ? $title : $category->name,
+                'title'             => $title,
                 'short_description' => $lineData['short_description'] ?? null,
                 'full_description'  => $lineData['full_description']  ?? null,
                 'country_of_origin_id' => $lineData['country_of_origin_id'] ?? null,
@@ -498,9 +499,10 @@ class PurchaseService
                 'website_price'     => isset($lineData['website_price']) && $lineData['website_price'] !== ''
                     ? (float) $lineData['website_price']
                     : null,
-                // Line-level toggle, applied to every product this line
-                // creates/owns below (see the "New ROW" and "Existing
-                // ROW" branches) — not just seeded once at creation.
+                // Applied to every product this line creates below, and
+                // re-applied as the default for any NEW row a later edit
+                // adds under this line (not to rows/products that already
+                // exist — see class docblock).
                 'website_enabled'   => (bool) ($lineData['website_enabled'] ?? false),
                 'carat_weight'      => $caratDefault,
                 'stone_type'        => $lineData['stone_type']   ?? null,
@@ -565,62 +567,38 @@ class PurchaseService
                     $existingRow->save();
                     $seenRowIds[] = $existingRow->id;
 
-                    // Carat weight, selling price, and the website toggle
-                    // are the fields genuinely meant to stay synced onto
-                    // the product after creation — re-weighing a stone,
-                    // repricing one item in a batch, or flipping whether
-                    // this batch is listed are all normal corrections
-                    // during a purchase edit.
+                    // Carat weight is the one field genuinely meant to
+                    // stay in sync post-creation — correcting a weighed
+                    // figure after the fact should reach the product too.
+                    // Everything else the line/row carries is a
+                    // creation-time template only (see class docblock).
                     if ($existingRow->product_id) {
-                        $lineProduct = Product::find($existingRow->product_id);
-                        if ($lineProduct) {
-                            if ($caratWeight !== null) {
-                                $lineProduct->carat_weight = $caratWeight;
-                            }
-                            if ($websitePrice !== null) {
-                                $lineProduct->website_price = $websitePrice;
-                            }
-                            // Pushed through the model (not a bulk update)
-                            // so booted()'s updating hook still stamps
-                            // website_enabled_at/disabled_at and clears
-                            // featured_product on disable — same as
-                            // flipping it from the Products screen. Status
-                            // is promoted to Active alongside enabling it,
-                            // mirroring the create-time rule above.
-                            $lineProduct->website_enabled = $line->website_enabled;
-                            if ($line->website_enabled) {
-                                $lineProduct->status = Product::STATUS_ACTIVE;
-                            }
-                            if ($lineProduct->isDirty()) {
-                                $lineProduct->save();
-                            }
-                        }
+                        Product::whereKey($existingRow->product_id)->update(['carat_weight' => $caratWeight]);
                     }
                 } else {
+                    $websiteEnabled = (bool) $lineFields['website_enabled'];
+
                     $product = Product::create([
-                        'title'             => $line->title,
-                        'sku'               => Product::generateSku($category),
-                        'category_id'       => $category->id,
-                        'short_description' => $line->short_description,
-                        'full_description'  => $line->full_description,
-                        'country_of_origin_id' => $line->country_of_origin_id,
-                        'notes_tags'        => $line->notes_tags,
+                        'title'                => $lineFields['title'],
+                        'sku'                  => Product::generateSku($category),
+                        'category_id'          => $category->id,
+                        'short_description'    => $lineFields['short_description'],
+                        'full_description'     => $lineFields['full_description'],
+                        'country_of_origin_id' => $lineFields['country_of_origin_id'],
+                        'notes_tags'           => $lineFields['notes_tags'],
                         // Storefront listing needs BOTH website_enabled
-                        // and an Active status (see WebsiteController) —
-                        // the line's toggle drives both together so an
-                        // enabled product is actually live, not stuck
-                        // Draft.
-                        'status'            => $line->website_enabled ? Product::STATUS_ACTIVE : Product::STATUS_DRAFT,
-                        'pack_type'         => Product::PACK_TYPE_PIECE,
-                        'website_price'     => $websitePrice,
-                        'carat_weight'      => $caratWeight,
-                        'stone_type'        => $line->stone_type,
-                        'colour_grade'      => $line->colour_grade,
-                        'clarity_grade'     => $line->clarity_grade,
-                        'cut_shape'         => $line->cut_shape,
-                        'treatment'         => $line->treatment,
-                        'website_enabled'   => $line->website_enabled,
-                        'featured_product'  => false,
+                        // and an Active status (see WebsiteController).
+                        'status'               => $websiteEnabled ? Product::STATUS_ACTIVE : Product::STATUS_DRAFT,
+                        'pack_type'            => Product::PACK_TYPE_PIECE,
+                        'carat_weight'         => $caratWeight,
+                        'stone_type'           => $lineFields['stone_type'],
+                        'colour_grade'         => $lineFields['colour_grade'],
+                        'clarity_grade'        => $lineFields['clarity_grade'],
+                        'cut_shape'            => $lineFields['cut_shape'],
+                        'treatment'            => $lineFields['treatment'],
+                        'website_enabled'      => $websiteEnabled,
+                        'website_price'        => $websitePrice,
+                        'featured_product'     => false,
                     ]);
 
                     Barcode::create([

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\CartService;
 use App\Services\SettingService;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\View;
@@ -57,6 +58,24 @@ class AppServiceProvider extends ServiceProvider
         View::composer('website.*', function ($view) {
             $settings = app(SettingService::class);
             $view->with('settings', $settings);
+        });
+
+        // ----- Cart badge/drawer: re-validate against live Product state -----
+        // website.layout reads the cart directly to render the navbar
+        // badge and cart-drawer preview on EVERY storefront page -- not
+        // just /cart or /checkout, which already run this through
+        // CartService via their own controllers (see CartController,
+        // CheckoutController). Without this, a product pulled from the
+        // site mid-browsing session would still show here until the
+        // customer happened to open the full cart page.
+        View::composer('website.layout', function ($view) {
+            $result = app(CartService::class)->validate(session('sg_cart', []));
+
+            if ($result['removed']) {
+                session(['sg_cart' => $result['cart']]);
+            }
+
+            $view->with('cart', $result['cart']);
         });
 
         // ----- Share $settings with the admin panel + auth pages -----

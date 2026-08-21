@@ -213,19 +213,10 @@ class StockTransferService
             if (! $pp) {
                 throw new InvalidArgumentException("Piece #{$ppId} not found.");
             }
-            // Prefer the row's own product (every row created after the
-            // "purchase creates its own products" change carries one
-            // directly). Fall back to the line's shared product for
-            // historical pre-change rows, where purchase_products.product_id
-            // is still null.
-            $productId = (int) ($pp->product_id ?: optional($pp->line)->product_id);
-            if (! $productId) {
-                throw new InvalidArgumentException("Piece #{$ppId} is missing a product reference.");
-            }
 
             $transfer->lines()->save(new StockTransferLine([
                 'purchase_product_id' => $ppId,
-                'product_id'          => $productId,
+                'product_id'          => $pp->product_id,
                 'qty'                 => max(1, (int) ($row['qty'] ?? 1)),
                 'to_rack_id'          => $row['to_rack_id'] ?? null,
                 'notes'               => $row['notes']      ?? null,

@@ -12,7 +12,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * Per-piece convention: each row references an exact `purchase_products`
  * row, so when the transfer is posted the OUT and IN movements can be
- * filed against the right ledger key.
+ * filed against the right ledger key. product_id always names the
+ * piece's Product directly.
  */
 class StockTransferLine extends Model
 {

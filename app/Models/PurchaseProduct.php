@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Actual inventory row. Each record = ONE stockable unit (one piece,
- * one box). Owns its barcode, rack, expiry, and money fields.
+ * one box). Owns its barcode, rack, expiry, and money fields. One row =
+ * one Product, created directly alongside it -- see PurchaseService.
  */
 class PurchaseProduct extends Model
 {
@@ -57,9 +58,7 @@ class PurchaseProduct extends Model
     }
 
     /**
-     * The individual Product this row created (or, for historical rows
-     * predating this column, null — identity for those still comes via
-     * line->product_id). One row = one product going forward.
+     * The individual Product this row created. One row = one product.
      */
     public function product(): BelongsTo
     {

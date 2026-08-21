@@ -16,6 +16,12 @@
 
 <div style="padding:60px;background:var(--dark-900);min-height:60vh">
 
+  @if(!empty($removedItems))
+  <div style="margin-bottom:24px;padding:16px 20px;background:rgba(220,80,80,.08);border:1px solid rgba(220,80,80,.2);border-radius:4px;color:#e07070;font-size:13px;line-height:1.6">
+    <strong>Heads up:</strong> {{ implode(', ', $removedItems) }} {{ count($removedItems) === 1 ? 'is' : 'are' }} no longer available and {{ count($removedItems) === 1 ? 'was' : 'were' }} removed from your cart.
+  </div>
+  @endif
+
   @if(empty($cart))
     {{-- Empty State --}}
     <div style="text-align:center;padding:80px 0">

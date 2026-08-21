@@ -64,10 +64,10 @@
             clarity_grade: null,
             cut_shape:     null,
             treatment:     null,
-            // Type is no longer chosen in the UI (Add Item's Type selector
-            // is hidden) — default to 'box' so the Pcs (package_qty) field
-            // stays enabled and drives row count, instead of the 'piece'
-            // default which locks it at 1.
+            // Box: Pcs is the number of separate rows/products this line
+            // fans out into. Piece: Pcs is the qty stamped onto the single
+            // row/product a piece line always collapses to (see addLine()).
+            // Defaults to 'box', the more common case.
             type:          'box',
             package_qty:   1,
         };
@@ -409,12 +409,7 @@
 
                 if (!this.addForm.category_id) this.addErrors.category_id = 'Required';
 
-                // Piece lines are always a single inventory row/product —
-                // the physical count goes on that row's own Qty field
-                // instead. Only Box lines fan out into one row per box.
-                if (this.addForm.type === 'piece') {
-                    this.addForm.package_qty = 1;
-                }
+                const isPiece = this.addForm.type === 'piece';
                 const qty = parseInt(this.addForm.package_qty, 10) || 0;
                 if (qty < 1) this.addErrors.package_qty = 'Must be at least 1';
 
@@ -436,9 +431,18 @@
                 const priceDefault = (this.addForm.price !== null && this.addForm.price !== '')
                     ? parseFloat(this.addForm.price) : null;
 
+                // Piece lines are always exactly one inventory row/product
+                // — the physical count (qty) goes on that single row instead
+                // of driving row count, so several identical pieces can
+                // share one product. Box lines still fan out into one row
+                // per box, Pcs driving the row count directly.
+                const rowCount = isPiece ? 1 : qty;
                 const rows = [];
-                for (let i = 0; i < qty; i++) {
+                for (let i = 0; i < rowCount; i++) {
                     rows.push(emptyRow(caratDefault, websitePriceDefault, barcodeDefault, priceDefault));
+                }
+                if (isPiece) {
+                    rows[0].qty = qty;
                 }
 
                 // Title is optional — fall back to the category name so a
@@ -464,10 +468,10 @@
                     cut_shape:          this.addFormIsGemstone ? this.addForm.cut_shape     : null,
                     treatment:          this.addFormIsGemstone ? this.addForm.treatment     : null,
                     _highlight:         true,
-                    _expanded:          qty > 1,
+                    _expanded:          rows.length > 1,
                     type:               this.addForm.type,
-                    package_name:       this.addForm.type === 'piece' ? 'Piece' : 'Box',
-                    package_qty:        qty,
+                    package_name:       isPiece ? 'Piece' : 'Box',
+                    package_qty:        isPiece ? 1 : qty,
                     remarks:            null,
                     rows:               rows,
                 });
@@ -475,17 +479,9 @@
                 const newIdx = this.form.lines.length - 1;
                 this.flashLine(newIdx);
                 this.refreshLotCodePreview(newIdx);
-                this.setMessage('success', `Added "${this.form.lines[newIdx].title}" (${qty} pc${qty === 1 ? '' : 's'}).`);
+                const pieceSuffix = (isPiece && qty > 1) ? ' in 1 row' : '';
+                this.setMessage('success', `Added "${this.form.lines[newIdx].title}" (${qty} pc${qty === 1 ? '' : 's'}${pieceSuffix}).`);
                 this.addForm = emptyAddForm();
-            },
-            onAddFormTypeChange() {
-                // Locks the Add Item Qty input at 1 for Piece — mirrors the
-                // disabled state on the input itself; kept as an explicit
-                // handler so switching back to Box cleanly re-enables it
-                // without leaving a stale value behind.
-                if (this.addForm.type === 'piece') {
-                    this.addForm.package_qty = 1;
-                }
             },
 
             /* ─── Row management ─────────────────────────────────── */

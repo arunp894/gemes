@@ -19,10 +19,10 @@ class BarcodeHistoryService
 {
     /**
      * Look up a barcode OR a purchase lot code and return the complete
-     * product history. Barcode is tried first (the primary scan path);
-     * if nothing matches, the value is retried against
-     * purchase_products.lot_code (format SS-PPP-UUU), which identifies
-     * one physical piece rather than the catalogue product directly.
+     * product history. Tried in that order: barcode is the primary scan
+     * path; lot code identifies one physical piece (via
+     * purchase_products.lot_code) for when no barcode was printed or the
+     * label only carries the lot code.
      *
      * Returns ['found' => false, 'message' => '...'] when nothing matches.
      * Returns ['found' => true, ...data...] on success.

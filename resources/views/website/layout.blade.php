@@ -167,11 +167,12 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
     @endif
 
     @if($settings->bool('cart_enabled', true))
-    {{-- Cart icon with live badge --}}
+    {{-- Cart icon with live badge. $cart comes pre-validated (against
+         live product state) from the website.layout View::composer in
+         AppServiceProvider -- see CartService. --}}
     <button class="sg-icon-btn" id="sgCartBtn" title="Cart" onclick="openCartDrawer()">
       🛒
-      @php $cartCount = count(session('sg_cart', [])); @endphp
-      <span class="sg-cart-badge" id="sgCartBadge" style="{{ $cartCount > 0 ? '' : 'display:none' }}">{{ $cartCount }}</span>
+      <span class="sg-cart-badge" id="sgCartBadge" style="{{ count($cart) > 0 ? '' : 'display:none' }}">{{ count($cart) }}</span>
     </button>
     @endif
   </div>
@@ -184,13 +185,12 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
   <div class="sg-drawer-header">
     <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600">
       Your Cart
-      <span id="drawerCount" style="font-family:'Jost',sans-serif;font-size:13px;font-weight:400;color:var(--white-faint);margin-left:8px">({{ $cartCount }})</span>
+      <span id="drawerCount" style="font-family:'Jost',sans-serif;font-size:13px;font-weight:400;color:var(--white-faint);margin-left:8px">({{ count($cart) }})</span>
     </div>
     <button class="sg-drawer-close" onclick="closeCartDrawer()">✕</button>
   </div>
 
   <div class="sg-drawer-body" id="drawerBody">
-    @php $cart = session('sg_cart', []); @endphp
     @if(empty($cart))
       <div style="text-align:center;padding:60px 0;color:var(--white-faint)">
         <div style="font-size:40px;margin-bottom:14px">💎</div>

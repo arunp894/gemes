@@ -15,6 +15,13 @@
 </div>
 
 <div style="padding:60px;background:var(--dark-900);min-height:70vh">
+
+  @if(!empty($removedItems))
+  <div style="margin-bottom:24px;padding:16px 20px;background:rgba(220,80,80,.08);border:1px solid rgba(220,80,80,.2);border-radius:4px;color:#e07070;font-size:13px;line-height:1.6">
+    <strong>Heads up:</strong> {{ implode(', ', $removedItems) }} {{ count($removedItems) === 1 ? 'is' : 'are' }} no longer available and {{ count($removedItems) === 1 ? 'was' : 'were' }} removed from your cart. Your total below has been updated.
+  </div>
+  @endif
+
   <div style="display:grid;grid-template-columns:1fr 380px;gap:40px;align-items:start">
 
     {{-- LEFT: Payment --}}
@@ -225,7 +232,10 @@ paypal.Buttons({
 
   onError: function (err) {
     console.error('PayPal error:', err);
-    showMsg('error', 'A PayPal error occurred. Please try again or contact us.');
+    // createOrder() rejects with a specific message (e.g. an item that's
+    // no longer available, from our /checkout/create 422 response) --
+    // surface that instead of a generic error when we have it.
+    showMsg('error', (err && err.message) ? err.message : 'A PayPal error occurred. Please try again or contact us.');
   },
 
   onCancel: function () {

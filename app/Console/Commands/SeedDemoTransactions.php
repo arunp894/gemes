@@ -16,31 +16,33 @@ use Illuminate\Support\Facades\DB;
  * WHY THIS EXISTS (token / performance rationale)
  * ------------------------------------------------
  * Going through PurchaseService::create()/post() and SaleService::create()
- * one row at a time for 10,000+ purchases would mean 10,000+ full
- * Eloquent lifecycles (model events, per-row SKU/lot-code/invoice-number
- * queries, individual transactions). That's correct but far too slow at
- * this volume.
+ * one row at a time for 10,000+ purchases would mean tens of thousands of
+ * full Eloquent lifecycles (model events, per-row SKU/lot-code/invoice-
+ * number queries, individual transactions). That's correct but far too
+ * slow at this volume.
  *
  * Instead this command:
  *   - Builds each purchase/sale's full plan in PHP memory (Faker-driven),
  *   - Replicates the handful of DB-derived sequences (SKU, EAN-13 barcode,
- *     invoice number, lot code, sale number, customer code) as in-memory
+ *     invoice number, lot codes, sale number, customer code) as in-memory
  *     counters seeded ONCE from the DB, instead of one query per row,
  *   - Writes every table with chunked multi-row DB::table()->insert()
  *     calls instead of Model::create() in a loop,
  *   - Recovers auto-increment IDs for newly inserted children via
  *     lastInsertId() (MySQL/InnoDB guarantees a contiguous ascending ID
  *     block for every row in a single multi-row INSERT, regardless of
- *     innodb_autoinc_lock_mode — see MySQL docs on AUTO_INCREMENT
+ *     innodb_autoinc_lock_mode -- see MySQL docs on AUTO_INCREMENT
  *     Handling in InnoDB), instead of re-querying.
  *
- * This keeps the generator itself small (a few hundred lines) while being
- * able to produce any number of rows — the cost doesn't scale with the
- * row count the way hand-written seed data would.
+ * This keeps the generator itself small while being able to produce any
+ * number of rows -- the cost doesn't scale with the row count the way
+ * hand-written seed data would.
  *
  * BUSINESS LOGIC REPLICATED (kept in sync with, but independent of):
- *   - PurchaseService::syncLines()      (product-per-row creation, box vs
- *                                         piece row expansion, pack_type)
+ *   - PurchaseService::syncLines()       (raw-row generation, box vs
+ *                                          piece expansion, product-per-row
+ *                                          creation)
+ *   - Product::generateSku()             (per-category SKU sequence)
  *   - PurchaseProduct::generateLotCode() (SS-CCC-UUU sequence)
  *   - Purchase::generateInvoiceNumber()  (PREFIX-YYYYMM-#### per supplier)
  *   - Sale::generateSaleNumber()         (SALE-YYYYMM-#### global)
@@ -48,11 +50,12 @@ use Illuminate\Support\Facades\DB;
  *   - StockService (append-only ledger, global stock pool, FIFO-ish pick)
  *   - PurchaseService::recalculatePayments() / SaleService equivalent
  *
- * Only Purchases with status=posted write stock_movements and enter the
- * in-memory stock pool; only Sales with status != draft consume it —
- * this mirrors the real app's "draft has no stock impact" rule exactly.
- * Cancelled purchases are treated as "cancelled while still draft" (no
- * stock ever booked) to avoid needing to fabricate reversal pairs.
+ * FLOW: each posted Purchase row creates its own Product + primary
+ * Barcode directly (mirroring PurchaseService::syncLines()) and credits
+ * the stock pool; Sales draw only from that pool. Only Purchases with
+ * status=posted write stock_movements and credit the pool; only Sales
+ * with status != draft consume it -- this mirrors the real app's "draft
+ * has no stock impact" rule exactly.
  *
  * USAGE
  * -----
@@ -61,7 +64,7 @@ use Illuminate\Support\Facades\DB;
  *   php artisan demo:seed-transactions --purchases=20000 --sales=15000 --chunk=300
  *
  * Requires the base seeders to have already run (suppliers, locations,
- * gemstone categories, channels, walk-in customer) — i.e. php artisan db:seed.
+ * gemstone categories, channels, walk-in customer) -- i.e. php artisan db:seed.
  */
 class SeedDemoTransactions extends Command
 {
@@ -77,7 +80,7 @@ class SeedDemoTransactions extends Command
 
     private FakerGenerator $faker;
 
-    /** @var array<string, string> colour descriptors — no canonical list exists on the Product model, unlike clarity/cut/treatment */
+    /** @var array<string, string> colour descriptors -- no canonical list exists on the Product model, unlike clarity/cut/treatment */
     private const COLOUR_GRADES = [
         'Vivid Red', 'Pigeon Blood Red', 'Royal Blue', 'Cornflower Blue', 'Vivid Green',
         'Padparadscha', 'Vivid Pink', 'Deep Blue', 'Golden Yellow', 'Vivid Orange', 'Lavender',
@@ -104,17 +107,18 @@ class SeedDemoTransactions extends Command
     private array $unitCounterByStub = []; // "PFX-003-" => int
     private int $customerCodeCounter = 0;
 
-    // ── Global stock pool, built while generating purchases, drained
-    //    while generating sales. O(1) random-pick + O(1) removal via a
-    //    swap-to-end-and-pop index (array_rand() on a 50k+ array would
-    //    be O(n) per call and dominate runtime at this scale). ─────────
-    private array $stockPool = [];  // pp_id => ['product_id','location_id','price','remaining','purchase_date']
-    private array $poolOrder = [];  // 0-indexed list of currently-active pp_ids
-    private array $poolIndex = [];  // pp_id => index into poolOrder
+    // ── Stock -- fed by posted Purchases (each row creates its own
+    //    Product + Barcode immediately, see generatePurchases()), drained
+    //    by Sales. O(1) random-pick + O(1) removal via a swap-to-end-and-
+    //    pop index (array_rand() on a 50k+ array would be O(n) per call
+    //    and dominate runtime). ─────────────────────────────────────────
+    private array $stockPool = [];       // pp_id => ['product_id','location_id','price','remaining','purchase_date']
+    private array $stockPoolOrder = [];
+    private array $stockPoolIndex = [];
 
     public function handle(): void
     {
-        // Safety net — many Windows/XAMPP php.ini defaults cap CLI scripts
+        // Safety net -- many Windows/XAMPP php.ini defaults cap CLI scripts
         // at 128M, which the stock pool alone can approach at full 10K+
         // scale. Override for just this process; doesn't touch php.ini.
         $memoryLimit = (string) $this->option('memory-limit');
@@ -129,7 +133,7 @@ class SeedDemoTransactions extends Command
         $this->loadReferenceData();
 
         if (empty($this->suppliers) || empty($this->locationIds) || empty($this->gemCategories)) {
-            $this->error('Missing base data — run "php artisan db:seed" first (need suppliers, locations, and gemstone categories).');
+            $this->error('Missing base data -- run "php artisan db:seed" first (need suppliers, locations, and gemstone categories).');
             return;
         }
 
@@ -149,7 +153,7 @@ class SeedDemoTransactions extends Command
 
         $actualSales = 0;
         if ($saleTarget > 0) {
-            $this->info("Generating up to {$saleTarget} sales against " . count($this->poolOrder) . ' available stock rows...');
+            $this->info("Generating up to {$saleTarget} sales against " . count($this->stockPoolOrder) . ' available stock rows...');
             $actualSales = $this->generateSales($saleTarget, max(1, (int) $this->option('sale-chunk')));
         }
 
@@ -158,7 +162,7 @@ class SeedDemoTransactions extends Command
         $this->info('Done in ' . $elapsed . 's.');
         $this->line("  Customers created : {$customerCount}");
         $this->line("  Purchases created : {$purchaseTarget}");
-        $this->line("  Sales created     : {$actualSales}" . ($actualSales < $saleTarget ? ' (stopped early — stock pool exhausted)' : ''));
+        $this->line("  Sales created     : {$actualSales}" . ($actualSales < $saleTarget ? ' (stopped early -- stock pool exhausted)' : ''));
     }
 
     /* ═══════════════════════════════════════════════════════════════
@@ -211,7 +215,7 @@ class SeedDemoTransactions extends Command
         $this->channelIds       = DB::table('channels')->where('status', 1)->pluck('id', 'code')->all();
         $this->walkinCustomerId = DB::table('customers')->where('customer_code', 'WALKIN')->value('id');
 
-        // ── Sequence seeds — one cheap query per sequence, never per row ──
+        // ── Sequence seeds -- one cheap query per sequence, never per row ──
         foreach ($this->gemCategories as $catId => $cat) {
             $stub = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cat['code'])) . '-';
             $max  = DB::table('products')->where('sku', 'like', $stub . '%')
@@ -222,14 +226,14 @@ class SeedDemoTransactions extends Command
         $maxBarcode = DB::table('barcodes')->where('barcode_value', 'like', '200%')->max('barcode_value');
         $this->barcodeCounter = $maxBarcode ? (int) substr((string) $maxBarcode, 3, 9) : 0;
 
-        // Every one of these three blocks is aggregated IN SQL (GROUP BY /
-        // MAX), never a raw ->get() of every purchase/sale/lot-code row.
-        // A ->get() here would grow with the TABLE size, not with anything
-        // this command controls — after this command has run once and the
+        // Every one of these blocks is aggregated IN SQL (GROUP BY / MAX),
+        // never a raw ->get() of every purchase/sale/lot-code row. A
+        // ->get() here would grow with the TABLE size, not with anything
+        // this command controls -- after this command has run once and the
         // tables hold 100K+ rows, a naive full-table pull to seed a few
         // running counters is exactly the kind of thing that exhausts a
         // 128M CLI memory_limit on a second run. These stay at (suppliers
-        // × months) / (months) / (suppliers × categories) rows, always.
+        // x months) / (months) / (suppliers x categories) rows, always.
         $invoiceAgg = DB::table('purchases')
             ->selectRaw("supplier_id, DATE_FORMAT(purchase_date, '%Y%m') as ym, "
                 . "MAX(CAST(SUBSTRING_INDEX(invoice_number, '-', -1) AS UNSIGNED)) as max_seq")
@@ -334,35 +338,35 @@ class SeedDemoTransactions extends Command
     }
 
     /* ═══════════════════════════════════════════════════════════════
-     |  Stock pool — O(1) random pick + O(1) removal
+     |  Stock pool -- O(1) random pick + O(1) removal.
      ═══════════════════════════════════════════════════════════════ */
 
-    private function addToPool(int $ppId, array $data): void
+    private function addToPool(array &$pool, array &$order, array &$index, int $id, array $data): void
     {
-        $this->stockPool[$ppId] = $data;
-        $this->poolIndex[$ppId] = count($this->poolOrder);
-        $this->poolOrder[]      = $ppId;
+        $pool[$id]  = $data;
+        $index[$id] = count($order);
+        $order[]    = $id;
     }
 
-    private function pickRandomPoolKey(): ?int
+    private function pickRandomPoolKey(array $order): ?int
     {
-        if (empty($this->poolOrder)) {
+        if (empty($order)) {
             return null;
         }
-        return $this->poolOrder[mt_rand(0, count($this->poolOrder) - 1)];
+        return $order[mt_rand(0, count($order) - 1)];
     }
 
-    private function decrementPool(int $ppId, int $qty): void
+    private function decrementPool(array &$pool, array &$order, array &$index, int $id, int $qty): void
     {
-        $this->stockPool[$ppId]['remaining'] -= $qty;
-        if ($this->stockPool[$ppId]['remaining'] <= 0) {
-            $idx       = $this->poolIndex[$ppId];
-            $lastIdx   = count($this->poolOrder) - 1;
-            $lastPpId  = $this->poolOrder[$lastIdx];
-            $this->poolOrder[$idx]        = $lastPpId;
-            $this->poolIndex[$lastPpId]   = $idx;
-            array_pop($this->poolOrder);
-            unset($this->poolIndex[$ppId], $this->stockPool[$ppId]);
+        $pool[$id]['remaining'] -= $qty;
+        if ($pool[$id]['remaining'] <= 0) {
+            $idx      = $index[$id];
+            $lastIdx  = count($order) - 1;
+            $lastId   = $order[$lastIdx];
+            $order[$idx]    = $lastId;
+            $index[$lastId] = $idx;
+            array_pop($order);
+            unset($index[$id], $pool[$id]);
         }
     }
 
@@ -474,7 +478,7 @@ class SeedDemoTransactions extends Command
     }
 
     /**
-     * Same idea for a sale — single payment row (POS-realistic), higher
+     * Same idea for a sale -- single payment row (POS-realistic), higher
      * paid-in-full weighting than purchases.
      *
      * @return array{0: float, 1: array<int, array{amount: float, method: string, date: Carbon}>}
@@ -548,7 +552,8 @@ class SeedDemoTransactions extends Command
     }
 
     /* ═══════════════════════════════════════════════════════════════
-     |  Purchases
+     |  Purchases -- each row creates its own sellable Product + primary
+     |  Barcode immediately (mirrors PurchaseService::syncLines()).
      ═══════════════════════════════════════════════════════════════ */
 
     private function generatePurchases(int $target, int $chunkSize): void
@@ -593,14 +598,22 @@ class SeedDemoTransactions extends Command
                         $priceRange = $this->caratPriceRange($cat);
                         $caratRange = $this->caratRange($cat);
 
+                        // Line-level product template -- stamped onto
+                        // every product this line creates below, exactly
+                        // like PurchaseService::syncLines()' $lineFields.
+                        // ~30% list on the website, matching the density
+                        // the old two-stage (purchase hint -> packing
+                        // roll) flow produced in practice.
+                        $websiteEnabled = $this->faker->boolean(30);
+
                         $rows = [];
                         for ($r = 0; $r < $totalQty; $r++) {
                             $carat = round(mt_rand((int) round($caratRange[0] * 100), (int) round($caratRange[1] * 100)) / 100, 3);
                             $price = mt_rand($priceRange[0], $priceRange[1]);
                             $qty   = $type === 'piece' ? mt_rand(1, 5) : mt_rand(1, 2);
-                            $websitePrice = $this->faker->boolean(30)
-                                ? round($carat * $price * (mt_rand(150, 300) / 100), 2)
-                                : null;
+                            // Selling price -- seeds both the row's own
+                            // website_price and the Product it creates.
+                            $websitePrice = round($carat * $price * (mt_rand(150, 300) / 100), 2);
 
                             $rows[] = [
                                 'carat_weight'  => $carat,
@@ -620,7 +633,7 @@ class SeedDemoTransactions extends Command
                             'package_qty'      => $packageQty,
                             'total_qty'        => $totalQty,
                             'title'            => $this->productTitle($cat),
-                            'website_enabled'  => $this->faker->boolean(12),
+                            'website_enabled'  => $websiteEnabled,
                             'rows'             => $rows,
                             'line_total'       => array_sum(array_map(fn ($r) => $r['carat_weight'] * $r['price'], $rows)),
                         ];
@@ -681,18 +694,28 @@ class SeedDemoTransactions extends Command
                 }
                 unset($p);
 
-                // ── 3. Purchase lines ──
+                // ── 3. Purchase lines. Also stashes each line's rolled
+                //      description/colour/clarity/cut/treatment onto the
+                //      plan (product_template) so step 4 stamps the SAME
+                //      values onto every product the line creates, rather
+                //      than re-rolling them per row. ──
                 $lineRows = [];
                 $lineMeta = [];
                 foreach ($plans as $pIdx => $p) {
                     foreach ($p['lines'] as $lIdx => $line) {
-                        $countryId = $this->countryIds ? $this->countryIds[array_rand($this->countryIds)] : null;
+                        $countryId    = $this->countryIds ? $this->countryIds[array_rand($this->countryIds)] : null;
+                        $shortDesc    = $this->faker->boolean(40) ? $this->faker->sentence(10) : null;
+                        $colourGrade  = $this->faker->randomElement(self::COLOUR_GRADES);
+                        $clarityGrade = $this->faker->randomElement(Product::CLARITY_GRADES);
+                        $cutShape     = $this->faker->randomElement(Product::CUT_SHAPES);
+                        $treatment    = $this->faker->randomElement(Product::TREATMENTS);
+
                         $lineRows[] = [
                             'purchase_id'          => $p['id'],
                             'product_id'           => null,
                             'title'                => $line['title'],
                             'category_id'          => $line['category_id'],
-                            'short_description'    => $this->faker->boolean(40) ? $this->faker->sentence(10) : null,
+                            'short_description'    => $shortDesc,
                             'full_description'     => null,
                             'country_of_origin'    => null,
                             'country_of_origin_id' => $countryId,
@@ -701,10 +724,10 @@ class SeedDemoTransactions extends Command
                             'website_enabled'      => $line['website_enabled'],
                             'carat_weight'         => $line['rows'][0]['carat_weight'] ?? null,
                             'stone_type'           => $line['cat']['stone_type'],
-                            'colour_grade'         => $this->faker->randomElement(self::COLOUR_GRADES),
-                            'clarity_grade'        => $this->faker->randomElement(Product::CLARITY_GRADES),
-                            'cut_shape'            => $this->faker->randomElement(Product::CUT_SHAPES),
-                            'treatment'            => $this->faker->randomElement(Product::TREATMENTS),
+                            'colour_grade'         => $colourGrade,
+                            'clarity_grade'        => $clarityGrade,
+                            'cut_shape'            => $cutShape,
+                            'treatment'            => $treatment,
                             'type'                 => $line['type'],
                             'package_name'         => $line['type'] === 'piece' ? 'Piece' : 'Box',
                             'package_qty'          => $line['package_qty'],
@@ -717,6 +740,16 @@ class SeedDemoTransactions extends Command
                             'updated_at'           => $now,
                         ];
                         $lineMeta[] = [$pIdx, $lIdx];
+
+                        $plans[$pIdx]['lines'][$lIdx]['product_template'] = [
+                            'short_description'    => $shortDesc,
+                            'country_of_origin_id' => $countryId,
+                            'stone_type'           => $line['cat']['stone_type'],
+                            'colour_grade'         => $colourGrade,
+                            'clarity_grade'        => $clarityGrade,
+                            'cut_shape'            => $cutShape,
+                            'treatment'            => $treatment,
+                        ];
                     }
                 }
                 DB::table('purchase_lines')->insert($lineRows);
@@ -725,43 +758,48 @@ class SeedDemoTransactions extends Command
                     $plans[$pIdx]['lines'][$lIdx]['id'] = $firstLineId + $offset;
                 }
 
-                // ── 4. Products (one per inventory row) ──
+                // ── 4. Products -- one per row, created directly
+                //      alongside the purchase (see
+                //      PurchaseService::syncLines()). Must exist before
+                //      purchase_products, which references product_id. ──
                 $productRows = [];
-                $productMeta = [];
+                $productMeta = []; // [pIdx, lIdx, rIdx]
                 foreach ($plans as $pIdx => $p) {
                     foreach ($p['lines'] as $lIdx => $line) {
+                        $tpl = $line['product_template'];
                         foreach ($line['rows'] as $rIdx => $row) {
-                            $websiteEnabled = $line['website_enabled'];
-                            $status = $websiteEnabled ? 1 : ($this->faker->boolean(85) ? 1 : 0);
                             $productRows[] = [
-                                'title'                => $line['title'] . ' #' . ($rIdx + 1),
+                                'title'                => $line['title'],
                                 'sku'                  => $this->nextSku($line['category_id'], $line['cat']['code']),
                                 'category_id'          => $line['category_id'],
-                                'short_description'    => null,
+                                'short_description'    => $tpl['short_description'],
                                 'full_description'     => null,
                                 'country_of_origin'    => null,
-                                'country_of_origin_id' => null,
+                                'country_of_origin_id' => $tpl['country_of_origin_id'],
                                 'notes_tags'           => null,
-                                'status'               => $status,
+                                // Storefront listing needs BOTH
+                                // website_enabled and an Active status
+                                // (see WebsiteController).
+                                'status'               => $line['website_enabled'] ? 1 : ($this->faker->boolean(85) ? 1 : 0),
                                 'pack_type'            => 'piece',
                                 'outer_pack_name'      => null,
                                 'outer_pack_contains'  => null,
                                 'inner_pack_name'      => null,
                                 'inner_pack_contains'  => null,
                                 'carat_weight'         => $row['carat_weight'],
-                                'stone_type'           => $line['cat']['stone_type'],
-                                'colour_grade'         => $this->faker->randomElement(self::COLOUR_GRADES),
-                                'clarity_grade'        => $this->faker->randomElement(Product::CLARITY_GRADES),
-                                'cut_shape'            => $this->faker->randomElement(Product::CUT_SHAPES),
-                                'treatment'            => $this->faker->randomElement(Product::TREATMENTS),
+                                'stone_type'           => $tpl['stone_type'],
+                                'colour_grade'         => $tpl['colour_grade'],
+                                'clarity_grade'        => $tpl['clarity_grade'],
+                                'cut_shape'            => $tpl['cut_shape'],
+                                'treatment'            => $tpl['treatment'],
                                 'certificate_number'   => $this->faker->boolean(15) ? strtoupper($this->faker->bothify('GIA-########')) : null,
-                                'website_enabled'      => $websiteEnabled,
+                                'website_enabled'      => $line['website_enabled'],
                                 'website_price'        => $row['website_price'],
                                 'website_title'        => null,
                                 'website_description'  => null,
-                                'featured_product'     => $websiteEnabled && $this->faker->boolean(10),
+                                'featured_product'     => $line['website_enabled'] && $this->faker->boolean(10),
                                 'website_sort_order'   => null,
-                                'website_enabled_at'   => $websiteEnabled ? $p['created_at'] : null,
+                                'website_enabled_at'   => $line['website_enabled'] ? $p['created_at'] : null,
                                 'website_disabled_at'  => null,
                                 'created_by'           => $this->adminId,
                                 'updated_by'           => $this->adminId,
@@ -778,7 +816,7 @@ class SeedDemoTransactions extends Command
                     $plans[$pIdx]['lines'][$lIdx]['rows'][$rIdx]['product_id'] = $firstProductId + $offset;
                 }
 
-                // ── 5. Barcodes (one primary EAN-13 per product) ──
+                // ── 5. Barcodes -- one primary EAN-13 per product ──
                 $barcodeRows = [];
                 foreach ($plans as $p) {
                     foreach ($p['lines'] as $line) {
@@ -800,7 +838,8 @@ class SeedDemoTransactions extends Command
                 }
                 DB::table('barcodes')->insert($barcodeRows);
 
-                // ── 6. purchase_products (the inventory ledger rows) ──
+                // ── 6. purchase_products -- the inventory rows, each
+                //      already carrying the product_id from step 4. ──
                 $ppRows = [];
                 $ppMeta = [];
                 foreach ($plans as $pIdx => $p) {
@@ -838,7 +877,9 @@ class SeedDemoTransactions extends Command
                     $plans[$pIdx]['lines'][$lIdx]['rows'][$rIdx]['pp_id'] = $firstPpId + $offset;
                 }
 
-                // ── 7. Stock movements (IN) + stock pool — posted only ──
+                // ── 7. Stock movements (IN) + stock pool. Posted
+                //      purchases only. Every row already has a product,
+                //      so every movement carries product_id. ──
                 $movementRows = [];
                 foreach ($plans as $p) {
                     if ($p['status'] !== 'posted') {
@@ -867,15 +908,15 @@ class SeedDemoTransactions extends Command
                                 'updated_at'          => $now,
                             ];
 
-                            $this->addToPool($row['pp_id'], [
+                            $this->addToPool($this->stockPool, $this->stockPoolOrder, $this->stockPoolIndex, $row['pp_id'], [
                                 'product_id'    => $row['product_id'],
                                 'location_id'   => $p['location_id'],
                                 'price'         => $row['price'],
                                 'remaining'     => $row['qty'],
-                                // Int timestamp, not a Carbon copy — at 50K-70K
-                                // pool entries, one Carbon object per row is real
-                                // memory. Converted back to Carbon only when a
-                                // sale actually consumes this row (see below).
+                                // Int timestamp, not a Carbon copy -- at
+                                // 50K-70K pool entries, one Carbon object
+                                // per row is real memory. Converted back to
+                                // Carbon only when actually consumed.
                                 'purchase_date' => $p['date']->timestamp,
                             ]);
                         }
@@ -916,13 +957,14 @@ class SeedDemoTransactions extends Command
     }
 
     /* ═══════════════════════════════════════════════════════════════
-     |  Sales
+     |  Sales -- draw only from the stock pool credited by posted
+     |  Purchases above.
      ═══════════════════════════════════════════════════════════════ */
 
     private function generateSales(int $target, int $chunkSize): int
     {
-        if (empty($this->poolOrder)) {
-            $this->warn('No stock available (no posted purchases) — skipping sales.');
+        if (empty($this->stockPoolOrder)) {
+            $this->warn('No stock available (no posted purchases) -- skipping sales.');
             return 0;
         }
 
@@ -934,14 +976,14 @@ class SeedDemoTransactions extends Command
         $channelWeights = ['pos' => 55, 'website' => 20, 'ebay' => 10, 'sukainagems' => 10, 'catawiki' => 5];
 
         $created = 0;
-        while ($created < $target && ! empty($this->poolOrder)) {
+        while ($created < $target && ! empty($this->stockPoolOrder)) {
             $batchSize = min($chunkSize, $target - $created);
 
             $actualInBatch = DB::transaction(function () use ($batchSize, $customerIds, $locationIds, $channelWeights) {
                 $plans = [];
 
                 for ($i = 0; $i < $batchSize; $i++) {
-                    if (empty($this->poolOrder)) {
+                    if (empty($this->stockPoolOrder)) {
                         break;
                     }
 
@@ -951,7 +993,7 @@ class SeedDemoTransactions extends Command
                     $saleDateFloorTs = null;
 
                     for ($l = 0; $l < $lineCount; $l++) {
-                        $ppId = $this->pickRandomPoolKey();
+                        $ppId = $this->pickRandomPoolKey($this->stockPoolOrder);
                         if ($ppId === null) {
                             break;
                         }
@@ -979,7 +1021,7 @@ class SeedDemoTransactions extends Command
                             $saleDateFloorTs = $piece['purchase_date'];
                         }
 
-                        $this->decrementPool($ppId, $qty);
+                        $this->decrementPool($this->stockPool, $this->stockPoolOrder, $this->stockPoolIndex, $ppId, $qty);
                     }
 
                     if (empty($lines)) {
@@ -1100,7 +1142,7 @@ class SeedDemoTransactions extends Command
                     $plans[$pIdx]['lines'][$lIdx]['id'] = $firstLineId + $offset;
                 }
 
-                // ── Stock movements (OUT) — draft sales have no stock impact ──
+                // ── Stock movements (OUT) -- draft sales have no stock impact ──
                 $movementRows = [];
                 foreach ($plans as $p) {
                     if ($p['status'] === 'draft') {
@@ -1130,7 +1172,7 @@ class SeedDemoTransactions extends Command
                     DB::table('stock_movements')->insert($movementRows);
                 }
 
-                // ── Sale payments — draft sales have none ──
+                // ── Sale payments -- draft sales have none ──
                 $paymentRows = [];
                 foreach ($plans as $p) {
                     if ($p['status'] === 'draft') {

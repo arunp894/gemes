@@ -131,8 +131,14 @@
                                         <td></td>
                                         <td class="fw-semibold">{{ $i + 1 }}</td>
                                         <td>
-                                            <div class="fw-semibold">{{ $line->title ?? $line->product?->title }}</div>
-                                            <small class="text-muted">{{ $line->category?->name ?? ('SKU: ' . $line->product?->sku) }}</small>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div>
+                                                    <div class="fw-semibold">{{ $line->title ?? $line->product?->title }}</div>
+                                                    <small class="text-muted">{{ $line->category?->name ?? ('SKU: ' . $line->product?->sku) }}</small>
+                                                </div>
+                                                <i class="ti fs-16 {{ $line->website_enabled ? 'ti-world text-info' : 'ti-world-off text-muted' }}"
+                                                   title="{{ $line->website_enabled ? 'Website hint: On (default when this stock is packed)' : 'Website hint: Off (default when this stock is packed)' }}"></i>
+                                            </div>
                                         </td>
                                         <td class="small">{{ $line->countryOfOrigin?->name ?? '—' }}</td>
                                         <td colspan="6"></td>
