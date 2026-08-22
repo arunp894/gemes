@@ -168,7 +168,7 @@ class PurchaseController extends Controller
 
                 $html = '<div class="d-flex gap-1 justify-content-center">';
                 $html .= '<a href="' . route('purchases.show', $p) . '" class="btn btn-sm btn-soft-secondary" title="View"><i class="ti ti-eye"></i></a>';
-                if ($canEdit && $p->isDraft()) {
+                if ($canEdit && ! $p->editBlockReason($this->purchaseEditDays())) {
                     $html .= '<a href="' . route('purchases.edit', $p) . '" class="btn btn-sm btn-soft-primary" title="Edit"><i class="ti ti-edit"></i></a>';
                 }
                 if ($canPost && $p->isDraft()) {
@@ -265,7 +265,12 @@ class PurchaseController extends Controller
 
     public function destroy(Purchase $purchase): JsonResponse
     {
-        $this->service->delete($purchase);
+        try {
+            $this->service->delete($purchase);
+        } catch (\InvalidArgumentException|\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+
         return response()->json(['message' => 'Purchase deleted.']);
     }
 

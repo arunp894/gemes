@@ -9,8 +9,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * Product-level row on a purchase. ONE per product, regardless of how
- * many inner-pack inventory rows hang off it.
+ * Product-creation TEMPLATE on a purchase (category, gemstone fields,
+ * cost, website hint). One line fans out into N inventory rows (see
+ * rows()) and, under the direct-creation architecture, each row
+ * creates its OWN Product one-to-one — the line no longer shares a
+ * single product across its rows. `product_id` / product() below are
+ * vestigial, populated only on historical rows that predate that
+ * change (see PurchaseProduct::getResolvedProductAttribute()).
  */
 class PurchaseLine extends Model
 {
@@ -47,12 +52,11 @@ class PurchaseLine extends Model
         // Optional seed for the created product(s)' listing price — staff
         // can leave this blank and set it later per product instead.
         'website_price',
-        // Line-level "list on website" HINT only (as of the packing
-        // split — see PurchaseService::syncLines()). A purchase line no
-        // longer creates or touches any Product directly; this value is
-        // just the default carried onto PackingSource::website_enabled
-        // when this raw stock is later packed (see PackingService),
-        // editable per-piece at that point.
+        // Default "list on website" hint, stamped onto every Product
+        // this line creates at save time (see
+        // PurchaseService::syncLines()) — not re-applied to rows/products
+        // that already exist. Editable per-product afterward from the
+        // Products screen.
         'website_enabled',
         'carat_weight',
         'stone_type',

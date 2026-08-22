@@ -262,8 +262,12 @@ class SaleController extends Controller
 
     public function destroy(Sale $sale): JsonResponse
     {
-        $this->service->delete($sale);
-        return response()->json(['ok' => true, 'message' => 'Sale deleted.']);
+        try {
+            $this->service->delete($sale);
+            return response()->json(['ok' => true, 'message' => 'Sale deleted.']);
+        } catch (Throwable $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
+        }
     }
 
     /* ─── Status transitions ──────────────────────────────── */

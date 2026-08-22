@@ -359,16 +359,25 @@ class PurchaseService
     }
 
     /**
-     * Delete a purchase entirely. Retires every row it created via the
-     * same safety check as removing a single row on edit (see
-     * retireRow()) — a purchase whose products have already picked up
-     * photos or a website listing won't be silently deleted out from
-     * under them; it throws instead, so the caller can unlink those
-     * products first if that's really what's wanted.
+     * Delete a purchase entirely. If it's posted, its stock ledger is
+     * reversed first — same call cancel() makes, see
+     * StockService::reversePurchasePosting(), which refuses if any
+     * piece has already been sold or moved elsewhere — so no IN
+     * movement is left dangling against a row that's about to be
+     * retired. Every row is then retired via the same safety check as
+     * removing a single row on edit (see retireRow()) — a purchase
+     * whose products have already picked up photos or a website
+     * listing won't be silently deleted out from under them; it throws
+     * instead, so the caller can unlink those products first if that's
+     * really what's wanted.
      */
     public function delete(Purchase $purchase): void
     {
         DB::transaction(function () use ($purchase) {
+            if ($purchase->isPosted()) {
+                $this->stock->reversePurchasePosting($purchase);
+            }
+
             $purchase->lines()->each(function (PurchaseLine $l) {
                 foreach ($l->rows()->get() as $row) {
                     $this->retireRow($row);

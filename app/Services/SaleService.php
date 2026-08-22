@@ -334,9 +334,27 @@ class SaleService
         });
     }
 
+    /**
+     * Delete a sale entirely. If it has active OUT movements booked
+     * (posted or completed — both go through post(), which is the only
+     * place recordSalePosting() runs), they're reversed first via the
+     * same call cancel() makes — StockService::reverseSalePosting()
+     * with REASON_SALE_CANCEL — so no OUT movement is left dangling
+     * against a sale that's about to disappear. Refunded/cancelled sales
+     * already had their stock settled by refund()/cancel() and are left
+     * alone here (reverseSalePosting() is idempotent per-reason, but
+     * calling it with a DIFFERENT reason than what already ran would
+     * double-credit the stock, so status gates which sales need it
+     * rather than calling it unconditionally). Drafts never had
+     * movements booked at all.
+     */
     public function delete(Sale $sale): void
     {
         DB::transaction(function () use ($sale) {
+            if ($sale->isPosted() || $sale->isCompleted()) {
+                $this->stock->reverseSalePosting($sale, StockMovement::REASON_SALE_CANCEL);
+            }
+
             $sale->lines()->each(fn(SaleLine $l) => $l->delete());
             $sale->payments()->each(fn(SalePayment $p) => $p->delete());
             $sale->delete();
