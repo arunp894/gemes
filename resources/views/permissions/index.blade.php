@@ -133,7 +133,7 @@
                 url: '{{ route('permissions.data') }}',
                 type: 'GET',
             },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 25,
             columns: [
                 { data: 'DT_RowIndex',       name: 'DT_RowIndex',            orderable: false, searchable: false, className: 'text-center' },
@@ -157,7 +157,7 @@
             },
             initComplete: function () {
                 $('#permsInfoSlot').append($('#permsTable_info'));
-                $('#permsPaginationSlot').append($('#permsTable_paginate'));
+                $('#permsPaginationSlot').append($('.datatables-tail'));
             },
         });
 

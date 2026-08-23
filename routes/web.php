@@ -23,6 +23,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleImportController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\StockAuditController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\SupplierController;
@@ -485,6 +486,44 @@ Route::middleware('auth')->group(function () {
             'edit'    => 'permission:stock-transfers.edit',
             'update'  => 'permission:stock-transfers.edit',
             'destroy' => 'permission:stock-transfers.delete',
+        ]);
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stock Audits (physical stock-take)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('stock-audits')->name('stock-audits.')->group(function () {
+        Route::get('/data', [StockAuditController::class, 'data'])
+            ->middleware('permission:stock-audits.view')->name('data');
+        Route::get('/{stockAudit}/scan', [StockAuditController::class, 'scanScreen'])
+            ->whereNumber('stockAudit')->middleware('permission:stock-audits.scan')->name('scan');
+        Route::post('/{stockAudit}/scan', [StockAuditController::class, 'scan'])
+            ->whereNumber('stockAudit')->middleware('permission:stock-audits.scan')->name('scan.store');
+        Route::post('/{stockAudit}/undo-scan', [StockAuditController::class, 'undoScan'])
+            ->whereNumber('stockAudit')->middleware('permission:stock-audits.scan')->name('undo-scan');
+        Route::post('/{stockAudit}/complete', [StockAuditController::class, 'complete'])
+            ->whereNumber('stockAudit')->middleware('permission:stock-audits.complete')->name('complete');
+        Route::post('/{stockAudit}/cancel', [StockAuditController::class, 'cancel'])
+            ->whereNumber('stockAudit')->middleware('permission:stock-audits.complete')->name('cancel');
+        Route::post('/{stockAudit}/write-off-missing', [StockAuditController::class, 'writeOffMissing'])
+            ->whereNumber('stockAudit')->middleware('permission:stock-audits.write-off')->name('write-off-missing');
+        Route::get('/{stockAudit}/missing-data', [StockAuditController::class, 'missingData'])
+            ->whereNumber('stockAudit')->middleware('permission:stock-audits.view')->name('missing-data');
+        Route::get('/{stockAudit}/export/pdf', [StockAuditController::class, 'exportPdf'])
+            ->whereNumber('stockAudit')->middleware('permission:stock-audits.view')->name('export.pdf');
+        Route::get('/{stockAudit}/export/excel', [StockAuditController::class, 'exportExcel'])
+            ->whereNumber('stockAudit')->middleware('permission:stock-audits.view')->name('export.excel');
+    });
+    Route::resource('stock-audits', StockAuditController::class)
+        ->only(['index', 'create', 'store', 'show'])
+        ->whereNumber('stockAudit')
+        ->parameters(['stock-audits' => 'stockAudit'])
+        ->middleware([
+            'index'  => 'permission:stock-audits.view',
+            'show'   => 'permission:stock-audits.view',
+            'create' => 'permission:stock-audits.create',
+            'store'  => 'permission:stock-audits.create',
         ]);
 
     /*

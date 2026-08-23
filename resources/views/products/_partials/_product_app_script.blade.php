@@ -40,6 +40,7 @@
                     clarity_grade: null,
                     cut_shape: null,
                     treatment: null,
+                    stone_description: '',
                     certificate_number: '',
                     website_enabled: false,
                     website_price: null,
@@ -64,7 +65,7 @@
                 existingCertificate: null,
 
                 barcodeMode: 'single',
-                barcodes: [makeBlankBarcode(true)],
+                barcodes: [],
                 barcodesError: null,
 
                 errors: {},
@@ -324,9 +325,12 @@
                         }
                     }
 
-                    if (!this.barcodes.length) {
-                        this.barcodesError = 'Please add at least one barcode.';
-                    } else {
+                    // Barcodes are optional -- a product created directly
+                    // here (or edited after a Purchase auto-assigned it a
+                    // primary EAN-13, see PurchaseService::syncLines()) can
+                    // be saved with zero rows in this panel. Only validate
+                    // shape/primary/duplicates for rows that actually exist.
+                    if (this.barcodes.length) {
                         const primaryCount = this.barcodes.filter((b) => b.is_primary).length;
                         if (primaryCount !== 1) {
                             this.barcodesError = primaryCount === 0
@@ -367,7 +371,7 @@
                         'title','sku','category_id','short_description','full_description',
                         'country_of_origin_id','notes_tags','status',
                         'carat_weight','stone_type','colour_grade','clarity_grade',
-                        'cut_shape','treatment','certificate_number',
+                        'cut_shape','treatment','stone_description','certificate_number',
                         'website_enabled','website_price','website_title','website_description',
                         'featured_product','website_sort_order',
                     ];
@@ -390,14 +394,19 @@
                     if (this.certificateFile)  fd.append('certificate_image', this.certificateFile);
                     this.galleryFiles.forEach((file) => fd.append('gallery_images[]', file));
 
-                    const barcodesPayload = this.barcodes.map((b) => ({
-                        id: b.id,
-                        value: b.value,
-                        format: b.format,
-                        label: b.label || null,
-                        is_primary: !!b.is_primary,
-                        channel_ids: (b.channel_ids || []).map((n) => parseInt(n, 10)),
-                    }));
+                    // Defensive: drop any row that never got a value typed
+                    // in (e.g. a blank row left over from the panel) rather
+                    // than submitting it and tripping server-side validation.
+                    const barcodesPayload = this.barcodes
+                        .filter((b) => (b.value || '').trim() !== '')
+                        .map((b) => ({
+                            id: b.id,
+                            value: b.value,
+                            format: b.format,
+                            label: b.label || null,
+                            is_primary: !!b.is_primary,
+                            channel_ids: (b.channel_ids || []).map((n) => parseInt(n, 10)),
+                        }));
                     fd.append('barcodes', JSON.stringify(barcodesPayload));
 
                     const url = this.mode === 'edit'

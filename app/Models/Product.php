@@ -123,6 +123,7 @@ class Product extends Model implements HasMedia
         'clarity_grade',
         'cut_shape',
         'treatment',
+        'stone_description',
         'certificate_number',
         // Website visibility
         'website_enabled',

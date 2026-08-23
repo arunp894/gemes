@@ -75,6 +75,7 @@ class UpdatePurchaseRequest extends FormRequest
             'lines.*.clarity_grade' => ['nullable', 'string', Rule::in(Product::CLARITY_GRADES)],
             'lines.*.cut_shape'     => ['nullable', 'string', Rule::in(Product::CUT_SHAPES)],
             'lines.*.treatment'     => ['nullable', 'string', Rule::in(Product::TREATMENTS)],
+            'lines.*.stone_description' => ['nullable', 'string'],
 
             'lines.*.type'         => ['required', 'in:' . implode(',', PurchaseLine::TYPES)],
             'lines.*.package_name' => ['nullable', 'string', 'max:50'],

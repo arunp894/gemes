@@ -125,7 +125,7 @@
                 url: '{{ route('roles.data') }}',
                 type: 'GET',
             },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'DT_RowIndex',             name: 'DT_RowIndex',        orderable: false, searchable: false, className: 'text-center' },
@@ -149,7 +149,7 @@
             },
             initComplete: function () {
                 $('#rolesInfoSlot').append($('#rolesTable_info'));
-                $('#rolesPaginationSlot').append($('#rolesTable_paginate'));
+                $('#rolesPaginationSlot').append($('.datatables-tail'));
             },
         });
 

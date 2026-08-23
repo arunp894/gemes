@@ -135,6 +135,7 @@
                                 <tr class="text-uppercase fs-xxs">
                                     <th>#</th>
                                     <th>Product</th>
+                                    <th>Ct</th>
                                     <th>Barcode</th>
                                     <th class="text-end">Qty</th>
                                     <th class="text-end">Unit Price</th>
@@ -154,6 +155,7 @@
                                                 <small class="d-block text-muted">{{ $line->notes }}</small>
                                             @endif
                                         </td>
+                                        <td>{{ $line->purchaseProduct->carat_weight }}</td>
                                         <td><code class="small">{{ $line->barcode ?? '—' }}</code></td>
                                         <td class="text-end">{{ $line->qty }}</td>
                                         <td class="text-end">{{ number_format((float) $line->unit_price, 2) }}</td>

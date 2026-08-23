@@ -140,7 +140,7 @@
                     d.payment_status = $('#salePaymentFilter').val();
                 },
             },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'DT_RowIndex',     name: 'DT_RowIndex',        orderable: false, searchable: false, className: 'text-center' },
@@ -166,7 +166,7 @@
             },
             initComplete: function () {
                 $('#salesInfoSlot').append($('#salesTable_info'));
-                $('#salesPaginationSlot').append($('#salesTable_paginate'));
+                $('#salesPaginationSlot').append($('.datatables-tail'));
             },
         });
 

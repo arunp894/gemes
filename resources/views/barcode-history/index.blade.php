@@ -673,7 +673,7 @@
                 this.error   = null;
                 this.result  = null;
 
-                fetch('/barcode-history/lookup?barcode=' + encodeURIComponent(barcode), {
+                fetch('{{ route('barcode-history.lookup') }}?barcode=' + encodeURIComponent(barcode), {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept':           'application/json',

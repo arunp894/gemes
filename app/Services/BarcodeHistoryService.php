@@ -33,7 +33,7 @@ class BarcodeHistoryService
         $barcode = Barcode::withTrashed()
             ->with([
                 'product' => fn ($q) => $q->withTrashed()
-                    ->with(['category.parent', 'media']),
+                    ->with(['category', 'media']),
             ])
             ->where('barcode_value', $searchValue)
             ->first();
@@ -55,8 +55,8 @@ class BarcodeHistoryService
             // already-printed label needs to keep resolving after that edit.
             $purchaseProduct = PurchaseProduct::withTrashed()
                 ->with([
-                    'product'      => fn ($q) => $q->withTrashed()->with(['category.parent', 'media']),
-                    'line.product' => fn ($q) => $q->withTrashed()->with(['category.parent', 'media']),
+                    'product'      => fn ($q) => $q->withTrashed()->with(['category', 'media']),
+                    'line.product' => fn ($q) => $q->withTrashed()->with(['category', 'media']),
                 ])
                 ->where('lot_code', $searchValue)
                 ->first();
@@ -163,10 +163,9 @@ class BarcodeHistoryService
         $onHand = max(0, $inQty - $outQty);
 
         // ── 6. Category breadcrumb ────────────────────────────────────────
-        $cat          = $product->category;
-        $categoryPath = $cat
-            ? ($cat->parent ? $cat->parent->name . ' › ' . $cat->name : $cat->name)
-            : '—';
+        // Categories are a flat, single-level list (see CategorySeeder) — no
+        // parent/child nesting, so this is just the category name.
+        $categoryPath = $product->category?->name ?? '—';
 
         // ── 7. Build response ─────────────────────────────────────────────
         return [

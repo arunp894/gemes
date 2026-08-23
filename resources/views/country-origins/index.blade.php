@@ -65,8 +65,8 @@
                 </div>
 
                 <div class="table-responsive">
-                    <table id="originsTable" class="table table-striped dt-responsive align-middle mb-0">
-                        <thead class="bg-light align-middle bg-opacity-25 thead-sm">
+                    <table id="originsTable" class="table table-custom table-centered table-hover w-100 mb-0">
+                        <thead class="bg-light bg-opacity-25 thead-sm">
                             <tr class="text-uppercase fs-xxs">
                                 <th class="text-center" style="width: 1%;">S.No</th>
                                 <th>Name</th>
@@ -80,8 +80,8 @@
 
                 <div class="card-footer border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <div id="originsInfoSlot" class="text-muted small"></div>
                         <div id="originsPaginationSlot"></div>
+                        <div id="originsInfoSlot" class="text-muted small"></div>
                     </div>
                 </div>
             </div>
@@ -124,7 +124,7 @@
                 url: '{{ route('country-origins.data') }}',
                 type: 'GET',
             },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'DT_RowIndex',   name: 'DT_RowIndex',    orderable: false, searchable: false, className: 'text-center' },
@@ -147,7 +147,7 @@
             },
             initComplete: function () {
                 $('#originsInfoSlot').append($('#originsTable_info'));
-                $('#originsPaginationSlot').append($('#originsTable_paginate'));
+                $('#originsPaginationSlot').append($('.datatables-tail'));
             },
         });
 

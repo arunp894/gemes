@@ -150,7 +150,7 @@
                 url: '{{ route('banners.data') }}',
                 type: 'GET',
             },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'checkbox',        name: 'checkbox',         orderable: false, searchable: false, className: 'ps-3' },
@@ -178,7 +178,7 @@
             },
             initComplete: function () {
                 $('#bannersInfoSlot').append($('#bannersTable_info'));
-                $('#bannersPaginationSlot').append($('#bannersTable_paginate'));
+                $('#bannersPaginationSlot').append($('.datatables-tail'));
             },
         });
 

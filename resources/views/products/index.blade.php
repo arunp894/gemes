@@ -105,9 +105,9 @@
                             </ul>
                         </div>
 
-                        <a href="{{ route('products.create') }}" class="btn btn-primary ms-1">
+                        {{-- <a href="{{ route('products.create') }}" class="btn btn-primary ms-1">
                             <i class="ti ti-plus fs-sm me-2"></i> Add Product
-                        </a>
+                        </a> --}}
                     </div>
                 </div>
 
@@ -191,7 +191,7 @@
                     d.website_enabled = $('#productWebsiteFilter').val();
                 },
             },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'checkbox',        name: 'checkbox',          orderable: false, searchable: false, className: 'ps-3' },
@@ -218,7 +218,7 @@
             },
             initComplete: function () {
                 $('#productsInfoSlot').append($('#productsTable_info'));
-                $('#productsPaginationSlot').append($('#productsTable_paginate'));
+                $('#productsPaginationSlot').append($('.datatables-tail'));
             },
             drawCallback: function () {
                 $('#productSelectAll').prop('checked', false);

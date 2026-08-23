@@ -117,6 +117,18 @@
       @endforeach
     </div>
 
+    {{-- Stone Description --}}
+    @if($product->stone_description)
+    <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:4px;margin-bottom:28px;overflow:hidden">
+      <div style="padding:12px 18px;background:rgba(0,191,176,.055);border-bottom:1px solid rgba(0,191,176,.1);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--teal-400)">
+        Stone Description
+      </div>
+      <div style="padding:16px 18px;font-size:13px;line-height:1.8;color:var(--white-dim)">
+        {!! nl2br(e($product->stone_description)) !!}
+      </div>
+    </div>
+    @endif
+
     {{-- Cert Badges --}}
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px">
       @if($product->certificate_number)

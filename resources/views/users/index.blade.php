@@ -137,7 +137,7 @@
                 url: '{{ route('users.data') }}',
                 type: 'GET',
             },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'checkbox',     name: 'checkbox',            orderable: false, searchable: false, className: 'ps-3' },
@@ -162,7 +162,7 @@
             },
             initComplete: function () {
                 $('#usersInfoSlot').append($('#usersTable_info'));
-                $('#usersPaginationSlot').append($('#usersTable_paginate'));
+                $('#usersPaginationSlot').append($('.datatables-tail'));
             },
         });
 

@@ -140,6 +140,9 @@
 
                             <dt class="col-sm-4 text-muted">Certificate Number</dt>
                             <dd class="col-sm-8">{{ $product->certificate_number ?: '—' }}</dd>
+
+                            <dt class="col-sm-4 text-muted">Stone Description</dt>
+                            <dd class="col-sm-8" style="white-space: pre-line;">{{ $product->stone_description ?: '—' }}</dd>
                         </dl>
                     </div>
                 </div>

@@ -64,6 +64,7 @@
             clarity_grade: null,
             cut_shape:     null,
             treatment:     null,
+            stone_description: '',
             // Box: Pcs is the number of separate rows/products this line
             // fans out into. Piece: Pcs is the qty stamped onto the single
             // row/product a piece line always collapses to (see addLine()).
@@ -114,6 +115,7 @@
             clarity_grade:      l.clarity_grade,
             cut_shape:          l.cut_shape,
             treatment:          l.treatment,
+            stone_description:  l.stone_description || '',
             _highlight:         false,
             _expanded:          (l.rows || []).length > 1,
             type:               l.type,
@@ -467,6 +469,7 @@
                     clarity_grade:      this.addFormIsGemstone ? this.addForm.clarity_grade : null,
                     cut_shape:          this.addFormIsGemstone ? this.addForm.cut_shape     : null,
                     treatment:          this.addFormIsGemstone ? this.addForm.treatment     : null,
+                    stone_description:  this.addFormIsGemstone ? (this.addForm.stone_description || null) : null,
                     _highlight:         true,
                     _expanded:          rows.length > 1,
                     type:               this.addForm.type,
@@ -589,6 +592,7 @@
                         clarity_grade:      l.clarity_grade,
                         cut_shape:          l.cut_shape,
                         treatment:          l.treatment,
+                        stone_description:  l.stone_description,
                         type:               l.type,
                         package_name:       l.package_name,
                         package_qty:        l.package_qty,

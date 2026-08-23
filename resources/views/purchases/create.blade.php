@@ -108,7 +108,7 @@
                                 <small class="text-muted" v-else-if="supplierCategories.length">Filtered to this supplier.</small>
                             </div>
 
-                            <div class="col-md-2">
+                            <div class="col-md-2 d-none" hidden>
                                 <label class="form-label">Title</label>
                                 <input type="text" class="form-control" v-model="addForm.title" maxlength="200"
                                        placeholder="e.g. Paraiba Tourmaline, loose (optional)">
@@ -129,8 +129,8 @@
                                 <div class="invalid-feedback">@{{ addErrors.package_qty }}</div>
                             </div>
 
-                            <div class="col-md-2">
-                                <label class="form-label">Carat Weight <span class="text-danger" v-if="addFormIsGemstone">*</span></label>
+                            <div class="col-md-1">
+                                <label class="form-label">Carat <span class="text-danger" v-if="addFormIsGemstone">*</span></label>
                                 <div class="input-group">
                                     <input type="number" step="0.001" min="0.001" class="form-control"
                                            v-model.number="addForm.carat_weight"
@@ -226,6 +226,11 @@
                                     <label class="form-label">Colour Grade</label>
                                     <input type="text" class="form-control" v-model="addForm.colour_grade"
                                            maxlength="100" placeholder="e.g. Vivid Blue">
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="form-label">Stone Description</label>
+                                    <textarea class="form-control" v-model="addForm.stone_description" rows="2"
+                                              placeholder="Additional grading notes, inclusions, brilliance, etc. (optional)"></textarea>
                                 </div>
                             </template>
 

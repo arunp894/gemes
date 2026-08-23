@@ -91,7 +91,7 @@ $(function () {
         responsive: false,
         order: [[4, 'asc']],
         ajax: { url: '{{ route('channels.data') }}', type: 'GET' },
-        dom: 'rt<"d-none datatables-tail"ip>',
+        dom: 'rt<"datatables-tail"ip>',
         pageLength: 25,
         columns: [
             { data: 'DT_RowIndex',   name: 'DT_RowIndex',   orderable: false, searchable: false, className: 'text-muted small' },
@@ -112,7 +112,7 @@ $(function () {
         },
         initComplete: function () {
             $('#channelsInfoSlot').append($('#channelsTable_info'));
-            $('#channelsPaginationSlot').append($('#channelsTable_paginate'));
+            $('#channelsPaginationSlot').append($('.datatables-tail'));
         },
     });
 

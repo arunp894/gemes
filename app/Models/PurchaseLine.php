@@ -64,6 +64,7 @@ class PurchaseLine extends Model
         'clarity_grade',
         'cut_shape',
         'treatment',
+        'stone_description',
         'type',
         'package_name',
         'package_qty',

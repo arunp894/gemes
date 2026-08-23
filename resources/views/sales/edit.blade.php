@@ -155,7 +155,9 @@
                         <table class="table table-custom align-middle mb-0">
                             <thead class="bg-light bg-opacity-25 thead-sm">
                                 <tr class="text-uppercase fs-xxs">
-                                    <th>Product</th><th>Barcode</th>
+                                    <th>Product</th>
+                                    <th>Ct</th>
+                                    <th>Barcode</th>
                                     <th class="text-end">Qty</th><th class="text-end">Unit Price</th>
                                     <th class="text-end">Disc %</th><th class="text-end">Tax %</th>
                                     <th class="text-end">Total</th><th></th>
@@ -167,6 +169,7 @@
                                         <div class="fw-semibold">@{{ line.product_title }}</div>
                                         <small class="text-muted">SKU: @{{ line.product_sku }}</small>
                                     </td>
+                                    <td>@{{ line.carat_weight }}</td>
                                     <td><code class="small">@{{ line.barcode || '—' }}</code></td>
                                     <td><input type="number" min="1" step="1" class="form-control form-control-sm text-end" v-model.number="line.qty"></td>
                                     <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" v-model.number="line.unit_price"></td>
@@ -244,6 +247,7 @@
         'product_sku'         => optional($l->product)->sku,
         'purchase_product_id' => $l->purchase_product_id,
         'barcode'             => $l->barcode,
+        'carat_weight'        => $l->purchaseProduct->carat_weight,
         'qty'                 => $l->qty,
         'unit_price'          => (float) $l->unit_price,
         'cost_price'          => (float) $l->cost_price,

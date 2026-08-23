@@ -216,6 +216,11 @@
                                     <input type="text" class="form-control" v-model="addForm.colour_grade"
                                            maxlength="100" placeholder="e.g. Vivid Blue">
                                 </div>
+                                <div class="col-md-12">
+                                    <label class="form-label">Stone Description</label>
+                                    <textarea class="form-control" v-model="addForm.stone_description" rows="2"
+                                              placeholder="Additional grading notes, inclusions, brilliance, etc. (optional)"></textarea>
+                                </div>
                             </template>
 
                             <div class="col-12 d-flex align-items-center gap-2 mt-2">

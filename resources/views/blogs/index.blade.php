@@ -126,7 +126,7 @@
                 url: '{{ route('blogs.data') }}',
                 type: 'GET',
             },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'DT_RowIndex',   name: 'DT_RowIndex',        orderable: false, searchable: false, className: 'text-center' },
@@ -150,7 +150,7 @@
             },
             initComplete: function () {
                 $('#blogsInfoSlot').append($('#blogsTable_info'));
-                $('#blogsPaginationSlot').append($('#blogsTable_paginate'));
+                $('#blogsPaginationSlot').append($('.datatables-tail'));
             },
         });
 

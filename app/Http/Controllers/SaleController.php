@@ -412,6 +412,7 @@ class SaleController extends Controller
                     'rack_id'             => $pp->rack_id,
                     'expiry_date'         => optional($pp->expiry_date)->toDateString(),
                 ],
+                'carat_weight' => $pp->carat_weight,
                 'barcode'  => $value,
             ]);
         }

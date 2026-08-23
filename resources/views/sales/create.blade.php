@@ -34,7 +34,7 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-3">
-                                <label class="form-label">Sale Date <span class="text-danger">*</span></label>
+                                <label class="form-label"><i class="ti ti-calendar text-primary me-2"></i> Sale Date <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control"
                                     v-model="form.sale_date"
                                     @change="refreshSaleNumber"
@@ -43,7 +43,7 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Sale #</label>
+                                <label class="form-label"><i class="ti ti-shopping-cart text-primary me-2"></i> Sale #</label>
                                 <input type="text" class="form-control bg-light"
                                     :value="form.sale_number_preview"
                                     readonly placeholder="auto-generated">
@@ -51,7 +51,7 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Location <span class="text-danger">*</span></label>
+                                <label class="form-label"><i class="ti ti-location-pin text-primary me-2"></i> Location <span class="text-danger">*</span></label>
 
                                 {{-- ── NONE: user has no assigned locations ── --}}
                                 @if ($locationMode === 'none')
@@ -88,7 +88,7 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Salesperson</label>
+                                <label class="form-label"><i class="ti ti-user text-primary me-2"></i> Sales person</label>
                                 <select class="form-select" v-model.number="form.salesperson_id">
                                     <option :value="null">— Unassigned —</option>
                                     <option v-for="u in salespeople" :key="u.id" :value="u.id">@{{ u.name }}</option>
@@ -96,7 +96,7 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Sales Channel</label>
+                                <label class="form-label"><i class="ti ti-direction text-primary me-2"></i> Sales Channel</label>
                                 <select class="form-select" v-model.number="form.channel_id">
                                     <option :value="null">— No Channel —</option>
                                     <option v-for="c in channels" :key="c.id" :value="c.id">@{{ c.name }}</option>
@@ -104,7 +104,7 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Tax Type</label>
+                                <label class="form-label"><i class="ti ti-receipt text-primary me-2"></i> Tax Type</label>
                                 <select class="form-select" v-model="form.tax_type">
                                     <option value="none">No Tax</option>
                                     <option value="cgst_sgst">CGST + SGST</option>
@@ -113,13 +113,13 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Shipping</label>
+                                <label class="form-label"><i class="ti ti-truck text-primary me-2"></i> Shipping</label>
                                 <input type="number" min="0" step="0.01" class="form-control"
                                     v-model.number="form.shipping_charge">
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">Status</label>
+                                <label class="form-label"><i class="ti ti-check text-primary me-2"></i> Status</label>
                                 <select class="form-select" v-model="form.status">
                                     <option value="draft">Draft (save for later)</option>
                                     <option value="posted">Posted</option>
@@ -140,6 +140,7 @@
                         <div class="row g-2 align-items-end">
                             <div class="col-md-6">
                                 <label class="form-label">
+                                    <i class="ti ti-barcode text-primary me-2"></i>
                                     Barcode / Lot Code
                                     <small class="text-muted">Scan and press Enter to add to cart.</small>
                                 </label>
@@ -150,7 +151,9 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Search by name / SKU</label>
+                                <label class="form-label">
+                                    <i class="ti ti-search text-primary me-2"></i>
+                                    Search by name / SKU</label>
                                 <div class="position-relative">
                                     <input type="text" class="form-control" v-model="productSearch"
                                         placeholder="e.g. Sapphire 6mm" @input="onSearchInput" @focus="onSearchInput">
@@ -200,6 +203,7 @@
                             <thead class="bg-light bg-opacity-25 thead-sm">
                                 <tr class="text-uppercase fs-xxs">
                                     <th style="width: 24%;">Product</th>
+                                    <th>Ct</th>
                                     <th>Barcode</th>
                                     <th class="text-end" style="width: 8%;">Qty</th>
                                     <th class="text-end" style="width: 12%;">Unit Price</th>
@@ -219,14 +223,16 @@
                                             Cost: @{{ formatMoney(line.cost_price) }}
                                         </small>
                                     </td>
+                                    <td>@{{ line.carat_weight }}</td>
                                     <td>
                                         <code class="small">@{{ line.barcode || '—' }}</code>
                                         <small v-if="line._stockWarning" class="d-block text-danger">
                                             <i class="ti ti-alert-triangle"></i> Qty &gt; recorded stock
                                         </small>
+                                        <small v-else class="d-block text-success">Qty @{{ line.on_hand }} On Hand</small>
                                     </td>
                                     <td>
-                                        <input type="number" min="1" step="1"
+                                        <input type="number" min="1" step="1" :max="line.on_hand"
                                             class="form-control form-control-sm text-end"
                                             v-model.number="line.qty"
                                             @input="checkStockWarning(idx)">
@@ -672,7 +678,9 @@ $(function () {
 
                 this.form.lines.push({
                     product_id:          p.id,
+                    carat_weight :       data.carat_weight,
                     product_title:       p.title,
+                    on_hand:             inv.on_hand,
                     product_sku:         p.sku,
                     purchase_product_id: inv ? inv.purchase_product_id : null,
                     barcode:             data.barcode || null,

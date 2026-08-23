@@ -97,6 +97,13 @@ class PermissionSeeder extends Seeder
             ['slug' => 'stock-transfers.delete',   'name' => 'Delete Stock Transfers',   'module' => 'stock-transfers'],
             ['slug' => 'stock-transfers.post',     'name' => 'Post / Receive Transfers', 'module' => 'stock-transfers'],
 
+            // ----- Stock Audits module (physical stock-take) -----
+            ['slug' => 'stock-audits.view',        'name' => 'View Stock Audits',         'module' => 'stock-audits'],
+            ['slug' => 'stock-audits.create',      'name' => 'Start Stock Audits',        'module' => 'stock-audits'],
+            ['slug' => 'stock-audits.scan',        'name' => 'Scan Items During Audit',   'module' => 'stock-audits'],
+            ['slug' => 'stock-audits.complete',    'name' => 'Complete / Cancel Audits',  'module' => 'stock-audits'],
+            ['slug' => 'stock-audits.write-off',   'name' => 'Write Off Missing Stock',   'module' => 'stock-audits'],
+
             // ----- Banners module -----
             ['slug' => 'banners.view',             'name' => 'View Banners',              'module' => 'banners'],
             ['slug' => 'banners.create',           'name' => 'Create Banners',            'module' => 'banners'],

@@ -140,7 +140,7 @@
                 url: '{{ route('suppliers.data') }}',
                 type: 'GET',
             },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'checkbox',      name: 'checkbox',                orderable: false, searchable: false, className: 'ps-3' },
@@ -168,7 +168,7 @@
             },
             initComplete: function () {
                 $('#suppliersInfoSlot').append($('#suppliersTable_info'));
-                $('#suppliersPaginationSlot').append($('#suppliersTable_paginate'));
+                $('#suppliersPaginationSlot').append($('.datatables-tail'));
             },
         });
 

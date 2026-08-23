@@ -139,7 +139,7 @@
             responsive: false,
             order: [[8, 'desc']],
             ajax: { url: '{{ route('customers.data') }}', type: 'GET' },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'checkbox',      name: 'checkbox',                  orderable: false, searchable: false, className: 'ps-3' },
@@ -164,7 +164,7 @@
             },
             initComplete: function () {
                 $('#customersInfoSlot').append($('#customersTable_info'));
-                $('#customersPaginationSlot').append($('#customersTable_paginate'));
+                $('#customersPaginationSlot').append($('.datatables-tail'));
             },
         });
 

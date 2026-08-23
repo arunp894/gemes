@@ -79,6 +79,7 @@ class StoreProductRequest extends FormRequest
             'clarity_grade'      => ['nullable', 'string', Rule::in(Product::CLARITY_GRADES)],
             'cut_shape'          => ['nullable', 'string', Rule::in(Product::CUT_SHAPES)],
             'treatment'          => ['nullable', 'string', Rule::in(Product::TREATMENTS)],
+            'stone_description'  => ['nullable', 'string'],
             'certificate_number' => ['nullable', 'string', 'max:100'],
 
             /* ------------------------ Website visibility -------------------- */
@@ -96,9 +97,12 @@ class StoreProductRequest extends FormRequest
             'certificate_image'     => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'], // 10 MB for PDF
 
             /* ----------------------------- Barcodes ------------------------- */
-            // At least 1 barcode is required (the product cannot exist without
-            // physical identification per spec §5).
-            'barcodes'                 => ['required', 'array', 'min:1', 'max:' . Barcode::MAX_BARCODES_PER_PRODUCT],
+            // Optional here: a product created directly on this screen (or
+            // edited after being created by a Purchase, which auto-assigns
+            // its own primary EAN-13 -- see PurchaseService::syncLines())
+            // doesn't require this panel to be filled in. Any row that IS
+            // submitted still has to be well-formed (value/format/primary).
+            'barcodes'                 => ['nullable', 'array', 'max:' . Barcode::MAX_BARCODES_PER_PRODUCT],
             'barcodes.*.value'         => ['required', 'string', 'max:100'],
             'barcodes.*.format'        => ['required', 'string', Rule::in(Barcode::FORMATS)],
             'barcodes.*.label'         => ['nullable', 'string', 'max:100'],
@@ -233,7 +237,6 @@ class StoreProductRequest extends FormRequest
             'primary_image.mimes'  => 'Primary image must be a JPG or PNG file.',
             'gallery_images.max'   => 'You may upload at most ' . Product::MAX_GALLERY_IMAGES . ' gallery images.',
             'gallery_images.*.max' => 'Each gallery image must not be larger than 5 MB.',
-            'barcodes.min'         => 'Please add at least one barcode.',
             'barcodes.max'         => 'A product may have at most ' . Barcode::MAX_BARCODES_PER_PRODUCT . ' barcodes.',
         ];
     }
@@ -253,6 +256,7 @@ class StoreProductRequest extends FormRequest
             'clarity_grade'      => 'Clarity Grade',
             'cut_shape'          => 'Cut / Shape',
             'treatment'          => 'Treatment',
+            'stone_description'  => 'Stone Description',
             'certificate_number' => 'Certificate Number',
             'primary_image'      => 'Primary Image',
             'gallery_images'     => 'Gallery Images',

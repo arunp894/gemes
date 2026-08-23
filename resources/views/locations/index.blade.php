@@ -150,7 +150,7 @@
                 url: '{{ route('locations.data') }}',
                 type: 'GET',
             },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
             pageLength: 10,
             columns: [
                 { data: 'checkbox',      name: 'checkbox',                  orderable: false, searchable: false, className: 'ps-3' },
@@ -178,7 +178,7 @@
             },
             initComplete: function () {
                 $('#locationsInfoSlot').append($('#locationsTable_info'));
-                $('#locationsPaginationSlot').append($('#locationsTable_paginate'));
+                $('#locationsPaginationSlot').append($('.datatables-tail'));
             },
         });
 

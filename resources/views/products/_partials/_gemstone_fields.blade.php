@@ -86,6 +86,14 @@
                     placeholder="GIA / IGI / AGL ref">
             </div>
 
+            {{-- Stone Description --}}
+            <div class="col-md-12">
+                <label for="stone_description" class="form-label">Stone Description</label>
+                <textarea class="form-control" id="stone_description" name="stone_description"
+                    v-model="form.stone_description" rows="3"
+                    placeholder="Additional grading notes, inclusions, brilliance, provenance, etc. (optional)"></textarea>
+            </div>
+
             {{-- Certificate Image / PDF --}}
             <div class="col-md-12">
                 <label for="certificate_image" class="form-label">Certificate Document</label>

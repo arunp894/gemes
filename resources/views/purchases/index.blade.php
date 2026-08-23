@@ -41,11 +41,10 @@
                     <div class="d-flex align-items-center gap-1">
                         <div>
                             <select id="rolePerPage" class="form-select form-control my-1 my-md-0">
-                                <option value="5">5</option>
                                 <option value="10" selected>10</option>
-                                <option value="15">15</option>
-                                <option value="20">20</option>
+                                <option value="25">25</option>
                                 <option value="50">50</option>
+                                <option value="100">100</option>
                             </select>
                         </div>
                         <select id="purchaseStatusFilter" class="form-select form-control">
@@ -88,8 +87,8 @@
                 </div>
                 <div class="card-footer border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                        <div id="rolesInfoSlot" class="text-muted small"></div>
-                        <div id="rolesPaginationSlot"></div>
+                        <div id="purchasesInfoSlot" class="text-muted small"></div>
+                        <div id="purchasesPaginationSlot"></div>
                     </div>
                 </div>
             </div>
@@ -111,7 +110,7 @@
                 d.payment_status = $('#purchasePaymentFilter').val();
             }
         },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"datatables-tail"ip>',
         columns: [
             { data: 'DT_RowIndex',     name: 'DT_RowIndex',   orderable: false, searchable: false, className: 'text-center' },
             { data: 'invoice_number',  name: 'invoice_number' },
@@ -125,10 +124,10 @@
             { data: 'actions',         orderable: false, searchable: false, className: 'text-center' },
         ],
         initComplete: function () {
-                $('#rolesInfoSlot').append($('#rolesTable_info'));
-                $('#rolesPaginationSlot').append($('#rolesTable_paginate'));
+                $('#purchasesInfoSlot').append($('#purchasesTable_info'));
+                $('#purchasesPaginationSlot').append($('.datatables-tail'));
             },
-        order: [[1, 'desc']],
+        order: [[2, 'desc']],
         pageLength: 10,
     });
 

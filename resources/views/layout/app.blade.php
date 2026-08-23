@@ -44,6 +44,9 @@
         table thead.bg-light{
             background-color: #f3f1f1 !important;
         }
+        /* Global DataTables layout: pagination on the left, "Showing x of y" info on the right */
+        .card-footer [id$="PaginationSlot"] { order: 1; }
+        .card-footer [id$="InfoSlot"] { order: 2; }
         
     </style>
 </head>
@@ -821,6 +824,7 @@
     <script src="{{ asset('assets/plugins/datatables/dataTables.bootstrap5.min.js')}}"></script>
     <script src="{{ asset('assets/plugins/datatables/dataTables.responsive.min.js')}}"></script>
     <script src="{{ asset('assets/plugins/datatables/responsive.bootstrap5.min.js')}}"></script>    
+    <script src="{{ asset('assets/js/datatables-defaults.js') }}"></script>
     <script src="{{ asset('assets/plugins/dropzone/dropzone-min.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.min.js"></script>
     

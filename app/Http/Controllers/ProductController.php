@@ -89,6 +89,7 @@ class ProductController extends Controller
                                 <a href="' . route('products.show', $product) . '" class="link-reset">'
                     . e($product->title) .
                     '</a>
+                        <span class="badge badge-soft-info">' . e($product->carat_weight) . 'Ct</span>
                             </h5>
                             <span class="text-muted fs-xs">' . e($subcategoryName) . '</span>
                         </div>
@@ -188,7 +189,7 @@ class ProductController extends Controller
             $this->syncMedia($product, $request, false);
 
             // 3. Create barcode rows + channel pivots.
-            $this->syncBarcodes($product, $data['barcodes']);
+            $this->syncBarcodes($product, $data['barcodes'] ?? []);
 
             return $product;
         });
@@ -250,7 +251,7 @@ class ProductController extends Controller
             $this->syncMedia($product, $request, true);
 
             // 3. Diff + sync barcodes.
-            $this->syncBarcodes($product, $data['barcodes']);
+            $this->syncBarcodes($product, $data['barcodes'] ?? []);
         });
 
         if ($request->wantsJson() || $request->ajax()) {
@@ -479,6 +480,7 @@ class ProductController extends Controller
             'clarity_grade'      => $data['clarity_grade'] ?? null,
             'cut_shape'          => $data['cut_shape'] ?? null,
             'treatment'          => $data['treatment'] ?? null,
+            'stone_description'  => $data['stone_description'] ?? null,
             'certificate_number' => $data['certificate_number'] ?? null,
 
             // Website

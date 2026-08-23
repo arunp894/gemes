@@ -77,6 +77,7 @@ class UpdateProductRequest extends FormRequest
             'clarity_grade'      => ['nullable', 'string', Rule::in(Product::CLARITY_GRADES)],
             'cut_shape'          => ['nullable', 'string', Rule::in(Product::CUT_SHAPES)],
             'treatment'          => ['nullable', 'string', Rule::in(Product::TREATMENTS)],
+            'stone_description'  => ['nullable', 'string'],
             'certificate_number' => ['nullable', 'string', 'max:100'],
 
             /* ------------------------ Website visibility -------------------- */
@@ -99,7 +100,9 @@ class UpdateProductRequest extends FormRequest
 
             /* ----------------------------- Barcodes ------------------------- */
             // Update allows existing barcode rows (with `id`) plus new ones.
-            'barcodes'                 => ['required', 'array', 'min:1', 'max:' . Barcode::MAX_BARCODES_PER_PRODUCT],
+            // Optional overall -- see StoreProductRequest for why. Any row
+            // that IS submitted still has to be well-formed.
+            'barcodes'                 => ['nullable', 'array', 'max:' . Barcode::MAX_BARCODES_PER_PRODUCT],
             'barcodes.*.id'            => ['nullable', 'integer'],
             'barcodes.*.value'         => ['required', 'string', 'max:100'],
             'barcodes.*.format'        => ['required', 'string', Rule::in(Barcode::FORMATS)],
@@ -255,7 +258,6 @@ class UpdateProductRequest extends FormRequest
             'primary_image.mimes'  => 'Primary image must be a JPG or PNG file.',
             'gallery_images.max'   => 'You may upload at most ' . Product::MAX_GALLERY_IMAGES . ' gallery images.',
             'gallery_images.*.max' => 'Each gallery image must not be larger than 5 MB.',
-            'barcodes.min'         => 'Please add at least one barcode.',
             'barcodes.max'         => 'A product may have at most ' . Barcode::MAX_BARCODES_PER_PRODUCT . ' barcodes.',
         ];
     }
@@ -275,6 +277,7 @@ class UpdateProductRequest extends FormRequest
             'clarity_grade'      => 'Clarity Grade',
             'cut_shape'          => 'Cut / Shape',
             'treatment'          => 'Treatment',
+            'stone_description'  => 'Stone Description',
             'certificate_number' => 'Certificate Number',
             'primary_image'      => 'Primary Image',
             'gallery_images'     => 'Gallery Images',

@@ -280,7 +280,7 @@ $(function () {
                 d.category_id = $('#stockCategoryFilter').val();
             },
         },
-        dom: 'rt<"d-none datatables-tail"ip>',
+        dom: 'rt<"datatables-tail"ip>',
         pageLength: 25,
         columns: [
             { data: 'DT_RowIndex',    name: 'DT_RowIndex',     orderable: false, searchable: false, className: 'text-center' },
@@ -297,7 +297,7 @@ $(function () {
         },
         initComplete: function () {
             $('#stockInfoSlot').append($('#stockTable_info'));
-            $('#stockPaginationSlot').append($('#stockTable_paginate'));
+            $('#stockPaginationSlot').append($('.datatables-tail'));
         },
     });
 

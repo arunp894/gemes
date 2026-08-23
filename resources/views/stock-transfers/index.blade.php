@@ -111,7 +111,7 @@ $(function () {
             url: '{{ route('stock-transfers.data') }}',
             data: function (d) { d.status = $('#transferStatusFilter').val(); },
         },
-        dom: 'rt<"d-none datatables-tail"ip>',
+        dom: 'rt<"datatables-tail"ip>',
         columns: [
             { data: 'DT_RowIndex',     name: 'DT_RowIndex',                    orderable: false, searchable: false, className: 'text-center' },
             { data: 'transfer_number', name: 'stock_transfers.transfer_number' },
@@ -130,7 +130,7 @@ $(function () {
         },
         initComplete: function () {
             $('#transfersInfoSlot').append($('#transfersTable_info'));
-            $('#transfersPaginationSlot').append($('#transfersTable_paginate'));
+            $('#transfersPaginationSlot').append($('.datatables-tail'));
         },
     });
 

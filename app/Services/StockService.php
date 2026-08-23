@@ -10,6 +10,7 @@ use App\Models\SaleLine;
 use App\Models\StockMovement;
 use App\Models\StockTransfer;
 use App\Models\StockTransferLine;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 use RuntimeException;
@@ -298,6 +299,45 @@ class StockService
         }
 
         return $ordered;
+    }
+
+    /**
+     * Every piece with positive on-hand balance at a given location —
+     * the "what's physically here" answer a stock audit starts from
+     * (see StockAuditService::start()). Joins straight through to
+     * purchase_products so the audit snapshot can be written in one
+     * pass without a second round-trip per piece.
+     *
+     * Returns a Collection of rows: purchase_product_id, product_id,
+     * barcode, lot_code, on_hand — ordered by purchase_product_id for
+     * stable, resumable chunking on large (10k+ item) locations.
+     */
+    public function onHandPiecesForLocation(int $locationId): Collection
+    {
+        $signedSql = "SUM(CASE WHEN stock_movements.direction = 'in' THEN stock_movements.qty "
+            . "ELSE -stock_movements.qty END)";
+
+        return DB::table('stock_movements')
+            ->join('purchase_products', 'purchase_products.id', '=', 'stock_movements.purchase_product_id')
+            ->where('stock_movements.location_id', $locationId)
+            ->whereNull('stock_movements.deleted_at')
+            ->whereNull('purchase_products.deleted_at')
+            ->groupBy(
+                'stock_movements.purchase_product_id',
+                'stock_movements.product_id',
+                'purchase_products.barcode',
+                'purchase_products.lot_code'
+            )
+            ->select([
+                'stock_movements.purchase_product_id',
+                'stock_movements.product_id',
+                'purchase_products.barcode',
+                'purchase_products.lot_code',
+                DB::raw($signedSql . ' as on_hand'),
+            ])
+            ->havingRaw($signedSql . ' > 0')
+            ->orderBy('stock_movements.purchase_product_id')
+            ->get();
     }
 
     /**

@@ -82,6 +82,7 @@
             'clarity_grade'      => $product->clarity_grade,
             'cut_shape'          => $product->cut_shape,
             'treatment'          => $product->treatment,
+            'stone_description'  => $product->stone_description,
             'certificate_number' => $product->certificate_number,
             'website_enabled'    => (bool) $product->website_enabled,
             'website_price'      => $product->website_price,
