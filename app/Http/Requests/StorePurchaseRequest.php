@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Category;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
@@ -88,9 +87,12 @@ class StorePurchaseRequest extends FormRequest
     }
 
     /**
-     * Cross-field validation: gemstone fields become required on a line
-     * whose chosen category is flagged is_gemstone. Mirrors
-     * StoreProductRequest::validateGemstoneFields(), applied per line.
+     * Cross-field validation: a line's category must actually be mapped to
+     * the chosen supplier (when that supplier has any mapping at all — see
+     * Supplier::categories() docblock). Gemstone grading fields (carat,
+     * stone type, treatment, etc.) are NOT collected on the purchase form
+     * and so are never required here — they're set later by editing the
+     * individual Product once it exists, same as photos.
      */
     public function withValidator(Validator $validator): void
     {
@@ -114,21 +116,6 @@ class StorePurchaseRequest extends FormRequest
 
                 if ($supplierCategoryIds && ! in_array((int) $categoryId, $supplierCategoryIds, true)) {
                     $v->errors()->add("lines.{$i}.category_id", 'This category is not mapped to the selected supplier.');
-                }
-
-                $category = Category::find($categoryId);
-                if (! $category || ! (bool) $category->is_gemstone) {
-                    continue;
-                }
-
-                if (! isset($line['carat_weight']) || $line['carat_weight'] === '') {
-                    $v->errors()->add("lines.{$i}.carat_weight", 'Carat weight is required for gemstone items.');
-                }
-                if (empty($line['stone_type'])) {
-                    $v->errors()->add("lines.{$i}.stone_type", 'Stone type is required for gemstone items.');
-                }
-                if (empty($line['treatment'])) {
-                    $v->errors()->add("lines.{$i}.treatment", 'Treatment is required for gemstone items.');
                 }
             }
         });

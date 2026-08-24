@@ -5,10 +5,14 @@
 
      As of the "purchase creates its own products" change, a line no
      longer points at an existing catalogue product — it's a template
-     (category, title, gemstone fields) that gets stamped onto a
-     brand-new Product for every inventory row generated under it. The
-     old "scan or search an existing product" step is gone; adding a
-     line now means filling in the Add Item mini-form below.
+     (category, title) that gets stamped onto a brand-new Product for
+     every inventory row generated under it. Lines are added and edited
+     directly in the Purchase Items table (addBlankLine() pushes a blank
+     one; its Stone/Type/Country/etc. cells are then filled in inline) —
+     there's no separate add-item form. Gemstone-specific grading fields
+     (stone type, treatment, cut, clarity, colour, description) aren't
+     collected here at all; they're set later by editing the individual
+     Product once it exists, same as photos already are.
 
      Configuration (interpolated via Blade above the script):
        mode              create|edit
@@ -49,31 +53,6 @@
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
     // ── Helpers ─────────────────────────────────────────────────────
-    function emptyAddForm() {
-        return {
-            category_id:   null,
-            title:         '',
-            country_of_origin_id: null,
-            website_price: null,
-            website_enabled: false,
-            carat_weight:  null,
-            barcode:       '',
-            price:         null,
-            stone_type:    null,
-            colour_grade:  '',
-            clarity_grade: null,
-            cut_shape:     null,
-            treatment:     null,
-            stone_description: '',
-            // Box: Pcs is the number of separate rows/products this line
-            // fans out into. Piece: Pcs is the qty stamped onto the single
-            // row/product a piece line always collapses to (see addLine()).
-            // Defaults to 'box', the more common case.
-            type:          'box',
-            package_qty:   1,
-        };
-    }
-
     function emptyRow(caratDefault, websitePriceDefault, barcodeDefault, priceDefault, websiteEnabledDefault) {
         return {
             id:               null,
@@ -93,6 +72,38 @@
             _focused:         false,
             _lotCode:         null,
             _product:         null, // populated only for rows hydrated from an existing purchase
+        };
+    }
+
+    // A brand-new line added straight into the Purchase Items table —
+    // Stone/Type/Country/etc. all start blank and are filled in inline
+    // (see addBlankLine()). Defaults to Box/Pcs 1, the more common case;
+    // gemstone grading fields are never collected here (see file header).
+    function emptyLine() {
+        return {
+            id:                 null,
+            category_id:        null,
+            title:              '',
+            short_description:  null,
+            full_description:   null,
+            country_of_origin_id: null,
+            notes_tags:         null,
+            website_price:      null,
+            website_enabled:    false,
+            carat_weight:       null,
+            stone_type:         null,
+            colour_grade:       null,
+            clarity_grade:      null,
+            cut_shape:          null,
+            treatment:          null,
+            stone_description:  null,
+            _highlight:         true,
+            _expanded:          false,
+            type:               'box',
+            package_name:       'Box',
+            package_qty:        1,
+            remarks:            null,
+            rows:               [emptyRow()],
         };
     }
 
@@ -156,13 +167,12 @@
             countriesOfOrigin: CONFIG.countriesOfOrigin,
             // Subset of `categories` mapped to the chosen supplier (see
             // fetchSupplierCategories()). Empty until a supplier with at
-            // least one mapped category is selected; the Add Item dropdown
-            // falls back to the full `categories` list otherwise (see the
-            // categoryOptions computed) so unmapped suppliers still work.
+            // least one mapped category is selected; the Stone dropdown on
+            // each new line falls back to the full `categories` list
+            // otherwise (see the categoryOptions computed) so unmapped
+            // suppliers still work.
             supplierCategories:       [],
             supplierCategoriesLoaded: false,
-            addForm:        emptyAddForm(),
-            addErrors:      {},
             formMessage:    '',
             formLevel:      '',   // 'success' | 'danger' | 'info'
             submitting:     false,
@@ -218,18 +228,12 @@
             totalPiecesAll() {
                 return this.form.lines.reduce((acc, l) => acc + this.totalPieces(l), 0);
             },
-            // Categories offered in the "Add Item" dropdown: the
+            // Categories offered in each line's Stone dropdown: the
             // supplier-mapped subset once loaded and non-empty, otherwise
             // every active category (covers suppliers with no mapping yet
             // and the brief window before a supplier is chosen).
             categoryOptions() {
                 return this.supplierCategories.length ? this.supplierCategories : this.categories;
-            },
-            addFormCategory() {
-                return this.categories.find(c => c.id === this.addForm.category_id) || null;
-            },
-            addFormIsGemstone() {
-                return !!(this.addFormCategory && this.addFormCategory.is_gemstone);
             },
             formAlertClass() {
                 return {
@@ -319,7 +323,7 @@
             },
 
             /* ─── Supplier -> mapped categories ───────────────────────
-               Filters the "Add Item" category dropdown down to whatever the
+               Filters each line's Stone dropdown down to whatever the
                chosen supplier is mapped to (Supplier::categories()). A
                supplier with no mapping yet resolves to an empty list here,
                and categoryOptions() falls back to the full category list
@@ -336,13 +340,6 @@
                         if (!j.success) return;
                         this.supplierCategories = j.categories || [];
                         this.supplierCategoriesLoaded = true;
-                        // If the Add Item form already has a category picked
-                        // that fell out of the newly-filtered list, clear it
-                        // rather than silently submitting a mismatched pick.
-                        if (this.addForm.category_id && this.supplierCategories.length
-                            && !this.supplierCategories.some(c => c.id === this.addForm.category_id)) {
-                            this.addForm.category_id = null;
-                        }
                     })
                     .catch(() => {});
             },
@@ -406,87 +403,24 @@
                 this.$set(line, '_expanded', !line._expanded);
             },
 
-            /* ─── Add Item ───────────────────────────────────────── */
+            /* ─── Line management ────────────────────────────────── */
 
-            addLine() {
-                this.addErrors = {};
+            // Pushes a blank line straight into the Purchase Items table —
+            // its Stone/Type/Country/etc. cells render inline-editable
+            // immediately (see _line_table.blade.php's `!line.id` branch).
+            addBlankLine() {
+                this.form.lines.push(emptyLine());
+                this.flashLine(this.form.lines.length - 1);
+            },
 
-                if (!this.addForm.category_id) this.addErrors.category_id = 'Required';
-
-                const isPiece = this.addForm.type === 'piece';
-                const qty = parseInt(this.addForm.package_qty, 10) || 0;
-                if (qty < 1) this.addErrors.package_qty = 'Must be at least 1';
-
-                if (this.addFormIsGemstone) {
-                    if (this.addForm.carat_weight === null || this.addForm.carat_weight === '') {
-                        this.addErrors.carat_weight = 'Required for gemstone items';
-                    }
-                    if (!this.addForm.stone_type) this.addErrors.stone_type = 'Required for gemstone items';
-                    if (!this.addForm.treatment)  this.addErrors.treatment  = 'Required for gemstone items';
-                }
-
-                if (Object.keys(this.addErrors).length) return;
-
-                const caratDefault = (this.addForm.carat_weight !== null && this.addForm.carat_weight !== '')
-                    ? parseFloat(this.addForm.carat_weight) : null;
-                const websitePriceDefault = (this.addForm.website_price !== null && this.addForm.website_price !== '')
-                    ? parseFloat(this.addForm.website_price) : null;
-                const barcodeDefault = (this.addForm.barcode || '').trim();
-                const priceDefault = (this.addForm.price !== null && this.addForm.price !== '')
-                    ? parseFloat(this.addForm.price) : null;
-
-                // Piece lines are always exactly one inventory row/product
-                // — the physical count (qty) goes on that single row instead
-                // of driving row count, so several identical pieces can
-                // share one product. Box lines still fan out into one row
-                // per box, Pcs driving the row count directly.
-                const rowCount = isPiece ? 1 : qty;
-                const rows = [];
-                for (let i = 0; i < rowCount; i++) {
-                    rows.push(emptyRow(caratDefault, websitePriceDefault, barcodeDefault, priceDefault, this.addForm.website_enabled));
-                }
-                if (isPiece) {
-                    rows[0].qty = qty;
-                }
-
-                // Title is optional — fall back to the category name so a
-                // line never shows blank in the items table or invoice.
-                const lineTitle = (this.addForm.title && this.addForm.title.trim())
-                    ? this.addForm.title.trim()
-                    : this.categoryName(this.addForm.category_id);
-
-                this.form.lines.push({
-                    id:                 null,
-                    category_id:        this.addForm.category_id,
-                    title:              lineTitle,
-                    short_description:  null,
-                    full_description:   null,
-                    country_of_origin_id: this.addForm.country_of_origin_id || null,
-                    notes_tags:         null,
-                    website_price:      (this.addForm.website_price !== null && this.addForm.website_price !== '') ? parseFloat(this.addForm.website_price) : null,
-                    website_enabled:    !!this.addForm.website_enabled,
-                    carat_weight:       caratDefault,
-                    stone_type:         this.addFormIsGemstone ? this.addForm.stone_type   : null,
-                    colour_grade:       this.addFormIsGemstone ? (this.addForm.colour_grade || null) : null,
-                    clarity_grade:      this.addFormIsGemstone ? this.addForm.clarity_grade : null,
-                    cut_shape:          this.addFormIsGemstone ? this.addForm.cut_shape     : null,
-                    treatment:          this.addFormIsGemstone ? this.addForm.treatment     : null,
-                    stone_description:  this.addFormIsGemstone ? (this.addForm.stone_description || null) : null,
-                    _highlight:         true,
-                    _expanded:          rows.length > 1,
-                    type:               this.addForm.type,
-                    package_name:       isPiece ? 'Piece' : 'Box',
-                    package_qty:        isPiece ? 1 : qty,
-                    remarks:            null,
-                    rows:               rows,
-                });
-
-                const newIdx = this.form.lines.length - 1;
-                this.flashLine(newIdx);
-                this.refreshLotCodePreview(newIdx);
-                const pieceSuffix = (isPiece && qty > 1) ? ' in 1 row' : '';
-                this.setMessage('success', `Added "${this.form.lines[newIdx].title}" (${qty} pc${qty === 1 ? '' : 's'}${pieceSuffix}).`);
-                this.addForm = emptyAddForm();
+            // Fired when a new (unsaved) line's Stone dropdown changes —
+            // keeps the line's title in sync with its category and kicks
+            // off a fresh lot code preview now that one can be computed.
+            onLineCategoryChange(li) {
+                const line = this.form.lines[li];
+                line.title = this.categoryName(line.category_id);
+                line.rows.forEach(row => { row._lotCode = null; });
+                this.refreshLotCodePreview(li);
             },
 
             /* ─── Row management ─────────────────────────────────── */
@@ -584,7 +518,9 @@
                     lines: this.form.lines.map(l => ({
                         id:                 l.id,
                         category_id:        l.category_id,
-                        title:              l.title,
+                        // Title has no dedicated input anymore — it's
+                        // always just the category name.
+                        title:              this.categoryName(l.category_id),
                         short_description:  l.short_description,
                         full_description:   l.full_description,
                         country_of_origin_id: l.country_of_origin_id,
@@ -647,6 +583,10 @@
                 }
                 if (this.form.lines.length === 0) {
                     this.setMessage('danger', 'Add at least one item before saving.');
+                    return;
+                }
+                if (this.form.lines.some(l => !l.category_id)) {
+                    this.setMessage('danger', 'Every line needs a Stone selected.');
                     return;
                 }
 

@@ -1,4 +1,13 @@
-{{-- Inline multi-row product table.
+{{-- Inline multi-row product table. There is no separate "Add Item" form —
+     the "Add Row" button (and the empty-state one) push a blank line
+     straight into this table via addBlankLine(); its Stone and Country of
+     Origin cells render as live selects for as long as the line is new
+     (`!line.id`, i.e. not yet saved). Once a line has been saved its
+     Stone/Country cells go read-only (see class docblock in the script
+     partial for why: nothing re-syncs a changed category to the product
+     it already created). Gemstone grading fields (stone type, treatment,
+     cut, clarity, colour, description) aren't collected here at all —
+     they're set later by editing the individual Product, same as photos.
 
      Layout strategy (driven by `line.rows.length`, not `line.type`):
        - Each LINE renders a "parent" <tr> with the item's title/category
@@ -26,6 +35,10 @@
         <i class="ti ti-list-details fs-18 text-primary"></i>
         <h5 class="card-title mb-0">Purchase Items</h5>
         <span class="badge bg-soft-primary text-primary ms-2">@{{ form.lines.length }} lines</span>
+        <button type="button" class="btn btn-sm btn-primary ms-auto" @click="addBlankLine"
+                :disabled="!form.supplier_id" :title="!form.supplier_id ? 'Pick a supplier first' : ''">
+            <i class="ti ti-plus me-1"></i> Add Row
+        </button>
     </div>
 
     <div class="table-responsive">
@@ -70,7 +83,17 @@
 
                         <td>
                             <div class="d-flex align-items-center justify-content-between gap-2">
-                                <div>
+                                {{-- New (unsaved) lines get a live Stone picker right in the
+                                     row — persisted lines stay read-only here (changing an
+                                     already-purchased line's category wouldn't reach the
+                                     product it already created, so it's not offered). --}}
+                                <select v-if="!line.id" class="form-select form-select-sm" style="min-width: 140px;"
+                                        v-model.number="line.category_id"
+                                        @change="onLineCategoryChange(li)" required>
+                                    <option :value="null">— Select Stone —</option>
+                                    <option v-for="c in categoryOptions" :key="c.id" :value="c.id">@{{ c.name }}</option>
+                                </select>
+                                <div v-else>
                                     <div class="fw-semibold">@{{ line.title }}</div>
                                     <small class="text-muted">@{{ categoryName(line.category_id) }}</small>
                                 </div>
@@ -89,7 +112,13 @@
                             </div>
                         </td>
 
-                        <td class="small">@{{ countryOfOriginName(line.country_of_origin_id) }}</td>
+                        <td class="small">
+                            <select v-if="!line.id" class="form-select form-select-sm" v-model.number="line.country_of_origin_id">
+                                <option :value="null">— Select —</option>
+                                <option v-for="o in countriesOfOrigin" :key="o.id" :value="o.id">@{{ o.name }}</option>
+                            </select>
+                            <span v-else>@{{ countryOfOriginName(line.country_of_origin_id) }}</span>
+                        </td>
 
                         <td>
                             <select class="form-select form-select-sm" v-model="line.type" @change="rebuildRows(li)">
@@ -234,7 +263,13 @@
                 <tr v-if="form.lines.length === 0">
                     <td colspan="12" class="text-center text-muted py-4">
                         <i class="ti ti-package fs-22 d-block mb-1 text-muted"></i>
-                        Add an item above to begin.
+                        <span v-if="!form.supplier_id">Pick a supplier above, then add a row to begin.</span>
+                        <template v-else>
+                            No items yet.
+                            <button type="button" class="btn btn-sm btn-soft-primary ms-1" @click="addBlankLine">
+                                <i class="ti ti-plus me-1"></i> Add Row
+                            </button>
+                        </template>
                     </td>
                 </tr>
             </tbody>

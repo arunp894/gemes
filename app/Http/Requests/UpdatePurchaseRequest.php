@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Category;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseLine;
@@ -128,21 +127,6 @@ class UpdatePurchaseRequest extends FormRequest
 
                 if ($supplierCategoryIds && ! in_array((int) $categoryId, $supplierCategoryIds, true)) {
                     $v->errors()->add("lines.{$i}.category_id", 'This category is not mapped to the selected supplier.');
-                }
-
-                $category = Category::find($categoryId);
-                if (! $category || ! (bool) $category->is_gemstone) {
-                    continue;
-                }
-
-                if (! isset($line['carat_weight']) || $line['carat_weight'] === '') {
-                    $v->errors()->add("lines.{$i}.carat_weight", 'Carat weight is required for gemstone items.');
-                }
-                if (empty($line['stone_type'])) {
-                    $v->errors()->add("lines.{$i}.stone_type", 'Stone type is required for gemstone items.');
-                }
-                if (empty($line['treatment'])) {
-                    $v->errors()->add("lines.{$i}.treatment", 'Treatment is required for gemstone items.');
                 }
             }
         });
