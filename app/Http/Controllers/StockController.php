@@ -295,7 +295,7 @@ class StockController extends Controller
         $movements = StockMovement::query()
             ->where('product_id', $product->id)
             ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
-            ->with(['location:id,name,location_code', 'purchaseProduct:id,barcode', 'creator:id,name'])
+            ->with(['location:id,name,location_code', 'purchaseProduct:id,barcode,carat_weight', 'creator:id,name'])
             ->orderBy('movement_date')
             ->orderBy('id')
             ->get();

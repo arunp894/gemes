@@ -559,6 +559,12 @@ class PurchaseService
                 $websitePrice = isset($r['website_price']) && $r['website_price'] !== ''
                     ? (float) $r['website_price']
                     : $lineFields['website_price'];
+                // Per-row website visibility, same fallback shape as
+                // website_price above — a box of 10 rarely gets listed
+                // all at once, so this is editable per row too.
+                $websiteEnabled = array_key_exists('website_enabled', $r) && $r['website_enabled'] !== null
+                    ? (bool) $r['website_enabled']
+                    : (bool) $lineFields['website_enabled'];
                 $price = (float) ($r['price'] ?? 0);
 
                 if ($existingRow) {
@@ -570,6 +576,7 @@ class PurchaseService
                         'serial_number'    => $r['serial_number'] ?? null,
                         'price'            => $price,
                         'website_price'    => $websitePrice,
+                        'website_enabled'  => $websiteEnabled,
                         'expiry_date'      => $r['expiry_date'] ?? null,
                         'manufacture_date' => $r['manufacture_date'] ?? null,
                         'remarks'          => $r['remarks'] ?? null,
@@ -586,8 +593,6 @@ class PurchaseService
                         Product::whereKey($existingRow->product_id)->update(['carat_weight' => $caratWeight]);
                     }
                 } else {
-                    $websiteEnabled = (bool) $lineFields['website_enabled'];
-
                     $product = Product::create([
                         'title'                => $lineFields['title'],
                         'sku'                  => Product::generateSku($category),
@@ -631,6 +636,7 @@ class PurchaseService
                         'serial_number'    => $r['serial_number'] ?? null,
                         'price'            => $price,
                         'website_price'    => $websitePrice,
+                        'website_enabled'  => $websiteEnabled,
                         'tax_percent'      => 0,
                         'tax_amount'       => 0,
                         'discount_percent' => 0,

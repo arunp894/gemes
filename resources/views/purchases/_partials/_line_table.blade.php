@@ -2,15 +2,14 @@
 
      Layout strategy (driven by `line.rows.length`, not `line.type`):
        - Each LINE renders a "parent" <tr> with the item's title/category
-         and country of origin. Pack Qty (hidden from this table; set via
-         the Add Item form's Pcs field) drives inventory-row count for
-         BOX lines — each row becomes its own product on save. PIECE
-         lines are always exactly one row; several identical pieces can
-         share one product via that row's own Qty field instead. Type and
-         Pack Qty stay on the line under the hood (still sent to the
-         server) but aren't shown or editable here anymore.
+         and country of origin. The Type column carries both the
+         Box/Piece select and, for Box lines, a Pack Qty input — changing
+         either calls rebuildRows(), which fans the line's rows out (or
+         back in) to match. PIECE lines are always exactly one row;
+         several identical pieces can share one product via that row's
+         own Qty field instead.
        - When a line has exactly ONE row, the parent row also carries that
-         row's qty / carat / barcode / rack / price inputs inline.
+         row's qty / carat / barcode / rack / price / website inputs inline.
        - When a line has MORE THAN ONE row, the parent row instead shows
          aggregate readouts (Total pieces / Inventory rows / Line total)
          with a chevron to expand/collapse. When expanded, CHILD <tr>s are
@@ -36,6 +35,7 @@
                     <th style="width: 32px;">#</th>
                     <th>Item</th>
                     <th style="width: 140px;">Country of Origin</th>
+                    <th style="width: 90px;">Type</th>
                     <th style="width: 90px;">Pcs</th>
                     <th style="width: 100px;">Carat</th>
                     <th style="width: 170px;">Barcode</th>
@@ -74,17 +74,34 @@
                                     <div class="fw-semibold">@{{ line.title }}</div>
                                     <small class="text-muted">@{{ categoryName(line.category_id) }}</small>
                                 </div>
-                                <button type="button"
+                                {{-- Single-row lines: the toggle edits row[0] directly
+                                     (same "hoist row 0 into the parent row" pattern the
+                                     other inputs already follow). Multi-row lines hide
+                                     this — one flag can't represent N independently-set
+                                     rows — and get a toggle per child row instead. --}}
+                                <button v-if="line.rows.length === 1" type="button"
                                         class="btn btn-icon btn-sm flex-shrink-0"
-                                        :class="line.website_enabled ? 'btn-soft-info' : 'btn-default'"
-                                        @click="line.website_enabled = !line.website_enabled"
-                                        :title="line.website_enabled ? 'Listed on website — click to unlist' : 'Not listed — click to list on website'">
-                                    <i class="ti fs-16" :class="line.website_enabled ? 'ti-world' : 'ti-world-off'"></i>
+                                        :class="line.rows[0].website_enabled ? 'btn-soft-info' : 'btn-default'"
+                                        @click="line.rows[0].website_enabled = !line.rows[0].website_enabled"
+                                        :title="line.rows[0].website_enabled ? 'Listed on website — click to unlist' : 'Not listed — click to list on website'">
+                                    <i class="ti fs-16" :class="line.rows[0].website_enabled ? 'ti-world' : 'ti-world-off'"></i>
                                 </button>
                             </div>
                         </td>
 
                         <td class="small">@{{ countryOfOriginName(line.country_of_origin_id) }}</td>
+
+                        <td>
+                            <select class="form-select form-select-sm" v-model="line.type" @change="rebuildRows(li)">
+                                <option value="box">Box</option>
+                                <option value="piece">Piece</option>
+                            </select>
+                            <input v-if="line.type === 'box'" type="number" min="1"
+                                   class="form-control form-control-sm mt-1"
+                                   v-model.number="line.package_qty"
+                                   @change="rebuildRows(li)"
+                                   title="Pack Qty — number of inventory rows/products this line creates">
+                        </td>
 
                         {{-- Single-row lines (Pack Qty = 1): hoist row[0]'s
                              inputs straight into the parent row. --}}
@@ -165,8 +182,16 @@
                                     @{{ row._product.sku }}
                                 </span>
                                 <span v-else class="badge badge-soft-secondary ms-1">New</span>
+                                <button type="button"
+                                        class="btn btn-icon btn-sm p-0 ms-1 lh-1"
+                                        :class="row.website_enabled ? 'text-info' : 'text-muted'"
+                                        @click="row.website_enabled = !row.website_enabled"
+                                        :title="row.website_enabled ? 'Listed on website — click to unlist' : 'Not listed — click to list on website'">
+                                    <i class="ti fs-14" :class="row.website_enabled ? 'ti-world' : 'ti-world-off'"></i>
+                                </button>
                             </td>
 
+                            <td class="bg-light bg-opacity-25"></td>
                             <td class="bg-light bg-opacity-25"></td>
 
                             <td>
@@ -207,7 +232,7 @@
                 </template>
 
                 <tr v-if="form.lines.length === 0">
-                    <td colspan="11" class="text-center text-muted py-4">
+                    <td colspan="12" class="text-center text-muted py-4">
                         <i class="ti ti-package fs-22 d-block mb-1 text-muted"></i>
                         Add an item above to begin.
                     </td>

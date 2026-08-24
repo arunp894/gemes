@@ -74,7 +74,7 @@
         };
     }
 
-    function emptyRow(caratDefault, websitePriceDefault, barcodeDefault, priceDefault) {
+    function emptyRow(caratDefault, websitePriceDefault, barcodeDefault, priceDefault, websiteEnabledDefault) {
         return {
             id:               null,
             qty:              1,
@@ -84,6 +84,7 @@
             serial_number:    null,
             price:            (priceDefault !== undefined && priceDefault !== null && priceDefault !== '') ? priceDefault : 0,
             website_price:    (websitePriceDefault !== undefined && websitePriceDefault !== null) ? websitePriceDefault : null,
+            website_enabled:  !!websiteEnabledDefault,
             tax_percent:      0,
             discount_percent: 0,
             expiry_date:      null,
@@ -131,6 +132,7 @@
                 serial_number:    r.serial_number,
                 price:            parseFloat(r.price)            || 0,
                 website_price:    (r.website_price !== null && r.website_price !== undefined) ? parseFloat(r.website_price) : null,
+                website_enabled:  !!r.website_enabled,
                 tax_percent:      parseFloat(r.tax_percent)      || 0,
                 discount_percent: parseFloat(r.discount_percent) || 0,
                 expiry_date:      r.expiry_date,
@@ -441,7 +443,7 @@
                 const rowCount = isPiece ? 1 : qty;
                 const rows = [];
                 for (let i = 0; i < rowCount; i++) {
-                    rows.push(emptyRow(caratDefault, websitePriceDefault, barcodeDefault, priceDefault));
+                    rows.push(emptyRow(caratDefault, websitePriceDefault, barcodeDefault, priceDefault, this.addForm.website_enabled));
                 }
                 if (isPiece) {
                     rows[0].qty = qty;
@@ -511,7 +513,10 @@
                         const t = line.rows[line.rows.length - 1];
                         const row = emptyRow(
                             t ? t.carat_weight : line.carat_weight,
-                            t ? t.website_price : line.website_price
+                            t ? t.website_price : line.website_price,
+                            undefined,
+                            undefined,
+                            t ? t.website_enabled : line.website_enabled
                         );
                         if (t) {
                             row.rack_id     = t.rack_id;
@@ -606,6 +611,7 @@
                             serial_number:    r.serial_number,
                             price:            r.price,
                             website_price:    (r.website_price === '' || r.website_price === undefined) ? null : r.website_price,
+                            website_enabled:  !!r.website_enabled,
                             expiry_date:      r.expiry_date,
                             manufacture_date: r.manufacture_date,
                             remarks:          r.remarks,

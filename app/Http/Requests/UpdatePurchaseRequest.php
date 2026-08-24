@@ -91,6 +91,7 @@ class UpdatePurchaseRequest extends FormRequest
             'lines.*.rows.*.serial_number'    => ['nullable', 'string', 'max:100'],
             'lines.*.rows.*.price'            => ['required', 'numeric', 'min:0'],
             'lines.*.rows.*.website_price'    => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'lines.*.rows.*.website_enabled'  => ['nullable', 'boolean'],
             'lines.*.rows.*.expiry_date'      => ['nullable', 'date'],
             'lines.*.rows.*.manufacture_date' => ['nullable', 'date', 'before_or_equal:lines.*.rows.*.expiry_date'],
             'lines.*.rows.*.remarks'          => ['nullable', 'string'],

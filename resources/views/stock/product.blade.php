@@ -169,6 +169,7 @@
                         <th>Reason</th>
                         <th style="min-width:180px">Source Document</th>
                         <th>Piece</th>
+                        <th class="text-end">Carat</th>
                         <th>Location</th>
                         <th class="text-end">Qty</th>
                         <th class="text-end">Balance</th>
@@ -259,6 +260,7 @@
                                     <small class="d-block text-muted">{{ $m->purchaseProduct->barcode }}</small>
                                 @endif
                             </td>
+                            <td class="text-end">{{ $m->purchaseProduct?->carat_weight ? $m->purchaseProduct->carat_weight . ' ct' : '—' }}</td>
                             <td>{{ optional($m->location)->name ?? '—' }}</td>
                             <td class="text-end {{ $m->isIn() ? 'text-success' : 'text-danger' }} fw-semibold">
                                 {{ $m->isIn() ? '+' : '−' }}{{ (int) $m->qty }}
@@ -268,7 +270,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-5">
+                            <td colspan="10" class="text-center text-muted py-5">
                                 <i class="ti ti-inbox d-block fs-2xl mb-2"></i>
                                 No movements recorded for this product yet.
                             </td>

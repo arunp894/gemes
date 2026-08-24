@@ -178,6 +178,7 @@
                                 <th>Lot Code</th>
                                 <th>Product</th>
                                 <th>SKU</th>
+                                <th class="text-end">Carat</th>
                                 <th>Category</th>
                                 <th>Supplier</th>
                                 <th>Invoice #</th>
@@ -227,6 +228,7 @@ $(function () {
             { data: 'lot_code_label',   name: 'lot_code',    orderable: false, searchable: false },
             { data: 'product_label',    name: 'product_label', orderable: false, searchable: false },
             { data: 'sku',              name: 'sku',          orderable: false, searchable: false },
+            { data: 'carat_weight',     name: 'carat_weight', orderable: false, searchable: false, className: 'text-end' },
             { data: 'category',         name: 'category',     orderable: false, searchable: false },
             { data: 'supplier',         name: 'supplier',     orderable: false, searchable: false },
             { data: 'invoice_number',   name: 'invoice_number', orderable: false, searchable: false },

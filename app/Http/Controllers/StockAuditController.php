@@ -264,6 +264,7 @@ class StockAuditController extends Controller
                 return $title;
             })
             ->addColumn('sku', fn (StockAuditItem $i) => $i->product?->sku ?? '—')
+            ->addColumn('carat_weight', fn (StockAuditItem $i) => $i->purchaseProduct?->carat_weight ? $i->purchaseProduct->carat_weight . ' ct' : '—')
             ->addColumn('category', fn (StockAuditItem $i) => $i->product?->category?->name ?? '—')
             ->addColumn('lot_code_label', fn (StockAuditItem $i) => $i->lot_code ?: '—')
             ->addColumn('supplier', function (StockAuditItem $i) {

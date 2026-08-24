@@ -91,6 +91,7 @@
                                     <th>#</th>
                                     <th>Product</th>
                                     <th>Barcode</th>
+                                    <th class="text-end">Carat</th>
                                     <th class="text-end">Qty</th>
                                     <th>Notes</th>
                                 </tr>
@@ -110,11 +111,12 @@
                                                 </a>
                                             </code>
                                         </td>
+                                        <td class="text-end">{{ $line->purchaseProduct?->carat_weight ? $line->purchaseProduct->carat_weight . ' ct' : '—' }}</td>
                                         <td class="text-end fw-semibold">{{ (int) $line->qty }}</td>
                                         <td><small>{{ $line->notes }}</small></td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="5" class="text-center text-muted py-4">No lines.</td></tr>
+                                    <tr><td colspan="6" class="text-center text-muted py-4">No lines.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>

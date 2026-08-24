@@ -129,17 +129,6 @@
                                 <div class="invalid-feedback">@{{ addErrors.package_qty }}</div>
                             </div>
 
-                            <div class="col-md-1">
-                                <label class="form-label">Carat <span class="text-danger" v-if="addFormIsGemstone">*</span></label>
-                                <div class="input-group">
-                                    <input type="number" step="0.001" min="0.001" class="form-control"
-                                           v-model.number="addForm.carat_weight"
-                                           :class="{ 'is-invalid': addErrors.carat_weight }">
-                                    <span class="input-group-text">ct</span>
-                                    <div class="invalid-feedback">@{{ addErrors.carat_weight }}</div>
-                                </div>
-                            </div>
-
                             <div class="col-md-2">
                                 <label class="form-label">Barcode</label>
                                 <input type="text" class="form-control" v-model="addForm.barcode"
@@ -182,6 +171,16 @@
                             {{-- Gemstone panel: shown only when the chosen category is flagged is_gemstone --}}
                             <template v-if="addFormIsGemstone">
                                 <div class="col-12"><hr class="my-1"></div>
+                                <div class="col-md-1">
+                                    <label class="form-label">Carat <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="number" step="0.001" min="0.001" class="form-control"
+                                               v-model.number="addForm.carat_weight"
+                                               :class="{ 'is-invalid': addErrors.carat_weight }">
+                                        <span class="input-group-text">ct</span>
+                                        <div class="invalid-feedback">@{{ addErrors.carat_weight }}</div>
+                                    </div>
+                                </div>
                                 <div class="col-md-2">
                                     <label class="form-label">Stone Type <span class="text-danger">*</span></label>
                                     <select class="form-select" v-model="addForm.stone_type"

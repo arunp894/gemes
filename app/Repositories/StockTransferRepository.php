@@ -24,7 +24,7 @@ class StockTransferRepository
             'fromLocation',
             'toLocation',
             'lines.product:id,title,sku',
-            'lines.purchaseProduct:id,purchase_line_id,barcode,lot_code,price',
+            'lines.purchaseProduct:id,purchase_line_id,barcode,lot_code,price,carat_weight',
             'lines.purchaseProduct.line:id,category_id,stone_type',
             'lines.purchaseProduct.line.category:id,name',
             'lines.toRack:id,code,name',
