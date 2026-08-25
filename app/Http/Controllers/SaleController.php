@@ -116,6 +116,13 @@ class SaleController extends Controller
                 fn(Sale $s) =>
                 '<span class="badge ' . $s->statusBadgeClass() . ' fs-xxs">' . e($s->statusLabel()) . '</span>'
             )
+            ->addColumn(
+                'shipping_badge',
+                fn(Sale $s) =>
+                $s->needsShipping()
+                    ? '<span class="badge ' . $s->shippingStatusBadgeClass() . ' fs-xxs">' . e($s->shippingStatusLabel()) . '</span>'
+                    : '<span class="text-muted">—</span>'
+            )
             ->addColumn('actions', function (Sale $s) use ($editDays) {
                 $canEdit   = auth()->user()?->hasPermission('sales.edit')   ?? false;
                 $canDelete = auth()->user()?->hasPermission('sales.delete') ?? false;
@@ -144,7 +151,7 @@ class SaleController extends Controller
                         ->orWhere('customer_code', 'like', $like);
                 });
             })
-            ->rawColumns(['sale_number', 'customer_label', 'location_label', 'channel_label', 'grand_total', 'payment_badge', 'status_badge', 'actions'])
+            ->rawColumns(['sale_number', 'customer_label', 'location_label', 'channel_label', 'grand_total', 'payment_badge', 'status_badge', 'shipping_badge', 'actions'])
             ->toJson();
     }
 
@@ -312,6 +319,56 @@ class SaleController extends Controller
         }
     }
 
+    /**
+     * Advance/correct a shipping-only status — unrelated to the sale's own
+     * draft/posted/completed lifecycle. Route constrains $status to
+     * Sale::SHIPPING_STATUSES, so this only re-validates against a sale
+     * that was never marked shippable in the first place (a POS sale,
+     * for instance — see Sale::needsShipping()).
+     */
+    public function updateShippingStatus(Sale $sale, string $status): JsonResponse
+    {
+        if (! $sale->needsShipping()) {
+            return response()->json(['ok' => false, 'message' => 'This sale has no shipping to track.'], 422);
+        }
+
+        $sale->update(['shipping_status' => $status]);
+
+        return response()->json([
+            'ok'      => true,
+            'message' => 'Shipping status updated.',
+            'sale'    => $sale,
+        ]);
+    }
+
+    public function updateShippingDetails(Request $request, Sale $sale): JsonResponse
+    {
+        if (! $sale->needsShipping()) {
+            return response()->json(['ok' => false, 'message' => 'This sale has no shipping to track.'], 422);
+        }
+
+        $data = $request->validate([
+            'shipping_address_line1'  => ['nullable', 'string', 'max:255'],
+            'shipping_address_line2'  => ['nullable', 'string', 'max:255'],
+            'shipping_city'           => ['nullable', 'string', 'max:100'],
+            'shipping_state'          => ['nullable', 'string', 'max:100'],
+            'shipping_zip_code'       => ['nullable', 'string', 'max:20'],
+            'shipping_country'        => ['nullable', 'string', 'max:100'],
+            'shipping_carrier'        => ['nullable', 'string', 'max:100'],
+            'tracking_number'         => ['nullable', 'string', 'max:100'],
+            'shipped_at'              => ['nullable', 'date'],
+            'estimated_delivery_date' => ['nullable', 'date'],
+        ]);
+
+        $sale->update($data);
+
+        return response()->json([
+            'ok'      => true,
+            'message' => 'Shipping details updated.',
+            'sale'    => $sale,
+        ]);
+    }
+
     /* ─── Payments ────────────────────────────────────────── */
 
     public function addPayment(StoreSalePaymentRequest $request, Sale $sale): JsonResponse
@@ -368,8 +425,8 @@ class SaleController extends Controller
         // barcode or its lot code (SS-PPP-UUU) — both identify this exact
         // physical piece, unlike the product-level Barcode table below.
         $pp = PurchaseProduct::with([
-            'product:id,title,sku,website_price',
-            'line.product:id,title,sku,website_price',
+            'product:id,title,sku,website_price,website_enabled',
+            'line.product:id,title,sku,website_price,website_enabled',
             'line.purchase:id,status',
         ])
             ->where(function ($q) use ($value) {
@@ -385,6 +442,17 @@ class SaleController extends Controller
         // created after purchases started making their own products.
         if ($pp && $pp->resolved_product) {
             $product = $pp->resolved_product;
+
+            // Site-disabled products are never sellable from the
+            // terminal, scan included — same rule searchProducts()
+            // already applies for the search path.
+
+            if ($product->website_enabled) {
+                return response()->json([
+                    'ok'      => false,
+                    'message' => "{$product->title} is not enabled for sale.",
+                ], 404);
+            }
 
             // Live on-hand from the ledger, summed across all locations.
             // Stock is one global pool; the sale's location is recorded on
@@ -413,14 +481,28 @@ class SaleController extends Controller
                     'expiry_date'         => optional($pp->expiry_date)->toDateString(),
                 ],
                 'carat_weight' => $pp->carat_weight,
+                // Actual remaining CT for this exact piece, read from the
+                // CT ledger — NOT qty × per-unit carat. A row's units can
+                // carry different individual weights (see CaratMovement),
+                // so this must be the real tracked balance, never derived.
+                'remaining_carat' => $pp->carat_weight !== null
+                    ? $this->stock->remainingCaratForPieceGlobal((int) $pp->id)
+                    : null,
                 'barcode'  => $value,
             ]);
         }
 
         // Strategy 2: registered barcode that hasn't been linked to a
         // specific purchase row — still useful, just no cost / qty info.
-        $bc = Barcode::with('product:id,title,sku,website_price')->where('barcode_value', $value)->first();
+        $bc = Barcode::with('product:id,title,sku,website_price,website_enabled')->where('barcode_value', $value)->first();
         if ($bc && $bc->product) {
+            if (! $bc->product->website_enabled) {
+                return response()->json([
+                    'ok'      => false,
+                    'message' => "{$bc->product->title} is not enabled for sale.",
+                ], 404);
+            }
+
             $onHand = $this->stock->onHandForProductGlobal((int) $bc->product->id);
 
             return response()->json([
@@ -453,10 +535,9 @@ class SaleController extends Controller
      * Scoped to website_enabled products only -- these are the listed,
      * finished items ready to sell (an item left disabled is typically
      * still being finished/priced, same as why WebsiteController gates
-     * the public storefront on the same flag). A specific piece can
-     * still be pulled in directly via lookupByBarcode()/scan regardless
-     * of this flag, since that's an explicit lookup of something staff
-     * are physically holding, not a browse.
+     * the public storefront on the same flag). lookupByBarcode() applies
+     * the same gate now too -- a disabled product can't be added to a
+     * sale by either path.
      */
     public function searchProducts(Request $request): JsonResponse
     {

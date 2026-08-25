@@ -63,6 +63,7 @@ class StoreSaleRequest extends FormRequest
             'lines.*.purchase_product_id'      => ['nullable', 'integer', Rule::exists('purchase_products', 'id')->whereNull('deleted_at')],
             'lines.*.barcode'                  => ['nullable', 'string', 'max:100'],
             'lines.*.qty'                      => ['required', 'integer', 'min:1'],
+            'lines.*.carat_weight'             => ['nullable', 'numeric', 'min:0', 'max:99999.999'],
             'lines.*.unit_price'               => ['required', 'numeric', 'min:0'],
             'lines.*.tax_percent'              => ['nullable', 'numeric', 'min:0', 'max:100'],
             'lines.*.discount_percent'         => ['nullable', 'numeric', 'min:0', 'max:100'],

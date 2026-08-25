@@ -91,6 +91,7 @@
                                 <th class="text-end">Balance</th>
                                 <th>Payment</th>
                                 <th>Status</th>
+                                <th>Shipping</th>
                                 <th class="text-center" style="width: 1%;">Actions</th>
                             </tr>
                         </thead>
@@ -153,6 +154,7 @@
                 { data: 'balance_due',     name: 'sales.balance_due', className: 'text-end' },
                 { data: 'payment_badge',   name: 'sales.payment_status', orderable: false, searchable: false },
                 { data: 'status_badge',    name: 'sales.status',         orderable: false, searchable: false },
+                { data: 'shipping_badge',  name: 'sales.shipping_status', orderable: false, searchable: false },
                 { data: 'actions',         name: 'actions',              orderable: false, searchable: false, className: 'text-center' },
             ],
             language: {

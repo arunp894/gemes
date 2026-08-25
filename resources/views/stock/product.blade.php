@@ -75,7 +75,12 @@
                         </span>
                     </div>
                     <h3 class="mb-0 {{ $onHand <= 0 ? 'text-danger' : '' }}">{{ number_format($onHand) }}</h3>
-                    <small class="text-muted">units on hand</small>
+                    <small class="text-muted">
+                        units on hand
+                        @if ($onHandCt !== null)
+                            &bull; {{ rtrim(rtrim(number_format($onHandCt, 3), '0'), '.') }} ct remaining
+                        @endif
+                    </small>
                 </div>
             </div>
         </div>
@@ -260,7 +265,7 @@
                                     <small class="d-block text-muted">{{ $m->purchaseProduct->barcode }}</small>
                                 @endif
                             </td>
-                            <td class="text-end">{{ $m->purchaseProduct?->carat_weight ? $m->purchaseProduct->carat_weight . ' ct' : '—' }}</td>
+                            <td class="text-end">{{ $row['carat'] !== null ? rtrim(rtrim(number_format((float) $row['carat'], 3), '0'), '.') . ' ct' : '—' }}</td>
                             <td>{{ optional($m->location)->name ?? '—' }}</td>
                             <td class="text-end {{ $m->isIn() ? 'text-success' : 'text-danger' }} fw-semibold">
                                 {{ $m->isIn() ? '+' : '−' }}{{ (int) $m->qty }}

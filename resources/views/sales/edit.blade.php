@@ -164,14 +164,32 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="(line, idx) in form.lines" :key="idx">
+                                <tr v-for="(line, idx) in form.lines" :key="idx" :class="{ 'table-warning': line._stockWarning }">
                                     <td>
                                         <div class="fw-semibold">@{{ line.product_title }}</div>
                                         <small class="text-muted">SKU: @{{ line.product_sku }}</small>
                                     </td>
-                                    <td>@{{ line.carat_weight }}</td>
-                                    <td><code class="small">@{{ line.barcode || '—' }}</code></td>
-                                    <td><input type="number" min="1" step="1" class="form-control form-control-sm text-end" v-model.number="line.qty"></td>
+                                    <td>
+                                        {{-- CT is its own independent ledger, separate from qty — the
+                                             seller enters exactly how much CT this line consumes, capped
+                                             at that piece's actual remaining CT balance (never a
+                                             qty-derived guess; different units on the same row can carry
+                                             different individual weights). --}}
+                                        <input v-if="line.piece_carat_weight !== null && line.piece_carat_weight !== undefined"
+                                            type="number" min="0" step="0.001"
+                                            :max="line.remaining_carat_before"
+                                            class="form-control form-control-sm text-end mb-1" v-model.number="line.carat_weight"
+                                            @input="checkCaratLimit(idx)">
+                                        <span v-if="line.piece_carat_weight !== null && line.piece_carat_weight !== undefined" class="badge badge-soft-info d-block">
+                                            Remaining Ct: @{{ formatCarat(remainingCaratAfter(line)) }}
+                                        </span>
+                                        <span v-else class="text-muted">—</span>
+                                    </td>
+                                    <td>
+                                        <code class="small">@{{ line.barcode || '—' }}</code>
+                                        <small v-if="line._stockWarning" class="d-block text-danger">Capped at stock on hand</small>
+                                    </td>
+                                    <td><input type="number" min="1" step="1" :max="line.on_hand" :disabled="line.on_hand === 1" class="form-control form-control-sm text-end" v-model.number="line.qty" @input="checkStockWarning(idx)"></td>
                                     <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" v-model.number="line.unit_price"></td>
                                     <td><input type="number" min="0" max="100" step="0.01" class="form-control form-control-sm text-end" v-model.number="line.discount_percent"></td>
                                     <td><input type="number" min="0" max="100" step="0.01" class="form-control form-control-sm text-end" v-model.number="line.tax_percent"></td>
@@ -241,19 +259,44 @@
 @endsection
 
 @php
-    $saleLines = $sale->lines->map(fn ($l) => [
-        'product_id'          => $l->product_id,
-        'product_title'       => optional($l->product)->title,
-        'product_sku'         => optional($l->product)->sku,
-        'purchase_product_id' => $l->purchase_product_id,
-        'barcode'             => $l->barcode,
-        'carat_weight'        => $l->purchaseProduct->carat_weight,
-        'qty'                 => $l->qty,
-        'unit_price'          => (float) $l->unit_price,
-        'cost_price'          => (float) $l->cost_price,
-        'tax_percent'         => (float) $l->tax_percent,
-        'discount_percent'    => (float) $l->discount_percent,
-    ]);
+    $stockSvc  = app(\App\Services\StockService::class);
+    $saleLines = $sale->lines->map(function ($l) use ($stockSvc) {
+        // Actually-recorded sold carat (editable), falling back to the
+        // piece's purchase-time figure for lines saved before this column
+        // existed. piece_carat_weight is the immutable per-unit reference
+        // used for the "X ct left" math — never the editable value above.
+        $lineCarat = $l->carat_weight ?? optional($l->purchaseProduct)->carat_weight;
+
+        return [
+            'product_id'          => $l->product_id,
+            'product_title'       => optional($l->product)->title,
+            'product_sku'         => optional($l->product)->sku,
+            'purchase_product_id' => $l->purchase_product_id,
+            'barcode'             => $l->barcode,
+            'carat_weight'        => $lineCarat,
+            'piece_carat_weight'  => optional($l->purchaseProduct)->carat_weight,
+            // Live remaining CT balance for this piece, with this line's
+            // own already-recorded carat added back in — same "add back
+            // what this sale already consumed" logic as on_hand below,
+            // mirrored for the CT ledger instead of the qty ledger.
+            'remaining_carat_before' => ($l->purchase_product_id && optional($l->purchaseProduct)->carat_weight !== null)
+                ? $stockSvc->remainingCaratForPieceGlobal($l->purchase_product_id) + (float) $lineCarat
+                : null,
+            // Global on-hand for this piece, with this line's own already-
+            // booked qty added back in — the live figure excludes it (this
+            // sale already consumed it), but for "what's left if I save this
+            // edit" math the pool has to include what this line currently
+            // holds, not just what's free elsewhere.
+            'on_hand'             => $l->purchase_product_id
+                ? $stockSvc->onHandForPieceGlobal($l->purchase_product_id) + (int) $l->qty
+                : null,
+            'qty'                 => $l->qty,
+            'unit_price'          => (float) $l->unit_price,
+            'cost_price'          => (float) $l->cost_price,
+            'tax_percent'         => (float) $l->tax_percent,
+            'discount_percent'    => (float) $l->discount_percent,
+        ];
+    });
     $saleCustomer = $sale->customer ? [
         'id'            => $sale->customer->id,
         'customer_code' => $sale->customer->customer_code,
@@ -356,6 +399,14 @@ $(function () {
                         purchase_product_id: inv ? inv.purchase_product_id : null,
                         barcode: data.barcode || null,
                         qty: 1,
+                        // Defaults to "sell everything left on this piece" —
+                        // must be the live remaining balance, not the
+                        // piece's original recorded weight (they differ
+                        // once a piece has been partially sold before).
+                        carat_weight: data.remaining_carat,
+                        piece_carat_weight: data.carat_weight,
+                        remaining_carat_before: data.remaining_carat,
+                        on_hand: inv ? inv.on_hand : null,
                         unit_price: defaultPrice,
                         cost_price: inv ? Number(inv.cost_price || 0) : 0,
                         tax_percent: 0, discount_percent: 0,
@@ -381,6 +432,9 @@ $(function () {
                     product_id: p.id, product_title: p.title, product_sku: p.sku,
                     purchase_product_id: null, barcode: null,
                     qty: 1,
+                    carat_weight: null,
+                    piece_carat_weight: null,
+                    on_hand: null,
                     unit_price: (p.website_price !== null && p.website_price !== undefined) ? Number(p.website_price) : 0,
                     cost_price: 0,
                     tax_percent: 0, discount_percent: 0,
@@ -388,6 +442,45 @@ $(function () {
                 this.productSearch = ''; this.searchResults = [];
             },
             removeLine(idx) { this.form.lines.splice(idx, 1); },
+
+            /* ── carat ─────────────────────── */
+            // CT is its own ledger, entirely independent of qty — this is
+            // the piece's actual remaining balance (with this line's own
+            // already-recorded consumption added back in, see
+            // remaining_carat_before above) minus whatever the seller has
+            // typed as the carat_weight being sold on this line.
+            remainingCaratAfter(line) {
+                if (line.piece_carat_weight === null || line.piece_carat_weight === undefined) return null;
+                return Number(line.remaining_carat_before || 0) - Number(line.carat_weight || 0);
+            },
+            formatCarat(v) {
+                if (v === null || v === undefined || isNaN(v)) return '—';
+                return (Math.round(Number(v) * 1000) / 1000).toString();
+            },
+            // Clamps qty to on-hand stock (when known) rather than just
+            // flagging it.
+            checkStockWarning(idx) {
+                const l = this.form.lines[idx];
+                if (!l) return;
+                if (!l.qty || Number(l.qty) < 1) l.qty = 1;
+                if (l.on_hand !== null && l.on_hand !== undefined && Number(l.qty) > Number(l.on_hand)) {
+                    l.qty = Number(l.on_hand);
+                    l._stockWarning = true;
+                    setTimeout(() => { l._stockWarning = false; }, 2000);
+                }
+            },
+            // Clamps the sold-carat figure to this piece's actual
+            // remaining CT balance — never a qty-derived guess, since
+            // different units on the same row can carry different
+            // individual weights.
+            checkCaratLimit(idx) {
+                const l = this.form.lines[idx];
+                if (!l || l.piece_carat_weight === null || l.piece_carat_weight === undefined) return;
+                if (l.carat_weight === null || l.carat_weight === undefined || l.carat_weight === '') return;
+                const maxCarat = Number(l.remaining_carat_before || 0);
+                if (Number(l.carat_weight) > maxCarat) l.carat_weight = maxCarat;
+                if (Number(l.carat_weight) < 0) l.carat_weight = 0;
+            },
 
             onCustomerSearchInput() {
                 clearTimeout(this._customerTimer);
@@ -422,6 +515,7 @@ $(function () {
                         purchase_product_id: l.purchase_product_id,
                         barcode: l.barcode,
                         qty: Number(l.qty) || 1,
+                        carat_weight: (l.carat_weight === '' || l.carat_weight === null || l.carat_weight === undefined) ? null : Number(l.carat_weight),
                         unit_price: Number(l.unit_price) || 0,
                         tax_percent: Number(l.tax_percent) || 0,
                         discount_percent: Number(l.discount_percent) || 0,

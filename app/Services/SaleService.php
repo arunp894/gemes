@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Channel;
 use App\Models\Customer;
 use App\Models\Location;
 use App\Models\Product;
@@ -68,6 +69,14 @@ class SaleService
             $sale->tax_type        = $data['tax_type']        ?? Sale::TAX_NONE;
             $sale->shipping_charge = (float) ($data['shipping_charge'] ?? 0);
             $sale->note            = $data['note']            ?? null;
+
+            // Only website-channel orders ship — a POS sale walks out the
+            // door with the customer, so shipping_status stays null (not
+            // applicable) for every other channel.
+            $channel = $sale->channel_id ? Channel::find($sale->channel_id) : null;
+            $sale->shipping_status = $channel?->code === Channel::CODE_WEBSITE
+                ? Sale::SHIPPING_PENDING
+                : null;
 
             // Import traceability — only set when called from SaleImportService.
             // Ignored for regular terminal sales (keys simply absent).
@@ -411,18 +420,25 @@ class SaleService
 
             $costPrice         = 0.0;
             $purchaseProductId = $row['purchase_product_id'] ?? null;
-            if ($purchaseProductId) {
-                $pp = PurchaseProduct::find($purchaseProductId);
-                if ($pp) {
-                    $costPrice = (float) $pp->price;
-                }
+            $pp                = $purchaseProductId ? PurchaseProduct::find($purchaseProductId) : null;
+            if ($pp) {
+                $costPrice = (float) $pp->price;
             }
+
+            // Carat actually sold — editable at the point of sale (a
+            // re-weigh at the counter can differ from the purchase-time
+            // figure), falling back to the piece's recorded carat_weight
+            // when the terminal didn't send one.
+            $caratWeight = array_key_exists('carat_weight', $row) && $row['carat_weight'] !== null && $row['carat_weight'] !== ''
+                ? (float) $row['carat_weight']
+                : ($pp ? (float) $pp->carat_weight : null);
 
             $line = new SaleLine([
                 'product_id'          => $product->id,
                 'purchase_product_id' => $purchaseProductId,
                 'barcode'             => $row['barcode'] ?? null,
                 'qty'                 => $qty,
+                'carat_weight'        => $caratWeight,
                 'unit_price'          => $unitPrice,
                 'tax_percent'         => $taxPercent,
                 'tax_amount'          => $taxAmount,

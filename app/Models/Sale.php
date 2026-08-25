@@ -65,6 +65,22 @@ class Sale extends Model
         self::PAY_PAID,
     ];
 
+    /* ─── Shipping status ──────────────────────────────────────
+       Null means "not applicable" (e.g. a POS sale the customer
+       carries out — nothing to ship). Only meaningful once set,
+       which happens for website-channel sales at creation time. */
+    public const SHIPPING_PENDING    = 'pending';
+    public const SHIPPING_PROCESSING = 'processing';
+    public const SHIPPING_SHIPPED    = 'shipped';
+    public const SHIPPING_DELIVERED  = 'delivered';
+
+    public const SHIPPING_STATUSES = [
+        self::SHIPPING_PENDING,
+        self::SHIPPING_PROCESSING,
+        self::SHIPPING_SHIPPED,
+        self::SHIPPING_DELIVERED,
+    ];
+
     public const NUMBER_PREFIX = 'SALE';
     public const NUMBER_PAD    = 4;
 
@@ -80,6 +96,17 @@ class Sale extends Model
         'tax_total',
         'discount_total',
         'shipping_charge',
+        'shipping_status',
+        'shipping_address_line1',
+        'shipping_address_line2',
+        'shipping_city',
+        'shipping_state',
+        'shipping_zip_code',
+        'shipping_country',
+        'shipping_carrier',
+        'tracking_number',
+        'shipped_at',
+        'estimated_delivery_date',
         'grand_total',
         'paid_amount',
         'balance_due',
@@ -104,6 +131,8 @@ class Sale extends Model
         'grand_total'     => 'decimal:2',
         'paid_amount'     => 'decimal:2',
         'balance_due'     => 'decimal:2',
+        'shipped_at'               => 'date',
+        'estimated_delivery_date'  => 'date',
     ];
 
     /* ─── Boot ─────────────────────────────────────────────── */
@@ -357,6 +386,27 @@ class Sale extends Model
             self::PAY_PAID    => 'badge-soft-success',
             self::PAY_PARTIAL => 'badge-soft-warning',
             default           => 'badge-soft-danger',
+        };
+    }
+
+    public function needsShipping(): bool
+    {
+        return $this->shipping_status !== null;
+    }
+
+    public function shippingStatusLabel(): string
+    {
+        return $this->shipping_status !== null ? ucfirst($this->shipping_status) : 'Not applicable';
+    }
+
+    public function shippingStatusBadgeClass(): string
+    {
+        return match ($this->shipping_status) {
+            self::SHIPPING_PENDING    => 'badge-soft-warning',
+            self::SHIPPING_PROCESSING => 'badge-soft-info',
+            self::SHIPPING_SHIPPED    => 'badge-soft-primary',
+            self::SHIPPING_DELIVERED  => 'badge-soft-success',
+            default                   => 'badge-soft-secondary',
         };
     }
 

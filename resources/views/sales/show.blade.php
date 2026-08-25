@@ -11,6 +11,11 @@
                 Sale {{ $sale->sale_number }}
                 <span class="badge {{ $sale->statusBadgeClass() }} ms-2">{{ $sale->statusLabel() }}</span>
                 <span class="badge {{ $sale->paymentStatusBadgeClass() }}">{{ $sale->paymentStatusLabel() }}</span>
+                @if ($sale->needsShipping())
+                    <span class="badge {{ $sale->shippingStatusBadgeClass() }}">
+                        <i class="ti ti-truck-delivery me-1"></i>{{ $sale->shippingStatusLabel() }}
+                    </span>
+                @endif
             </h4>
         </div>
         <div class="text-end">
@@ -68,6 +73,24 @@
                         data-confirm="Cancel this sale?">
                         <i class="ti ti-ban me-1"></i> Cancel
                     </button>
+                @endif
+
+                @if ($sale->needsShipping())
+                    <div class="d-flex align-items-center gap-1 border-start ps-2">
+                        <select id="shippingStatusSelect" class="form-select form-select-sm">
+                            @foreach (\App\Models\Sale::SHIPPING_STATUSES as $s)
+                                <option value="{{ $s }}" @selected($sale->shipping_status === $s)>{{ ucfirst($s) }}</option>
+                            @endforeach
+                        </select>
+                        <button type="button" class="btn btn-soft-primary btn-sm js-shipping-status"
+                            data-url="{{ route('sales.shipping-status', [$sale, '__STATUS__']) }}">
+                            <i class="ti ti-truck-delivery me-1"></i> Update
+                        </button>
+                        <button type="button" class="btn btn-soft-secondary btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#shippingDetailsModal">
+                            <i class="ti ti-map-pin me-1"></i> Shipping Details
+                        </button>
+                    </div>
                 @endif
             @endpermission
 
@@ -155,7 +178,7 @@
                                                 <small class="d-block text-muted">{{ $line->notes }}</small>
                                             @endif
                                         </td>
-                                        <td>{{ $line->purchaseProduct->carat_weight }}</td>
+                                        <td>{{ $line->carat_weight ?? optional($line->purchaseProduct)->carat_weight ?? '—' }}</td>
                                         <td><code class="small">{{ $line->barcode ?? '—' }}</code></td>
                                         <td class="text-end">{{ $line->qty }}</td>
                                         <td class="text-end">{{ number_format((float) $line->unit_price, 2) }}</td>
@@ -355,6 +378,92 @@
             @endif
         </div>
     </div>
+
+    @if ($sale->needsShipping())
+        {{-- ==================== Shipping Details Modal ==================== --}}
+        <div class="modal fade" id="shippingDetailsModal" tabindex="-1" aria-labelledby="shippingDetailsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="shippingDetailsModalLabel">
+                            <i class="ti ti-map-pin me-1"></i> Shipping Details
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="shippingDetailsForm" novalidate>
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <h6 class="text-muted text-uppercase fs-xxs mb-1">Delivery Address</h6>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Address Line 1</label>
+                                    <input type="text" name="shipping_address_line1" class="form-control"
+                                        value="{{ $sale->shipping_address_line1 ?? optional($sale->customer)->address_line1 }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Address Line 2</label>
+                                    <input type="text" name="shipping_address_line2" class="form-control"
+                                        value="{{ $sale->shipping_address_line2 ?? optional($sale->customer)->address_line2 }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">City</label>
+                                    <input type="text" name="shipping_city" class="form-control"
+                                        value="{{ $sale->shipping_city ?? optional($sale->customer)->city }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">State</label>
+                                    <input type="text" name="shipping_state" class="form-control"
+                                        value="{{ $sale->shipping_state ?? optional($sale->customer)->state }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">ZIP / Pincode</label>
+                                    <input type="text" name="shipping_zip_code" class="form-control"
+                                        value="{{ $sale->shipping_zip_code ?? optional($sale->customer)->zip_code }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Country</label>
+                                    <input type="text" name="shipping_country" class="form-control"
+                                        value="{{ $sale->shipping_country ?? optional($sale->customer)->country }}">
+                                </div>
+
+                                <div class="col-12 mt-4">
+                                    <h6 class="text-muted text-uppercase fs-xxs mb-1">Tracking</h6>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Carrier / Courier</label>
+                                    <input type="text" name="shipping_carrier" class="form-control"
+                                        value="{{ $sale->shipping_carrier }}" placeholder="e.g. Blue Dart, DHL">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Tracking Number</label>
+                                    <input type="text" name="tracking_number" class="form-control"
+                                        value="{{ $sale->tracking_number }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Shipped Date</label>
+                                    <input type="date" name="shipped_at" class="form-control"
+                                        value="{{ optional($sale->shipped_at)->toDateString() }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Estimated Delivery Date</label>
+                                    <input type="date" name="estimated_delivery_date" class="form-control"
+                                        value="{{ optional($sale->estimated_delivery_date)->toDateString() }}">
+                                </div>
+                            </div>
+                            <div id="shippingDetailsError" class="alert alert-danger mt-3 py-2 mb-0 d-none"></div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="shippingDetailsSubmit">
+                                <i class="ti ti-device-floppy me-1"></i> Save
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
 @endsection
 
@@ -379,6 +488,49 @@ $(function () {
             error: function (xhr) {
                 alert((xhr.responseJSON && xhr.responseJSON.message) || 'Action failed.');
             },
+        });
+    });
+
+    $('.js-shipping-status').on('click', function () {
+        const status = $('#shippingStatusSelect').val();
+        const url = $(this).data('url').replace('__STATUS__', status);
+
+        $.ajax({
+            url, type: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+            success: function (res) {
+                if (res.ok) window.location.reload();
+                else alert(res.message || 'Update failed.');
+            },
+            error: function (xhr) {
+                alert((xhr.responseJSON && xhr.responseJSON.message) || 'Update failed.');
+            },
+        });
+    });
+
+    $('#shippingDetailsForm').on('submit', function (e) {
+        e.preventDefault();
+        const $btn = $('#shippingDetailsSubmit');
+        const $err = $('#shippingDetailsError').addClass('d-none').text('');
+
+        $btn.prop('disabled', true);
+        $.ajax({
+            url: @json(route('sales.shipping-details', $sale)),
+            type: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+            data: $(this).serialize(),
+            success: function (res) {
+                if (res.ok) window.location.reload();
+                else $err.removeClass('d-none').text(res.message || 'Update failed.');
+            },
+            error: function (xhr) {
+                const errors = xhr.responseJSON && xhr.responseJSON.errors;
+                const message = errors
+                    ? Object.values(errors).flat().join(' ')
+                    : ((xhr.responseJSON && xhr.responseJSON.message) || 'Update failed.');
+                $err.removeClass('d-none').text(message);
+            },
+            complete: function () { $btn.prop('disabled', false); },
         });
     });
 

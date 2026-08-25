@@ -25,12 +25,14 @@ class StockTransferLine extends Model
         'purchase_product_id',
         'product_id',
         'qty',
+        'carat_weight',
         'to_rack_id',
         'notes',
     ];
 
     protected $casts = [
-        'qty' => 'integer',
+        'qty'          => 'integer',
+        'carat_weight' => 'decimal:3',
     ];
 
     public function transfer(): BelongsTo

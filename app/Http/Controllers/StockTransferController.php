@@ -144,9 +144,16 @@ class StockTransferController extends Controller
                 'barcode'              => $l->purchaseProduct?->barcode,
                 'lot_code'             => $l->purchaseProduct?->lot_code,
                 'qty'                  => (int) $l->qty,
+                'carat_weight'         => $l->carat_weight ?? optional($l->purchaseProduct)->carat_weight,
+                'piece_carat_weight'   => optional($l->purchaseProduct)->carat_weight,
                 'to_rack_id'           => $l->to_rack_id,
                 'notes'                => $l->notes,
                 'on_hand'              => 9999,
+                // Placeholder, same as on_hand above — the Vue app
+                // refreshes this for real once mounted (see
+                // refreshOnHandForExistingLines()), scoped to the
+                // transfer's actual from_location_id.
+                'remaining_carat_before' => null,
             ];
         })->values();
 
@@ -237,9 +244,9 @@ class StockTransferController extends Controller
         }
 
         $pieces = PurchaseProduct::with([
-                'product:id,title,sku',
+                'product:id,title,sku,website_enabled',
                 'line:id,title,type,product_id',
-                'line.product:id,title,sku',
+                'line.product:id,title,sku,website_enabled',
             ])
             ->where('barcode', $value)
             ->get()
@@ -264,6 +271,16 @@ class StockTransferController extends Controller
         $onHand    = array_sum($available);
         $first     = $pieces->first();
 
+        // Website-listed pieces are locked to their current location —
+        // transferring them would drift from what the site implies is
+        // available there. Disable the listing first to move it.
+        if ($first->resolved_product->website_enabled) {
+            return response()->json([
+                'ok'      => false,
+                'message' => "{$first->resolved_product->title} is enabled for website sale and can't be transferred. Disable it first.",
+            ], 404);
+        }
+
         if ($onHand <= 0) {
             return response()->json([
                 'ok'      => false,
@@ -280,6 +297,10 @@ class StockTransferController extends Controller
                 'product_sku'         => $first->resolved_product->sku,
                 'barcode'             => $value,
                 'type'                => $first->line->type ?? PurchaseLine::TYPE_PIECE,
+                'carat_weight'        => $first->carat_weight,
+                'remaining_carat'     => $first->carat_weight !== null
+                    ? $this->stock->remainingCaratForPiece((int) $first->id, $fromLocationId)
+                    : null,
                 'on_hand'             => $onHand,
                 // FIFO-ordered breakdown of every distinct row sharing this
                 // barcode with stock at the source location. The create/
@@ -309,7 +330,7 @@ class StockTransferController extends Controller
         }
 
         $q = PurchaseProduct::query()
-            ->with(['product:id,title,sku', 'line.category', 'line.product:id,title,sku']);
+            ->with(['product:id,title,sku,website_enabled', 'line.category', 'line.product:id,title,sku,website_enabled']);
 
         if ($search !== '') {
             $q->where(function ($qq) use ($search) {
@@ -332,6 +353,13 @@ class StockTransferController extends Controller
 
             $product = $row->resolved_product;
 
+            // Website-listed pieces are locked to their current location —
+            // transferring them would drift from what the site implies is
+            // available there. Disable the listing first to move it.
+            if ($product?->website_enabled) {
+                return null;
+            }
+
             return [
                 'purchase_product_id' => $row->id,
                 'lot_code'            => $row->lot_code,
@@ -342,6 +370,12 @@ class StockTransferController extends Controller
                 'category'            => $row->line?->category?->name,
                 'stone_type'          => $row->line?->stone_type,
                 'carat_weight'        => $row->carat_weight,
+                // Actual remaining CT at this location, from the ledger —
+                // NOT on_hand × carat_weight (units can carry different
+                // individual weights).
+                'remaining_carat'     => $row->carat_weight !== null
+                    ? $this->stock->remainingCaratForPiece($row->id, $locationId)
+                    : null,
                 'on_hand'             => $onHand,
             ];
         })->filter()->values();

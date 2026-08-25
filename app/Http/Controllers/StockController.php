@@ -57,14 +57,32 @@ class StockController extends Controller
         $signedSql = "SUM(CASE WHEN stock_movements.direction = 'in' THEN stock_movements.qty "
             . "ELSE -stock_movements.qty END)";
 
+        // Remaining CT per (product, location), pre-aggregated from the
+        // real CT ledger — NOT qty × per-unit carat_weight (a row's
+        // units can carry different individual weights, see
+        // CaratMovement). Pre-aggregating to exactly one row per
+        // (product_id, location_id) before joining is required: joining
+        // carat_movements directly against stock_movements would fan out
+        // (many historical rows on each side) and wildly over-count.
+        $caratAgg = DB::table('carat_movements')
+            ->whereNull('deleted_at')
+            ->groupBy('product_id', 'location_id')
+            ->selectRaw('product_id, location_id, '
+                . 'SUM(CASE WHEN direction = \'in\' THEN carat ELSE -carat END) as remaining_carat');
+
         $base = DB::table('stock_movements')
             ->join('products',      'products.id',      '=', 'stock_movements.product_id')
             ->join('locations',     'locations.id',      '=', 'stock_movements.location_id')
             ->leftJoin('categories', 'categories.id',     '=', 'products.category_id')
+            ->leftJoinSub($caratAgg, 'cm_agg', function ($join) {
+                $join->on('cm_agg.product_id', '=', 'stock_movements.product_id')
+                     ->on('cm_agg.location_id', '=', 'stock_movements.location_id');
+            })
             ->whereNull('stock_movements.deleted_at')
             ->groupBy(
                 'stock_movements.product_id', 'stock_movements.location_id',
                 'products.title', 'products.sku', 'products.category_id',
+                'products.carat_weight',
                 'categories.name', 'locations.name', 'locations.location_code'
             )
             ->select([
@@ -73,10 +91,15 @@ class StockController extends Controller
                 'products.title       as product_title',
                 'products.sku         as product_sku',
                 'products.category_id as category_id',
+                'products.carat_weight as carat_weight',
                 'categories.name      as category_name',
                 'locations.name       as location_name',
                 'locations.location_code',
                 DB::raw($signedSql . ' as on_hand'),
+                // cm_agg joins to exactly one row per (product_id,
+                // location_id) — MAX() here just picks up that constant
+                // value per group, not a real ambiguity.
+                DB::raw('MAX(cm_agg.remaining_carat) as remaining_carat'),
             ])
             ->havingRaw($signedSql . ' <> 0');
 
@@ -92,6 +115,11 @@ class StockController extends Controller
             ->editColumn('on_hand', fn ($row) =>
                 '<span class="fw-semibold ' . ((int) $row->on_hand <= 0 ? 'text-danger' : '') . '">'
                 . (int) $row->on_hand . '</span>'
+            )
+            ->addColumn('remaining_ct', fn ($row) =>
+                $row->carat_weight !== null && $row->remaining_carat !== null
+                    ? number_format((float) $row->remaining_carat, 3) . ' ct'
+                    : '—'
             )
             ->addColumn('product_label', fn ($row) =>
                 '<div class="fw-semibold">' . e($row->product_title) . '</div>'
@@ -139,11 +167,22 @@ class StockController extends Controller
         $signedSql = "SUM(CASE WHEN stock_movements.direction = 'in' THEN stock_movements.qty "
             . "ELSE -stock_movements.qty END)";
 
+        // Remaining CT per product, pre-aggregated from the real CT
+        // ledger (respecting the same optional location filter as the
+        // qty side below) — NOT qty × per-unit carat_weight, since a
+        // product's units can carry different individual weights.
+        $caratAgg = DB::table('carat_movements')
+            ->whereNull('deleted_at')
+            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
+            ->groupBy('product_id')
+            ->selectRaw('product_id, SUM(CASE WHEN direction = \'in\' THEN carat ELSE -carat END) as remaining_carat');
+
         // Per-product balance first -- matches the on-hand table's own
         // math -- then rolled up to category, so a product sitting at
         // exactly zero doesn't count toward that category's product count.
         $perProduct = DB::table('stock_movements')
             ->join('products', 'products.id', '=', 'stock_movements.product_id')
+            ->leftJoinSub($caratAgg, 'cm_agg', 'cm_agg.product_id', '=', 'stock_movements.product_id')
             ->whereNull('stock_movements.deleted_at')
             ->when($locationId, fn ($q) => $q->where('stock_movements.location_id', $locationId))
             ->groupBy('products.id', 'products.category_id')
@@ -151,6 +190,9 @@ class StockController extends Controller
                 'products.id          as product_id',
                 'products.category_id as category_id',
                 DB::raw($signedSql . ' as on_hand'),
+                // cm_agg joins to exactly one row per product_id — MAX()
+                // just picks up that constant value per group.
+                DB::raw('MAX(cm_agg.remaining_carat) as remaining_carat'),
             ])
             ->havingRaw($signedSql . ' <> 0');
 
@@ -163,6 +205,7 @@ class StockController extends Controller
                 'categories.name as category_name',
                 DB::raw('SUM(p.on_hand) as on_hand'),
                 DB::raw('COUNT(*) as product_count'),
+                DB::raw('SUM(COALESCE(p.remaining_carat, 0)) as on_hand_carats'),
             ])
             ->orderByDesc('on_hand')
             ->get();
@@ -300,6 +343,11 @@ class StockController extends Controller
             ->orderBy('id')
             ->get();
 
+        // Real per-movement CT — see StockService::caratForMovements() for
+        // why this can't just be purchaseProduct->carat_weight (that's the
+        // piece's static original weight, constant across every row).
+        $caratByMovementId = $this->stock->caratForMovements($movements);
+
         // Compute running balance per piece+location so the ledger reads
         // naturally — each row shows the balance immediately after it.
         $balances = [];
@@ -307,7 +355,12 @@ class StockController extends Controller
         foreach ($movements as $m) {
             $key = $m->purchase_product_id . ':' . $m->location_id;
             $balances[$key] = ($balances[$key] ?? 0) + $m->signedQty();
-            $rows[] = ['movement' => $m, 'balance_after' => $balances[$key]];
+
+            $rows[] = [
+                'movement'      => $m,
+                'balance_after' => $balances[$key],
+                'carat'         => $caratByMovementId[$m->id] ?? null,
+            ];
         }
 
         // KPI summary computed from the (optionally location-filtered) movements.
@@ -342,10 +395,20 @@ class StockController extends Controller
             ? $this->stock->onHandForProduct($product->id, $locationId)
             : $this->stock->onHandForProductGlobal($product->id);
 
+        // Actual remaining CT for this product, from the CT ledger — NOT
+        // on-hand qty × per-unit carat, since different units can carry
+        // different individual weights. Null (not 0) when carat isn't
+        // tracked at all.
+        $onHandCt = $product->carat_weight !== null
+            ? ($locationId
+                ? $this->stock->remainingCaratForProduct($product->id, $locationId)
+                : $this->stock->remainingCaratForProductGlobal($product->id))
+            : null;
+
         $locations    = Location::active()->orderBy('name')->get(['id', 'name', 'location_code']);
         $sourceLabels = $this->buildSourceLabels($movements);
 
-        return view('stock.product', compact('product', 'rows', 'summary', 'onHand', 'locations', 'locationId', 'sourceLabels'));
+        return view('stock.product', compact('product', 'rows', 'summary', 'onHand', 'onHandCt', 'locations', 'locationId', 'sourceLabels'));
     }
 
     /* ─── Per-piece ledger ────────────────────────────────── */
@@ -371,9 +434,15 @@ class StockController extends Controller
         }
 
         $byLocation   = $this->stock->onHandForPieceByLocation($purchaseProduct->id);
+        // Real per-location CT balance from the ledger — NOT
+        // balance × carat_weight, since this piece's own recorded
+        // weight may not be what's individually left after partial
+        // sales/transfers.
+        $caratByLocation      = $this->stock->remainingCaratForPieceByLocation($purchaseProduct->id);
+        $totalRemainingCarat  = $this->stock->remainingCaratForPieceGlobal($purchaseProduct->id);
         $sourceLabels = $this->buildSourceLabels($movements);
 
-        return view('stock.piece', compact('purchaseProduct', 'rows', 'byLocation', 'sourceLabels'));
+        return view('stock.piece', compact('purchaseProduct', 'rows', 'byLocation', 'caratByLocation', 'totalRemainingCarat', 'sourceLabels'));
     }
 
     /* ─── Helpers ─────────────────────────────────────────── */

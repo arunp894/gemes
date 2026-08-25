@@ -104,6 +104,22 @@
               <span style="margin-top:4px;display:block">{{ $sale->location->name }}</span>
             </div>
           @endif
+          @if($sale->needsShipping())
+            @php
+              $shc = match($sale->shipping_status) {
+                'delivered'  => ['c'=>'#7ec87e','b'=>'rgba(80,200,130,.25)','bg'=>'rgba(80,200,130,.12)'],
+                'shipped'    => ['c'=>'var(--teal-300)','b'=>'rgba(0,191,176,.25)','bg'=>'rgba(0,191,176,.12)'],
+                'processing' => ['c'=>'var(--gold-light)','b'=>'rgba(200,160,80,.25)','bg'=>'rgba(200,160,80,.12)'],
+                default      => ['c'=>'var(--white-faint)','b'=>'rgba(255,255,255,.15)','bg'=>'rgba(255,255,255,.06)'],
+              };
+            @endphp
+            <div style="margin-bottom:12px">
+              <span style="color:var(--white-faint)">Shipping Status</span><br>
+              <span style="margin-top:6px;display:inline-block;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:2px;background:{{ $shc['bg'] }};border:1px solid {{ $shc['b'] }};color:{{ $shc['c'] }}">
+                {{ $sale->shippingStatusLabel() }}
+              </span>
+            </div>
+          @endif
           @if($sale->note)
             <div style="margin-bottom:12px">
               <span style="color:var(--white-faint)">Notes</span><br>

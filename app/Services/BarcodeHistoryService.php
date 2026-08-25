@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\DB;
  */
 class BarcodeHistoryService
 {
+    public function __construct(private StockService $stock) {}
+
     /**
      * Look up a barcode OR a purchase lot code and return the complete
      * product history. Tried in that order: barcode is the primary scan
@@ -133,7 +135,7 @@ class BarcodeHistoryService
         }))->sortByDesc('purchase_date')->values();
 
         // ── 3. Sale lines ─────────────────────────────────────────────────
-        $saleLines = SaleLine::with(['sale.customer', 'sale.location', 'sale.channel'])
+        $saleLines = SaleLine::with(['sale.customer', 'sale.location', 'sale.channel', 'purchaseProduct:id,carat_weight'])
             ->where('product_id', $productId)
             ->whereNull('sale_lines.deleted_at')
             ->get()
@@ -148,19 +150,37 @@ class BarcodeHistoryService
             ->orderByDesc('id')
             ->get();
 
+        // Real per-movement CT — see StockService::caratForMovements() for
+        // why this can't just be the piece's static recorded carat_weight
+        // (that's constant across every row, purchase/sale/transfer alike).
+        $caratByMovementId = $this->stock->caratForMovements($movements);
+
         // ── 5. KPI summary ────────────────────────────────────────────────
         $totalPurchasedQty    = (int) $purchaseEvents->sum('qty');
         $totalPurchasedCarats = round((float) $purchaseEvents->sum('carats'), 3);
         $totalPurchasedValue  = round((float) $purchaseEvents->sum('total'), 2);
         $purchaseCount        = $purchaseEvents->count();
 
-        $totalSoldQty   = (int) $saleLines->sum('qty');
-        $totalSoldValue = round((float) $saleLines->sum('total'), 2);
-        $saleCount      = $saleLines->count();
+        $totalSoldQty    = (int) $saleLines->sum('qty');
+        $totalSoldValue  = round((float) $saleLines->sum('total'), 2);
+        $totalSoldCarats = round((float) $saleLines->sum(
+            fn ($l) => $l->carat_weight ?? optional($l->purchaseProduct)->carat_weight ?? 0
+        ), 3);
+        $saleCount       = $saleLines->count();
 
         $inQty  = (int) $movements->where('direction', StockMovement::DIRECTION_IN)->sum('qty');
         $outQty = (int) $movements->where('direction', StockMovement::DIRECTION_OUT)->sum('qty');
         $onHand = max(0, $inQty - $outQty);
+
+        // Actual remaining CT for this product's pieces, summed from the
+        // CT ledger — NOT qty × per-unit carat. Different pieces (and
+        // different units within a multi-qty row) can carry different
+        // individual weights, so this has to be the real tracked
+        // balance. Null (not 0) when carat isn't tracked at all, so the
+        // view can tell "0 ct left" apart from "not a weighed item".
+        $onHandCarats = $product->carat_weight !== null
+            ? $this->stock->remainingCaratForProductGlobal($productId)
+            : null;
 
         // ── 6. Category breadcrumb ────────────────────────────────────────
         // Categories are a flat, single-level list (see CategorySeeder) — no
@@ -210,8 +230,10 @@ class BarcodeHistoryService
                 'total_purchased_value'    => $totalPurchasedValue,
                 'sale_count'               => $saleCount,
                 'total_sold_qty'           => $totalSoldQty,
+                'total_sold_carats'        => $totalSoldCarats,
                 'total_sold_value'         => $totalSoldValue,
                 'on_hand_qty'              => $onHand,
+                'on_hand_carats'           => $onHandCarats,
                 'in_qty'                   => $inQty,
                 'out_qty'                  => $outQty,
             ],
@@ -223,6 +245,14 @@ class BarcodeHistoryService
 
             'sales' => $saleLines->map(function ($line) {
                 $s = $line->sale;
+
+                // Actually-sold carat for this line, falling back to the
+                // piece's own recorded weight only for legacy lines saved
+                // before sale_lines.carat_weight existed. Never the
+                // piece's weight for a real modern line — that's a fixed,
+                // unrelated figure, not what was sold.
+                $carat = $line->carat_weight ?? optional($line->purchaseProduct)->carat_weight;
+
                 return [
                     'id'          => $s?->id,
                     'sale_number' => $s?->sale_number ?? '—',
@@ -231,6 +261,7 @@ class BarcodeHistoryService
                     'location'    => $s?->location?->name ?? '—',
                     'channel'     => $s?->channel?->name ?? '—',
                     'qty'         => (int) $line->qty,
+                    'carat'       => $carat !== null ? (float) $carat : null,
                     'unit_price'  => (float) $line->unit_price,
                     'total'       => (float) $line->total,
                     'status'      => $s?->statusLabel() ?? '—',
@@ -238,11 +269,14 @@ class BarcodeHistoryService
                 ];
             })->values()->all(),
 
-            'movements' => $movements->map(function ($m) {
+            'movements' => $movements->map(function ($m) use ($caratByMovementId) {
                 return [
                     'date'         => $m->movement_date?->format('d M Y') ?? '—',
                     'direction'    => strtoupper($m->direction),
                     'qty'          => (int) $m->qty,
+                    // Real per-movement CT, not the piece's static
+                    // recorded weight — see StockService::caratForMovements().
+                    'carat'        => $caratByMovementId[$m->id] ?? null,
                     'reason'       => $m->reasonLabel(),
                     'reason_class' => $m->reasonBadgeClass(),
                     'location'     => $m->location?->name ?? '—',

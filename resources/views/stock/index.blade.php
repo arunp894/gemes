@@ -110,6 +110,7 @@
                                         <th>Product</th>
                                         <th>Location</th>
                                         <th class="text-end">On Hand</th>
+                                        <th class="text-end">Remaining Ct</th>
                                         <th class="text-center" style="width: 1%;">Ledger</th>
                                     </tr>
                                 </thead>
@@ -287,6 +288,7 @@ $(function () {
             { data: 'product_label',  name: 'products.title',  orderable: false },
             { data: 'location_label', name: 'locations.name',  orderable: false, searchable: false },
             { data: 'on_hand',        name: 'on_hand',         orderable: true,  searchable: false, className: 'text-end' },
+            { data: 'remaining_ct',   name: 'remaining_ct',    orderable: false, searchable: false, className: 'text-end' },
             { data: 'action',         name: 'action',          orderable: false, searchable: false, className: 'text-center' },
         ],
         language: {
@@ -348,6 +350,7 @@ $(function () {
                                         <h4 class="mb-0">${c.on_hand}</h4>
                                         <small class="text-muted">${c.product_count} item${c.product_count == 1 ? '' : 's'}</small>
                                     </div>
+                                    ${Number(c.on_hand_carats) > 0 ? `<small class="text-muted d-block">${Number(c.on_hand_carats).toFixed(3).replace(/\.?0+$/, '')} ct</small>` : ''}
                                 </div>
                             </div>
                         </div>

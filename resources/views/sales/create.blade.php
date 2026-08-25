@@ -223,16 +223,34 @@
                                             Cost: @{{ formatMoney(line.cost_price) }}
                                         </small>
                                     </td>
-                                    <td>@{{ line.carat_weight }}</td>
+                                    <td>
+                                        {{-- CT is its own independent ledger, separate from qty — the
+                                             seller enters exactly how much CT this line consumes, capped
+                                             at that piece's actual remaining CT balance (never a
+                                             qty-derived guess; different units on the same row can carry
+                                             different individual weights). --}}
+                                        <input v-if="line.piece_carat_weight !== null && line.piece_carat_weight !== undefined"
+                                            type="number" min="0" step="0.001"
+                                            :max="line.remaining_carat_before"
+                                            class="form-control form-control-sm text-end mb-1"
+                                            v-model.number="line.carat_weight"
+                                            @input="checkCaratLimit(idx)">
+                                        <span v-if="line.piece_carat_weight !== null && line.piece_carat_weight !== undefined"
+                                            class="badge badge-soft-info d-block">
+                                            Remaining Ct: @{{ formatCarat(remainingCaratAfter(line)) }}
+                                        </span>
+                                        <span v-else class="text-muted">—</span>
+                                    </td>
                                     <td>
                                         <code class="small">@{{ line.barcode || '—' }}</code>
                                         <small v-if="line._stockWarning" class="d-block text-danger">
-                                            <i class="ti ti-alert-triangle"></i> Qty &gt; recorded stock
+                                            <i class="ti ti-alert-triangle"></i> Capped at stock on hand
                                         </small>
                                         <small v-else class="d-block text-success">Qty @{{ line.on_hand }} On Hand</small>
                                     </td>
                                     <td>
                                         <input type="number" min="1" step="1" :max="line.on_hand"
+                                            :disabled="line.on_hand === 1"
                                             class="form-control form-control-sm text-end"
                                             v-model.number="line.qty"
                                             @input="checkStockWarning(idx)">
@@ -678,7 +696,23 @@ $(function () {
 
                 this.form.lines.push({
                     product_id:          p.id,
-                    carat_weight :       data.carat_weight,
+                    // Defaults to "sell everything left on this piece" —
+                    // the seller can type a smaller amount. Must default to
+                    // the live remaining balance, not the piece's original
+                    // recorded weight: once a piece has been partially sold
+                    // before, those two numbers differ (see remaining_carat_before).
+                    carat_weight:        data.remaining_carat,
+                    // Flag for "is this a weighed item at all" (drives the
+                    // v-if below) — the piece's original recorded per-unit
+                    // carat, immutable, never used in a calculation.
+                    piece_carat_weight:  data.carat_weight,
+                    // Snapshot of this piece's actual remaining CT balance
+                    // (from the ledger) at the moment it's added to the
+                    // sale — the cap the seller's entered carat_weight is
+                    // clamped against. Independent of qty entirely: a
+                    // piece's remaining CT doesn't change just because
+                    // this line's qty changes.
+                    remaining_carat_before: data.remaining_carat,
                     product_title:       p.title,
                     on_hand:             inv.on_hand,
                     product_sku:         p.sku,
@@ -714,6 +748,8 @@ $(function () {
             addProductBySearch(p) {
                 this.form.lines.push({
                     product_id:          p.id,
+                    carat_weight:        null,
+                    piece_carat_weight:  null,
                     product_title:       p.title,
                     product_sku:         p.sku,
                     purchase_product_id: null,
@@ -733,10 +769,43 @@ $(function () {
 
             removeLine(idx) { this.form.lines.splice(idx, 1); },
 
+            // Clamps qty to on-hand stock rather than just flagging it —
+            // typing past what's available snaps back to the ceiling.
             checkStockWarning(idx) {
                 const l = this.form.lines[idx];
                 if (!l) return;
-                l._stockWarning = (l.qty_on_record !== null && Number(l.qty) > Number(l.qty_on_record));
+                if (!l.qty || Number(l.qty) < 1) l.qty = 1;
+                if (l.qty_on_record !== null && Number(l.qty) > Number(l.qty_on_record)) {
+                    l.qty = Number(l.qty_on_record);
+                    l._stockWarning = true;
+                    setTimeout(() => { l._stockWarning = false; }, 2000);
+                }
+            },
+
+            /* ── carat ─────────────────────── */
+            // CT is its own ledger, entirely independent of qty — this is
+            // the piece's actual remaining balance (snapshotted when the
+            // line was added) minus whatever the seller has typed as the
+            // carat_weight being sold on this line.
+            remainingCaratAfter(line) {
+                if (line.piece_carat_weight === null || line.piece_carat_weight === undefined) return null;
+                return Number(line.remaining_carat_before || 0) - Number(line.carat_weight || 0);
+            },
+            formatCarat(v) {
+                if (v === null || v === undefined || isNaN(v)) return '—';
+                return (Math.round(Number(v) * 1000) / 1000).toString();
+            },
+            // Clamps the sold-carat figure to this piece's actual
+            // remaining CT balance — never a qty-derived guess, since
+            // different units on the same row can carry different
+            // individual weights.
+            checkCaratLimit(idx) {
+                const l = this.form.lines[idx];
+                if (!l || l.piece_carat_weight === null || l.piece_carat_weight === undefined) return;
+                const maxCarat = Number(l.remaining_carat_before || 0);
+                if (l.carat_weight === null || l.carat_weight === undefined || l.carat_weight === '') return;
+                if (Number(l.carat_weight) > maxCarat) l.carat_weight = maxCarat;
+                if (Number(l.carat_weight) < 0) l.carat_weight = 0;
             },
 
             /* ── customer search ──────────── */
@@ -828,6 +897,7 @@ $(function () {
                         purchase_product_id: l.purchase_product_id,
                         barcode:             l.barcode,
                         qty:                 Number(l.qty) || 1,
+                        carat_weight:        (l.carat_weight === '' || l.carat_weight === null || l.carat_weight === undefined) ? null : Number(l.carat_weight),
                         unit_price:          Number(l.unit_price) || 0,
                         tax_percent:         Number(l.tax_percent) || 0,
                         discount_percent:    Number(l.discount_percent) || 0,

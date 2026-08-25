@@ -28,6 +28,7 @@ class SaleLine extends Model
         'purchase_product_id',
         'barcode',
         'qty',
+        'carat_weight',
         'unit_price',
         'tax_percent',
         'tax_amount',
@@ -41,6 +42,7 @@ class SaleLine extends Model
 
     protected $casts = [
         'qty'              => 'integer',
+        'carat_weight'     => 'decimal:3',
         'unit_price'       => 'decimal:2',
         'tax_percent'      => 'decimal:2',
         'tax_amount'       => 'decimal:2',

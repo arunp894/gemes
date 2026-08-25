@@ -234,6 +234,9 @@
                         <div class="small opacity-75">
                             IN: @{{ result.summary.in_qty }} &bull; OUT: @{{ result.summary.out_qty }}
                         </div>
+                        <div v-if="result.summary.on_hand_carats !== null" class="small opacity-75">
+                            @{{ result.summary.on_hand_carats }} ct remaining
+                        </div>
                     </div>
                 </div>
             </div>
@@ -418,6 +421,7 @@
                                                 <th>Location</th>
                                                 <th>Channel</th>
                                                 <th class="text-end">Qty</th>
+                                                <th class="text-end">Carat</th>
                                                 <th class="text-end">Unit Price</th>
                                                 <th class="text-end">Total (₹)</th>
                                                 <th class="text-center">Status</th>
@@ -444,6 +448,9 @@
                                                 <td class="text-muted">@{{ row.location }}</td>
                                                 <td class="text-muted">@{{ row.channel }}</td>
                                                 <td class="text-end fw-bold text-danger">@{{ row.qty }}</td>
+                                                <td class="text-end text-muted small">
+                                                    @{{ row.carat !== null && row.carat !== undefined ? row.carat + ' ct' : '—' }}
+                                                </td>
                                                 <td class="text-end text-muted">₹@{{ fmt(row.unit_price) }}</td>
                                                 <td class="text-end fw-semibold">₹@{{ fmt(row.total) }}</td>
                                                 <td class="text-center">
@@ -457,6 +464,9 @@
                                                     <i class="ti ti-calculator me-1"></i>Total (@{{ result.sales.length }} sales)
                                                 </td>
                                                 <td class="text-end text-danger">@{{ result.summary.total_sold_qty }}</td>
+                                                <td class="text-end text-muted">
+                                                    @{{ result.product.is_gemstone ? result.summary.total_sold_carats + ' ct' : '—' }}
+                                                </td>
                                                 <td></td>
                                                 <td class="text-end">₹@{{ fmt(result.summary.total_sold_value) }}</td>
                                                 <td></td>
@@ -489,6 +499,10 @@
                                         <i class="ti ti-packages me-1"></i>
                                         Balance (On Hand): <strong>@{{ result.summary.on_hand_qty }}</strong>
                                     </span>
+                                    <span v-if="result.summary.on_hand_carats !== null" class="badge badge-soft-info fs-sm py-2 px-3">
+                                        <i class="ti ti-diamond me-1"></i>
+                                        Remaining: <strong>@{{ result.summary.on_hand_carats }} ct</strong>
+                                    </span>
                                 </div>
                                 <div class="table-responsive">
                                     <table class="table table-sm table-hover align-middle mb-0">
@@ -498,6 +512,7 @@
                                                 <th>Date</th>
                                                 <th class="text-center">Direction</th>
                                                 <th class="text-end">Qty</th>
+                                                <th class="text-end">Carat</th>
                                                 <th>Reason</th>
                                                 <th>Location</th>
                                                 <th>Notes</th>
@@ -518,6 +533,10 @@
                                                 <td class="text-end fw-bold"
                                                     :class="row.direction === 'IN' ? 'text-success' : 'text-danger'">
                                                     @{{ row.direction === 'IN' ? '+' : '-' }}@{{ row.qty }}
+                                                </td>
+                                                <td class="text-end small"
+                                                    :class="row.direction === 'IN' ? 'text-success' : 'text-danger'">
+                                                    @{{ row.carat !== null && row.carat !== undefined ? (row.direction === 'IN' ? '+' : '-') + row.carat + ' ct' : '—' }}
                                                 </td>
                                                 <td>
                                                     <span class="badge" :class="row.reason_class">@{{ row.reason }}</span>

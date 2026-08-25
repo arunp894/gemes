@@ -43,7 +43,7 @@ class StockTransferService
      *   'status'           => 'draft' | 'in_transit'  (start state)
      *   'note'             => string|null,
      *   'lines' => [
-     *     ['purchase_product_id' => int, 'qty' => int, 'to_rack_id' => int|null, 'notes' => string|null],
+     *     ['purchase_product_id' => int, 'qty' => int, 'carat_weight' => float|null, 'to_rack_id' => int|null, 'notes' => string|null],
      *     ...
      *   ],
      * ]
@@ -214,10 +214,29 @@ class StockTransferService
                 throw new InvalidArgumentException("Piece #{$ppId} not found.");
             }
 
+            // Website-listed pieces are locked to their current location —
+            // transferring them would drift from what the site implies is
+            // available there. Enforced here too (not just in the picker/
+            // scan endpoints) so a direct API call can't bypass it.
+            $product = $pp->resolved_product;
+            if ($product?->website_enabled) {
+                throw new InvalidArgumentException(
+                    "{$product->title} is enabled for website sale and can't be transferred. Disable it first."
+                );
+            }
+
+            // Carat actually being moved — editable when the row holds
+            // more than one unit, falling back to the piece's own
+            // recorded carat when the form didn't send one.
+            $caratWeight = array_key_exists('carat_weight', $row) && $row['carat_weight'] !== null && $row['carat_weight'] !== ''
+                ? (float) $row['carat_weight']
+                : (float) $pp->carat_weight;
+
             $transfer->lines()->save(new StockTransferLine([
                 'purchase_product_id' => $ppId,
                 'product_id'          => $pp->product_id,
                 'qty'                 => max(1, (int) ($row['qty'] ?? 1)),
+                'carat_weight'        => $caratWeight,
                 'to_rack_id'          => $row['to_rack_id'] ?? null,
                 'notes'               => $row['notes']      ?? null,
             ]));

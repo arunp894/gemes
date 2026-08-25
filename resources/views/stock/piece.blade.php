@@ -63,6 +63,10 @@
                         @endif
                         <dt class="col-5 text-muted">Barcode</dt>
                         <dd class="col-7"><code>{{ $purchaseProduct->barcode ?? '—' }}</code></dd>
+                        @if ($purchaseProduct->carat_weight !== null)
+                            <dt class="col-5 text-muted">Carat</dt>
+                            <dd class="col-7">{{ rtrim(rtrim(number_format((float) $purchaseProduct->carat_weight, 3), '0'), '.') }} ct</dd>
+                        @endif
                         <dt class="col-5 text-muted">Cost</dt>
                         <dd class="col-7">{{ number_format((float) $purchaseProduct->price, 2) }}</dd>
                         @if ($purchaseProduct->line && $purchaseProduct->line->purchase)
@@ -87,10 +91,15 @@
 
             {{-- Where It Is Now --}}
             <div class="card">
-                <div class="card-header border-light">
+                <div class="card-header border-light d-flex align-items-center justify-content-between">
                     <h5 class="card-title mb-0">
                         <i class="ti ti-map-pin me-2 text-info"></i>Where It Is Now
                     </h5>
+                    @if ($purchaseProduct->carat_weight !== null)
+                        <span class="badge badge-soft-info fs-xxs">
+                            {{ rtrim(rtrim(number_format($totalRemainingCarat, 3), '0'), '.') }} ct total
+                        </span>
+                    @endif
                 </div>
                 <div class="card-body p-0">
                     @if (empty($byLocation))
@@ -105,6 +114,11 @@
                                     <div>
                                         <div class="fw-semibold small">{{ $loc ? $loc->name : 'Location #'.$locId }}</div>
                                         @if($loc)<small class="text-muted">{{ $loc->location_code }}</small>@endif
+                                        @if ($purchaseProduct->carat_weight !== null)
+                                            <small class="text-muted d-block">
+                                                {{ rtrim(rtrim(number_format($caratByLocation[$locId] ?? 0, 3), '0'), '.') }} ct
+                                            </small>
+                                        @endif
                                     </div>
                                     <span class="badge {{ $balance <= 0 ? 'badge-soft-danger' : 'badge-soft-success' }} fs-sm">
                                         {{ (int) $balance }}

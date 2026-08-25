@@ -21,6 +21,7 @@ use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\RackController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SaleController;
+use App\Models\Sale;
 use App\Http\Controllers\SaleImportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\StockAuditController;
@@ -414,6 +415,11 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('sale')->middleware('permission:sales.post')->name('refund');
         Route::post('/{sale}/cancel',   [SaleController::class, 'cancel'])
             ->whereNumber('sale')->middleware('permission:sales.edit')->name('cancel');
+        Route::post('/{sale}/shipping-status/{status}', [SaleController::class, 'updateShippingStatus'])
+            ->whereNumber('sale')->whereIn('status', Sale::SHIPPING_STATUSES)
+            ->middleware('permission:sales.edit')->name('shipping-status');
+        Route::post('/{sale}/shipping-details', [SaleController::class, 'updateShippingDetails'])
+            ->whereNumber('sale')->middleware('permission:sales.edit')->name('shipping-details');
 
         // ── Payments ──
         Route::post('/{sale}/payments', [SaleController::class, 'addPayment'])

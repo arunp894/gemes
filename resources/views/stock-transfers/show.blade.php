@@ -111,7 +111,8 @@
                                                 </a>
                                             </code>
                                         </td>
-                                        <td class="text-end">{{ $line->purchaseProduct?->carat_weight ? $line->purchaseProduct->carat_weight . ' ct' : '—' }}</td>
+                                        @php $lineCarat = $line->carat_weight ?? optional($line->purchaseProduct)->carat_weight; @endphp
+                                        <td class="text-end">{{ $lineCarat ? $lineCarat . ' ct' : '—' }}</td>
                                         <td class="text-end fw-semibold">{{ (int) $line->qty }}</td>
                                         <td><small>{{ $line->notes }}</small></td>
                                     </tr>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Services\CartService;
 use App\Services\SettingService;
+use App\Services\StockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,7 @@ class CartController extends Controller
     public function __construct(
         private readonly SettingService $settings,
         private readonly CartService    $cartService,
+        private readonly StockService   $stock,
     ) {}
 
     /* ---------------------------------------------------------------
@@ -121,8 +123,18 @@ class CartController extends Controller
             return $this->respond($request, false, 'Item not in cart.', count($cart));
         }
 
-        $cart[$request->product_id]['qty']      = (int) $request->qty;
-        $cart[$request->product_id]['subtotal'] = $cart[$request->product_id]['price'] * (int) $request->qty;
+        // Never let the cart claim more than what's actually on hand —
+        // checkout would otherwise fail the stock/CT availability check
+        // at payment time with a confusing error after the customer has
+        // already committed to a quantity. Floored at 1 rather than the
+        // live on-hand figure when stock has hit 0, since dropping the
+        // item entirely here is CartService::validate()'s job, not this
+        // endpoint's.
+        $onHand = $this->stock->onHandForProductGlobal((int) $request->product_id);
+        $qty    = min((int) $request->qty, max(1, $onHand));
+
+        $cart[$request->product_id]['qty']      = $qty;
+        $cart[$request->product_id]['subtotal'] = $cart[$request->product_id]['price'] * $qty;
 
         $this->saveCart($cart);
 

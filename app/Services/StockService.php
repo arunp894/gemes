@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CaratMovement;
 use App\Models\Location;
 use App\Models\Purchase;
 use App\Models\PurchaseProduct;
@@ -121,6 +122,259 @@ class StockService
 
         return (int) ($rows[StockMovement::DIRECTION_IN] ?? 0)
              - (int) ($rows[StockMovement::DIRECTION_OUT] ?? 0);
+    }
+
+    /* ─────────────────────────────────────────────────────────
+     |  Read API — CT (carat) ledger
+     | ─────────────────────────────────────────────────────────
+     |  Independent of the qty ledger above: a purchase_products row's
+     |  qty and carat_weight are two separate quantities (a qty=3 row can
+     |  be 20ct + 7ct + 3ct, not 10ct each), so CT gets its own balance
+     |  rather than being derived as qty × carat_weight.
+     */
+
+    /**
+     * Remaining CT for a specific piece at a specific location.
+     */
+    public function remainingCaratForPiece(int $purchaseProductId, int $locationId): float
+    {
+        $rows = CaratMovement::query()
+            ->selectRaw('direction, SUM(carat) as total')
+            ->where('purchase_product_id', $purchaseProductId)
+            ->where('location_id', $locationId)
+            ->groupBy('direction')
+            ->pluck('total', 'direction');
+
+        return round(
+            (float) ($rows[CaratMovement::DIRECTION_IN] ?? 0)
+            - (float) ($rows[CaratMovement::DIRECTION_OUT] ?? 0),
+            3
+        );
+    }
+
+    /**
+     * Remaining CT for a piece, broken down by location. Mirrors
+     * onHandForPieceByLocation() — [location_id => balance], positive
+     * balances only.
+     */
+    public function remainingCaratForPieceByLocation(int $purchaseProductId): array
+    {
+        $rows = CaratMovement::query()
+            ->selectRaw('location_id, '
+                . 'SUM(CASE WHEN direction = ? THEN carat ELSE 0 END) as in_carat, '
+                . 'SUM(CASE WHEN direction = ? THEN carat ELSE 0 END) as out_carat',
+                [CaratMovement::DIRECTION_IN, CaratMovement::DIRECTION_OUT])
+            ->where('purchase_product_id', $purchaseProductId)
+            ->groupBy('location_id')
+            ->get();
+
+        $out = [];
+        foreach ($rows as $r) {
+            $bal = round((float) $r->in_carat - (float) $r->out_carat, 3);
+            if ($bal > 0.0005) {
+                $out[(int) $r->location_id] = $bal;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Remaining CT for a piece, summed across every location — the
+     * global figure the sale terminal and reports ask about (mirrors
+     * onHandForPieceGlobal()).
+     */
+    public function remainingCaratForPieceGlobal(int $purchaseProductId): float
+    {
+        $rows = CaratMovement::query()
+            ->selectRaw('direction, SUM(carat) as total')
+            ->where('purchase_product_id', $purchaseProductId)
+            ->groupBy('direction')
+            ->pluck('total', 'direction');
+
+        return round(
+            (float) ($rows[CaratMovement::DIRECTION_IN] ?? 0)
+            - (float) ($rows[CaratMovement::DIRECTION_OUT] ?? 0),
+            3
+        );
+    }
+
+    /**
+     * Remaining CT for a product at a location, summed across all of its
+     * pieces. Mirrors onHandForProduct().
+     */
+    public function remainingCaratForProduct(int $productId, int $locationId): float
+    {
+        $rows = CaratMovement::query()
+            ->selectRaw('direction, SUM(carat) as total')
+            ->where('product_id', $productId)
+            ->where('location_id', $locationId)
+            ->groupBy('direction')
+            ->pluck('total', 'direction');
+
+        return round(
+            (float) ($rows[CaratMovement::DIRECTION_IN] ?? 0)
+            - (float) ($rows[CaratMovement::DIRECTION_OUT] ?? 0),
+            3
+        );
+    }
+
+    /**
+     * Remaining CT for a product, summed across every location + piece.
+     * Mirrors onHandForProductGlobal().
+     */
+    public function remainingCaratForProductGlobal(int $productId): float
+    {
+        $rows = CaratMovement::query()
+            ->selectRaw('direction, SUM(carat) as total')
+            ->where('product_id', $productId)
+            ->groupBy('direction')
+            ->pluck('total', 'direction');
+
+        return round(
+            (float) ($rows[CaratMovement::DIRECTION_IN] ?? 0)
+            - (float) ($rows[CaratMovement::DIRECTION_OUT] ?? 0),
+            3
+        );
+    }
+
+    /**
+     * Pairs a set of StockMovement rows with their matching per-movement
+     * CT amount, for ledger/history views that show one row per event
+     * (Stock's product page, Barcode History). Returns [movement_id =>
+     * carat|null] — null where there's no CT counterpart (product isn't
+     * carat-tracked, or recordCarat() skipped a zero-carat leg).
+     *
+     * Matched by the same key StockService always writes a StockMovement
+     * + CaratMovement pair under for one event: piece, location,
+     * direction, reason, and source. A handful of reasons (adjustments,
+     * opening) carry no source_id at all, so several unrelated events can
+     * share that key — paired off in creation-order (id ascending) instead,
+     * which holds because both ledgers are written back-to-back for the
+     * same event, so their Nth-with-this-key rows line up.
+     *
+     * IMPORTANT: never call qty and carat display as if one derives the
+     * other (e.g. carat_weight × qty) — this is exactly the bug this
+     * method exists to avoid. Always resolve each row's real carat here.
+     */
+    public function caratForMovements(Collection $movements): array
+    {
+        if ($movements->isEmpty()) {
+            return [];
+        }
+
+        $caratByKey = CaratMovement::query()
+            ->whereIn('product_id', $movements->pluck('product_id')->unique())
+            ->orderBy('id')
+            ->get()
+            ->groupBy(fn (CaratMovement $cm) => implode(':', [
+                $cm->purchase_product_id, $cm->location_id, $cm->direction,
+                $cm->reason, $cm->source_type, $cm->source_id, $cm->source_line_id,
+            ]))
+            ->map(fn ($group) => $group->values()->all())
+            ->all();
+
+        $result = [];
+        foreach ($movements as $m) {
+            $key = implode(':', [
+                $m->purchase_product_id, $m->location_id, $m->direction,
+                $m->reason, $m->source_type, $m->source_id, $m->source_line_id,
+            ]);
+            $cm = ! empty($caratByKey[$key]) ? array_shift($caratByKey[$key]) : null;
+            $result[$m->id] = $cm?->carat !== null ? (float) $cm->carat : null;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Records one CT ledger row. Mirrors record() above. Silently
+     * no-ops on a non-positive carat amount rather than throwing — most
+     * callers pass through a possibly-null/possibly-zero line carat
+     * (e.g. a sale line with no piece attached has nothing to book),
+     * and forcing every caller to guard first would just duplicate this
+     * check everywhere.
+     */
+    public function recordCarat(array $data): ?CaratMovement
+    {
+        $carat = round((float) ($data['carat'] ?? 0), 3);
+        if ($carat <= 0) {
+            return null;
+        }
+        if (! isset($data['purchase_product_id'], $data['product_id'], $data['location_id'])) {
+            throw new InvalidArgumentException('recordCarat(): purchase_product_id, product_id, and location_id are all required.');
+        }
+        if (! isset($data['direction']) || ! in_array($data['direction'], CaratMovement::DIRECTIONS, true)) {
+            throw new InvalidArgumentException("recordCarat(): direction must be 'in' or 'out'.");
+        }
+        if (empty($data['reason']) || ! array_key_exists($data['reason'], CaratMovement::REASONS)) {
+            throw new InvalidArgumentException("recordCarat(): reason '{$data['reason']}' is not a recognised reason.");
+        }
+
+        return CaratMovement::create([
+            'purchase_product_id' => $data['purchase_product_id'],
+            'product_id'          => $data['product_id'],
+            'location_id'         => $data['location_id'],
+            'direction'           => $data['direction'],
+            'carat'               => $carat,
+            'reason'              => $data['reason'],
+            'source_type'         => $data['source_type']    ?? null,
+            'source_id'           => $data['source_id']      ?? null,
+            'source_line_id'      => $data['source_line_id'] ?? null,
+            'movement_date'       => $data['movement_date']  ?? now()->toDateString(),
+            'notes'               => $data['notes']          ?? null,
+        ]);
+    }
+
+    /**
+     * Shared CT reversal: finds original CaratMovement rows for
+     * (sourceType, sourceId, originalReason) restricted to $lineIds, and
+     * inserts one compensating opposite-direction row per original with
+     * $newReason. Used by both the sale-edit/refund/cancel paths and the
+     * transfer-cancel path so the "find matching originals, reverse
+     * each" logic isn't duplicated three times.
+     *
+     * Must be called ONCE against the full set of line ids for a given
+     * reversal — never per already-fetched StockMovement row — because
+     * one line's qty can span more than one location's movement, and
+     * looping this alongside that would find and reverse the same CT
+     * row multiple times.
+     */
+    private function reverseCaratForSource(
+        string $sourceType,
+        int $sourceId,
+        string $originalReason,
+        array $lineIds,
+        string $newReason,
+        ?string $notes = null
+    ): void {
+        $lineIds = array_values(array_filter($lineIds));
+        if (empty($lineIds)) {
+            return;
+        }
+
+        $originals = CaratMovement::query()
+            ->where('source_type', $sourceType)
+            ->where('source_id', $sourceId)
+            ->where('reason', $originalReason)
+            ->whereIn('source_line_id', $lineIds)
+            ->get();
+
+        foreach ($originals as $orig) {
+            $reverseDirection = $orig->isIn() ? CaratMovement::DIRECTION_OUT : CaratMovement::DIRECTION_IN;
+
+            $this->recordCarat([
+                'purchase_product_id' => $orig->purchase_product_id,
+                'product_id'          => $orig->product_id,
+                'location_id'         => $orig->location_id,
+                'direction'           => $reverseDirection,
+                'carat'               => (float) $orig->carat,
+                'reason'              => $newReason,
+                'source_type'         => $sourceType,
+                'source_id'           => $sourceId,
+                'source_line_id'      => $orig->source_line_id,
+                'notes'               => $notes,
+            ]);
+        }
     }
 
     /**
@@ -452,6 +706,23 @@ class StockService
                         'rack_id'             => $row->rack_id,
                         'movement_date'       => optional($purchase->purchase_date)->toDateString() ?? now()->toDateString(),
                     ]);
+
+                    // Seed this row's own CT balance — whatever carat was
+                    // recorded on the row, in full, regardless of qty.
+                    // recordCarat() itself no-ops when carat_weight is
+                    // null/0 (nothing to track).
+                    $this->recordCarat([
+                        'purchase_product_id' => $row->id,
+                        'product_id'          => $row->product_id,
+                        'location_id'         => $locationId,
+                        'direction'           => CaratMovement::DIRECTION_IN,
+                        'carat'               => (float) $row->carat_weight,
+                        'reason'              => CaratMovement::REASON_PURCHASE,
+                        'source_type'         => CaratMovement::SOURCE_PURCHASE,
+                        'source_id'           => $purchase->id,
+                        'source_line_id'      => $line->id,
+                        'movement_date'       => optional($purchase->purchase_date)->toDateString() ?? now()->toDateString(),
+                    ]);
                 }
             }
         });
@@ -531,6 +802,23 @@ class StockService
                     'rack_id'             => $orig->rack_id,
                     'notes'               => 'Reversal of original IN movement #' . $orig->id,
                 ]);
+
+                // Reverse this piece's ENTIRE remaining CT at this
+                // location — the whole row is being un-purchased, not a
+                // partial amount, so there's no allocation question here.
+                $remainingCarat = $this->remainingCaratForPiece((int) $orig->purchase_product_id, (int) $orig->location_id);
+                $this->recordCarat([
+                    'purchase_product_id' => $orig->purchase_product_id,
+                    'product_id'          => $orig->product_id,
+                    'location_id'         => $orig->location_id,
+                    'direction'           => CaratMovement::DIRECTION_OUT,
+                    'carat'               => $remainingCarat,
+                    'reason'              => CaratMovement::REASON_PURCHASE_CANCEL,
+                    'source_type'         => CaratMovement::SOURCE_PURCHASE,
+                    'source_id'           => $purchase->id,
+                    'source_line_id'      => $orig->source_line_id,
+                    'notes'               => 'Reversal of original IN movement #' . $orig->id,
+                ]);
             }
         });
     }
@@ -558,8 +846,10 @@ class StockService
         // Roll the lines up so multiple lines hitting the same piece are
         // aggregated for the check. Otherwise two lines of qty=2 each on
         // a piece with on-hand=3 would both pass individually.
-        $byPiece   = [];
-        $byProduct = [];
+        $byPiece      = [];
+        $byProduct    = [];
+        $caratByPiece   = [];
+        $caratByProduct = [];
 
         $sale->load('lines');
 
@@ -572,9 +862,24 @@ class StockService
             if ($line->purchase_product_id) {
                 $key = (int) $line->purchase_product_id;
                 $byPiece[$key] = ($byPiece[$key] ?? 0) + $qty;
+
+                // CT is independent of qty — only check it when the line
+                // actually carries a seller-entered carat figure.
+                if ($line->carat_weight !== null && (float) $line->carat_weight > 0) {
+                    $caratByPiece[$key] = ($caratByPiece[$key] ?? 0) + (float) $line->carat_weight;
+                }
             } else {
                 $key = (int) $line->product_id;
                 $byProduct[$key] = ($byProduct[$key] ?? 0) + $qty;
+
+                // Same CT check, rolled up at product level — this line
+                // will be FIFO-allocated across whichever of the
+                // product's pieces have stock, so the pool to check
+                // against is the product's total remaining CT, not any
+                // one piece's.
+                if ($line->carat_weight !== null && (float) $line->carat_weight > 0) {
+                    $caratByProduct[$key] = ($caratByProduct[$key] ?? 0) + (float) $line->carat_weight;
+                }
             }
         }
 
@@ -589,6 +894,20 @@ class StockService
             $onHand = $this->onHandForProductGlobal($productId);
             if ($onHand < $needed) {
                 $errors[] = "Insufficient stock for product #{$productId}: need {$needed}, on hand {$onHand}.";
+            }
+        }
+
+        foreach ($caratByPiece as $ppId => $neededCarat) {
+            $remainingCarat = $this->remainingCaratForPieceGlobal($ppId);
+            if ($remainingCarat + 0.0005 < $neededCarat) {
+                $errors[] = "Insufficient CT for piece #{$ppId}: need {$neededCarat}, remaining {$remainingCarat}.";
+            }
+        }
+
+        foreach ($caratByProduct as $productId => $neededCarat) {
+            $remainingCarat = $this->remainingCaratForProductGlobal($productId);
+            if ($remainingCarat + 0.0005 < $neededCarat) {
+                $errors[] = "Insufficient CT for product #{$productId}: need {$neededCarat}, remaining {$remainingCarat}.";
             }
         }
 
@@ -653,12 +972,16 @@ class StockService
 
             if ($line->purchase_product_id) {
                 // Exact piece specified — consume it from wherever it's held.
+                $lineCarat = ($line->carat_weight !== null && (float) $line->carat_weight > 0)
+                    ? (float) $line->carat_weight
+                    : null;
                 $this->bookPieceOut(
                     (int) $line->purchase_product_id,
                     (int) $line->product_id,
                     $qty,
                     $sale,
-                    (int) $line->id
+                    (int) $line->id,
+                    $lineCarat
                 );
                 continue;
             }
@@ -670,17 +993,74 @@ class StockService
             $remaining = $qty;
             $firstPpId = null;
 
-            foreach ($available as $ppId => $bal) {
-                if ($remaining <= 0) break;
-                $take = min((int) $bal, $remaining);
-                if ($take <= 0) continue;
+            // CT is independent of qty — only meaningful when the line
+            // actually carries an entered carat figure (e.g. a website
+            // order, which never pins a specific piece up front). When
+            // FIFO spans multiple pieces, split it proportionally by each
+            // piece's qty share, with the last piece taken absorbing
+            // whatever's left — same rule bookPieceOut() already applies
+            // when a single piece's qty spans multiple locations.
+            $lineCarat = ($line->carat_weight !== null && (float) $line->carat_weight > 0)
+                ? (float) $line->carat_weight
+                : null;
 
-                $this->bookPieceOut($ppId, (int) $line->product_id, $take, $sale, (int) $line->id);
+            // Resolve which pieces get drawn from (and how much of each)
+            // up front, so the carat split below can tell which pick is
+            // last without a second pass over $available.
+            $picks  = [];
+            $toFill = $remaining;
+            foreach ($available as $ppId => $bal) {
+                if ($toFill <= 0) break;
+                $take = min((int) $bal, $toFill);
+                if ($take <= 0) continue;
+                $picks[$ppId] = $take;
+                $toFill -= $take;
+            }
+
+            $caratRemaining = $lineCarat;
+            $pickIndex      = 0;
+            $pickCount      = count($picks);
+
+            foreach ($picks as $ppId => $take) {
+                $pickIndex++;
+                $pieceCarat = null;
+                if ($lineCarat !== null) {
+                    $proportional = ($pickIndex === $pickCount)
+                        ? $caratRemaining
+                        : round($lineCarat * $take / $qty, 3);
+
+                    // Different pieces can carry very different weights,
+                    // so a pure qty-proportional split can ask more of
+                    // one piece than it actually holds even when the
+                    // combined total across every picked piece is
+                    // enough. Cap each share at that piece's own
+                    // remaining CT — never overdraw it — and let any
+                    // shortfall roll forward onto whatever's picked next
+                    // via $caratRemaining.
+                    $pieceCarat = min($proportional, $this->remainingCaratForPieceGlobal($ppId));
+                    $caratRemaining = round($caratRemaining - $pieceCarat, 3);
+                }
+
+                $this->bookPieceOut($ppId, (int) $line->product_id, $take, $sale, (int) $line->id, $pieceCarat);
 
                 if ($firstPpId === null) {
                     $firstPpId = $ppId;
                 }
                 $remaining -= $take;
+            }
+
+            if ($lineCarat !== null && $caratRemaining > 0.0005) {
+                // Every picked piece is now exhausted of its own CT and
+                // there's still a balance left to place — the aggregate
+                // check in checkSaleAvailability() only verifies the
+                // product-level total, not that it's achievable given
+                // each individual piece's own weight, so this can still
+                // happen. Bail loudly rather than silently under-book
+                // the ledger by the shortfall.
+                throw new RuntimeException(
+                    "CT allocation shortfall on sale line #{$line->id}: {$caratRemaining} ct "
+                    . 'could not be placed across the pieces available for this product.'
+                );
             }
 
             if ($remaining > 0) {
@@ -709,8 +1089,15 @@ class StockService
      * location(s) actually hold positive balance. Stock is one global
      * pool; the sale's own location_id is a sales attribute and is NOT
      * used as a stock dimension here.
+     *
+     * When $caratWeight is given, books that exact CT figure OUT too —
+     * split across the same location(s) in the same proportion as the
+     * qty split (the common case is one location, so this is a no-op
+     * split of 1). The last location in the split absorbs whatever CT
+     * remains rather than its own proportional share, so rounding never
+     * drifts the ledger away from the seller-entered total.
      */
-    private function bookPieceOut(int $ppId, int $productId, int $qty, Sale $sale, int $lineId): void
+    private function bookPieceOut(int $ppId, int $productId, int $qty, Sale $sale, int $lineId, ?float $caratWeight = null): void
     {
         $byLoc = $this->onHandForPieceByLocation($ppId); // [location_id => balance], positives only
 
@@ -724,7 +1111,8 @@ class StockService
             $byLoc = [$def => $qty];
         }
 
-        $remaining = $qty;
+        $remaining      = $qty;
+        $caratRemaining = $caratWeight;
         foreach ($byLoc as $locId => $bal) {
             if ($remaining <= 0) break;
             $take = min((int) $bal, $remaining);
@@ -742,6 +1130,27 @@ class StockService
                 'source_line_id'      => $lineId,
                 'movement_date'       => optional($sale->sale_date)->toDateString() ?? now()->toDateString(),
             ]);
+
+            if ($caratWeight !== null) {
+                $caratTake = ($take >= $remaining)
+                    ? $caratRemaining
+                    : round($caratWeight * $take / $qty, 3);
+                $caratRemaining -= $caratTake;
+
+                $this->recordCarat([
+                    'purchase_product_id' => $ppId,
+                    'product_id'          => $productId,
+                    'location_id'         => (int) $locId,
+                    'direction'           => CaratMovement::DIRECTION_OUT,
+                    'carat'               => $caratTake,
+                    'reason'              => CaratMovement::REASON_SALE,
+                    'source_type'         => CaratMovement::SOURCE_SALE,
+                    'source_id'           => $sale->id,
+                    'source_line_id'      => $lineId,
+                    'movement_date'       => optional($sale->sale_date)->toDateString() ?? now()->toDateString(),
+                ]);
+            }
+
             $remaining -= $take;
         }
 
@@ -779,7 +1188,7 @@ class StockService
             return;
         }
 
-        DB::transaction(function () use ($originals, $sale) {
+        DB::transaction(function () use ($originals, $sale, $lineIds) {
             foreach ($originals as $orig) {
                 $this->record([
                     'purchase_product_id' => $orig->purchase_product_id,
@@ -794,6 +1203,16 @@ class StockService
                     'notes'               => 'Reversed for edit of sale ' . $sale->sale_number,
                 ]);
             }
+            // Called once against the full line-id set (not per
+            // StockMovement row above) — a line's qty can span more than
+            // one location's worth of movements, and looping the CT
+            // reversal alongside them would find + reverse the same CT
+            // row multiple times.
+            $this->reverseCaratForSource(
+                CaratMovement::SOURCE_SALE, $sale->id, CaratMovement::REASON_SALE,
+                $lineIds, CaratMovement::REASON_SALE_EDIT_REVERSE,
+                'Reversed for edit of sale ' . $sale->sale_number
+            );
         });
     }
 
@@ -817,18 +1236,20 @@ class StockService
             return;
         }
 
+        $lineIds = $sale->lines()->pluck('id')->all();
+
         $originals = StockMovement::query()
             ->where('source_type', StockMovement::SOURCE_SALE)
             ->where('source_id', $sale->id)
             ->where('reason', StockMovement::REASON_SALE)
-            ->whereIn('source_line_id', $sale->lines()->pluck('id'))
+            ->whereIn('source_line_id', $lineIds)
             ->get();
 
         if ($originals->isEmpty()) {
             return;
         }
 
-        DB::transaction(function () use ($originals, $reason, $sale) {
+        DB::transaction(function () use ($originals, $reason, $sale, $lineIds) {
             foreach ($originals as $orig) {
                 $this->record([
                     'purchase_product_id' => $orig->purchase_product_id,
@@ -843,6 +1264,11 @@ class StockService
                     'notes'               => 'Reversal of original OUT movement #' . $orig->id,
                 ]);
             }
+            $this->reverseCaratForSource(
+                CaratMovement::SOURCE_SALE, $sale->id, CaratMovement::REASON_SALE,
+                $lineIds, $reason,
+                'Reversal of original OUT CT movement'
+            );
         });
     }
 
@@ -866,15 +1292,26 @@ class StockService
         // Pre-flight availability check at source — same per-piece rules.
         $errors = [];
         $byPiece = [];
+        $caratByPiece = [];
         foreach ($transfer->lines as $line) {
             if ((int) $line->qty <= 0) continue;
             $key = (int) $line->purchase_product_id;
             $byPiece[$key] = ($byPiece[$key] ?? 0) + (int) $line->qty;
+
+            if ($line->carat_weight !== null && (float) $line->carat_weight > 0) {
+                $caratByPiece[$key] = ($caratByPiece[$key] ?? 0) + (float) $line->carat_weight;
+            }
         }
         foreach ($byPiece as $ppId => $needed) {
             $onHand = $this->onHandForPiece($ppId, (int) $transfer->from_location_id);
             if ($onHand < $needed) {
                 $errors[] = "Insufficient stock for piece #{$ppId} at source: need {$needed}, on hand {$onHand}.";
+            }
+        }
+        foreach ($caratByPiece as $ppId => $neededCarat) {
+            $remainingCarat = $this->remainingCaratForPiece($ppId, (int) $transfer->from_location_id);
+            if ($remainingCarat + 0.0005 < $neededCarat) {
+                $errors[] = "Insufficient CT for piece #{$ppId} at source: need {$neededCarat}, remaining {$remainingCarat}.";
             }
         }
         if (! empty($errors)) {
@@ -893,6 +1330,19 @@ class StockService
                     'qty'                 => (int) $line->qty,
                     'reason'              => StockMovement::REASON_TRANSFER_OUT,
                     'source_type'         => StockMovement::SOURCE_STOCK_TRANSFER,
+                    'source_id'           => $transfer->id,
+                    'source_line_id'      => $line->id,
+                    'movement_date'       => optional($transfer->transfer_date)->toDateString() ?? now()->toDateString(),
+                ]);
+
+                $this->recordCarat([
+                    'purchase_product_id' => (int) $line->purchase_product_id,
+                    'product_id'          => (int) $line->product_id,
+                    'location_id'         => (int) $transfer->from_location_id,
+                    'direction'           => CaratMovement::DIRECTION_OUT,
+                    'carat'               => (float) $line->carat_weight,
+                    'reason'              => CaratMovement::REASON_TRANSFER_OUT,
+                    'source_type'         => CaratMovement::SOURCE_STOCK_TRANSFER,
                     'source_id'           => $transfer->id,
                     'source_line_id'      => $line->id,
                     'movement_date'       => optional($transfer->transfer_date)->toDateString() ?? now()->toDateString(),
@@ -929,6 +1379,19 @@ class StockService
                     'rack_id'             => $line->to_rack_id,
                     'movement_date'       => now()->toDateString(),
                 ]);
+
+                $this->recordCarat([
+                    'purchase_product_id' => (int) $line->purchase_product_id,
+                    'product_id'          => (int) $line->product_id,
+                    'location_id'         => (int) $transfer->to_location_id,
+                    'direction'           => CaratMovement::DIRECTION_IN,
+                    'carat'               => (float) $line->carat_weight,
+                    'reason'              => CaratMovement::REASON_TRANSFER_IN,
+                    'source_type'         => CaratMovement::SOURCE_STOCK_TRANSFER,
+                    'source_id'           => $transfer->id,
+                    'source_line_id'      => $line->id,
+                    'movement_date'       => now()->toDateString(),
+                ]);
             }
         });
     }
@@ -953,7 +1416,9 @@ class StockService
             return;
         }
 
-        DB::transaction(function () use ($originals, $transfer) {
+        $lineIds = $originals->pluck('source_line_id')->filter()->unique()->values()->all();
+
+        DB::transaction(function () use ($originals, $transfer, $lineIds) {
             foreach ($originals as $orig) {
                 $this->record([
                     'purchase_product_id' => $orig->purchase_product_id,
@@ -968,6 +1433,11 @@ class StockService
                     'notes'               => 'Cancellation of in-transit transfer; restoring to source.',
                 ]);
             }
+            $this->reverseCaratForSource(
+                CaratMovement::SOURCE_STOCK_TRANSFER, $transfer->id, CaratMovement::REASON_TRANSFER_OUT,
+                $lineIds, CaratMovement::REASON_TRANSFER_CANCEL_OUT,
+                'Cancellation of in-transit transfer; restoring to source.'
+            );
         });
     }
 

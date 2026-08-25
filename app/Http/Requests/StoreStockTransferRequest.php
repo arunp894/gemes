@@ -36,6 +36,7 @@ class StoreStockTransferRequest extends FormRequest
             'lines'                              => ['required', 'array', 'min:1'],
             'lines.*.purchase_product_id'        => ['required', 'integer', Rule::exists('purchase_products', 'id')->whereNull('deleted_at')],
             'lines.*.qty'                        => ['required', 'integer', 'min:1'],
+            'lines.*.carat_weight'               => ['nullable', 'numeric', 'min:0', 'max:99999.999'],
             'lines.*.to_rack_id'                 => ['nullable', 'integer', Rule::exists('racks', 'id')->whereNull('deleted_at')],
             'lines.*.notes'                      => ['nullable', 'string', 'max:500'],
         ];

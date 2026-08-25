@@ -116,7 +116,11 @@ class CheckoutController extends Controller
         $items = array_values(array_map(fn ($item) => [
             'name'        => $item['title'],
             'unit_amount' => ['currency_code' => $currencyCode, 'value' => number_format($item['price'], 2, '.', '')],
-            'quantity'    => '1',
+            // Must match the cart's real qty — PayPal requires
+            // sum(unit_amount x quantity) across items to equal the
+            // order's item_total below, which IS built from the full
+            // qty-multiplied subtotal.
+            'quantity'    => (string) max(1, (int) ($item['qty'] ?? 1)),
             'sku'         => $item['sku'] ?? null,
         ], $cart));
 
@@ -296,6 +300,7 @@ class CheckoutController extends Controller
                     'tax_total'      => 0,
                     'discount_total' => 0,
                     'shipping_charge' => 0,
+                    'shipping_status' => Sale::SHIPPING_PENDING,
                     'grand_total'    => 0,
                     'paid_amount'    => 0,
                     'balance_due'    => 0,
@@ -306,22 +311,32 @@ class CheckoutController extends Controller
 
                 // Build SaleLines from cart
                 foreach ($cart as $item) {
-                    $price    = (float) $item['price'];
-                    $subtotal += $price;
+                    $qty   = max(1, (int) ($item['qty'] ?? 1));
+                    $price = (float) $item['price'];
+                    // Already price x qty (kept in sync by CartController::
+                    // updateQty()) — reuse it rather than recompute, so the
+                    // sale total always matches what was actually charged.
+                    $lineTotal = (float) ($item['subtotal'] ?? ($price * $qty));
+                    $subtotal += $lineTotal;
 
                     SaleLine::create([
                         'sale_id'             => $sale->id,
                         'product_id'          => $item['id'],
                         'purchase_product_id' => null, // FIFO allocated by StockService
                         'barcode'             => $item['sku'] ?? null,
-                        'qty'                 => 1,
+                        'qty'                 => $qty,
+                        // Whole-listing carat for this line, from the
+                        // cart (set at add-to-cart time from the
+                        // product's own recorded weight) — null for
+                        // non-gemstone products, which never carry one.
+                        'carat_weight'        => $item['carat'] ?? null,
                         'unit_price'          => $price,
                         'tax_percent'         => 0,
                         'tax_amount'          => 0,
                         'discount_percent'    => 0,
                         'discount_amount'     => 0,
-                        'subtotal'            => $price,
-                        'total'               => $price,
+                        'subtotal'            => $lineTotal,
+                        'total'               => $lineTotal,
                     ]);
                 }
 
