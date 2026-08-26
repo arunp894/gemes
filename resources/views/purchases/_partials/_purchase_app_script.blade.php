@@ -515,13 +515,15 @@
                 if (line.type === type) return;
                 line.type = type;
 
-                // Switching TO Box: whatever Pcs/Carat/Price/Selling Price
+                // Switching TO Box: whatever Carat/Price/Selling Price
                 // were entered for a single Piece don't carry meaning once
                 // this line fans out into one row per box, so start clean
-                // rather than silently carrying stale values forward.
+                // rather than silently carrying stale values forward. Qty
+                // is left alone -- it's a real per-row field on Box lines
+                // too (see rebuildRows), so the existing row keeps its
+                // current value instead of being zeroed.
                 if (type === 'box') {
                     line.rows.forEach(row => {
-                        this.$set(row, 'qty', 0);
                         this.$set(row, 'carat_weight', 0);
                         this.$set(row, 'price', 0);
                         this.$set(row, 'website_price', 0);
@@ -558,7 +560,7 @@
                         // the previous row currently holds (that previous
                         // row's own value may itself be stale/mid-edit).
                         const row = (line.type === 'box')
-                            ? emptyRow(0, 0, undefined, 0, t ? t.website_enabled : line.website_enabled, 0)
+                            ? emptyRow(0, 0, undefined, 0, t ? t.website_enabled : line.website_enabled)
                             : emptyRow(
                                 t ? t.carat_weight : line.carat_weight,
                                 t ? t.website_price : line.website_price,
@@ -574,6 +576,7 @@
                                 row.price = t.price;
                             }
                         }
+                        if (line.type === 'box') row.qty = null;
                         line.rows.push(row);
                     }
                 } else if (line.rows.length > expected) {

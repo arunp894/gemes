@@ -153,9 +153,7 @@
                         <template v-if="line.rows.length === 1">
                             <td>
                                 <input type="number" min="0" class="form-control form-control-sm"
-                                       v-model.number="line.rows[0].qty" placeholder="qty"
-                                       :disabled="line.type === 'box'"
-                                       :title="line.type === 'box' ? 'Not used for Box lines' : ''">
+                                       v-model.number="line.rows[0].qty" placeholder="qty">
                             </td>
                             <td>
                                 <input type="number" step="0.001" min="0" class="form-control form-control-sm"
@@ -244,9 +242,7 @@
 
                             <td>
                                 <input type="number" min="0" class="form-control form-control-sm"
-                                       v-model.number="row.qty" placeholder="qty"
-                                       :disabled="line.type === 'box'"
-                                       :title="line.type === 'box' ? 'Not used for Box lines' : ''">
+                                       v-model.number="row.qty" placeholder="qty">
                             </td>
                             <td>
                                 <input type="number" step="0.001" min="0" class="form-control form-control-sm"
