@@ -29,6 +29,7 @@
             </td>
             <td class="text-right">
                 <div><strong>Audit Date:</strong> {{ optional($audit->audit_date)->format('d M Y') }}</div>
+                <div><strong>Stone:</strong> {{ $audit->categoryLabel() }}</div>
                 <div><strong>Status:</strong> {{ $audit->statusLabel() }}</div>
                 <div><strong>Generated:</strong> {{ $generatedAt->format('d M Y H:i') }}</div>
             </td>
@@ -48,7 +49,7 @@
                 <th>Lot Code</th>
                 <th>Product</th>
                 <th>SKU</th>
-                <th>Category</th>
+                <th>Stone</th>
                 <th>Supplier</th>
                 <th>Invoice #</th>
                 <th>Purchase Date</th>

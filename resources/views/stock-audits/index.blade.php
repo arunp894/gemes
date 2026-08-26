@@ -88,6 +88,15 @@
                             </select>
                         </div>
                         <div class="app-search">
+                            <select id="auditCategoryFilter" class="form-select form-control my-1 my-md-0">
+                                <option value="">All Stones</option>
+                                @foreach ($categories as $cat)
+                                    <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                @endforeach
+                            </select>
+                            <i class="ti ti-tag app-search-icon text-muted"></i>
+                        </div>
+                        <div class="app-search">
                             <select id="auditStatusFilter" class="form-select form-control my-1 my-md-0">
                                 <option value="">All Status</option>
                                 <option value="in_progress">In Progress</option>
@@ -114,6 +123,7 @@
                                 <th><i class="ti ti-barcode me-1"></i>Audit #</th>
                                 <th><i class="ti ti-calendar-time me-1"></i>Date</th>
                                 <th><i class="ti ti-map-pin me-1"></i>Location</th>
+                                <th><i class="ti ti-tag me-1"></i>Stone</th>
                                 <th><i class="ti ti-list-check me-1"></i>Progress</th>
                                 <th><i class="ti ti-flag me-1"></i>Status</th>
                                 <th class="text-center" style="width: 1%;"><i class="ti ti-settings me-1"></i>Actions</th>
@@ -423,6 +433,7 @@ $(function () {
             data: function (d) {
                 d.status = $('#auditStatusFilter').val();
                 d.location_id = $('#auditLocationFilter').val();
+                d.category_id = $('#auditCategoryFilter').val();
             },
         },
         dom: 'rt<"datatables-tail"ip>',
@@ -431,6 +442,7 @@ $(function () {
             { data: 'audit_number',     name: 'stock_audits.audit_number' },
             { data: 'audit_date',       name: 'stock_audits.audit_date' },
             { data: 'location_label',   name: 'location_label', orderable: false, searchable: false },
+            { data: 'category_label',   name: 'category_label', orderable: false, searchable: false },
             { data: 'progress_label',   name: 'progress_label', orderable: false, searchable: false },
             { data: 'status_badge',     name: 'stock_audits.status', orderable: false, searchable: false },
             { data: 'actions',          name: 'actions',        orderable: false, searchable: false, className: 'text-center' },
@@ -454,7 +466,7 @@ $(function () {
         const v = this.value;
         timer = setTimeout(() => dt.search(v).draw(), 250);
     });
-    $('#auditStatusFilter, #auditLocationFilter').on('change', () => dt.draw());
+    $('#auditStatusFilter, #auditLocationFilter, #auditCategoryFilter').on('change', () => dt.draw());
 });
 </script>
 @endpush

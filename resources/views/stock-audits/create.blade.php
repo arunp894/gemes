@@ -29,8 +29,10 @@
                     Starting an audit takes a snapshot of everything the system currently shows as
                     on-hand at the chosen location — that's the list you'll be scanning against.
                     Sales or transfers made <em>after</em> you start won't change that list, so the
-                    count stays accurate to a single point in time. Only one audit can be in progress
-                    per location at once.
+                    count stays accurate to a single point in time. You can optionally narrow it to
+                    one stone type below; otherwise it covers everything at the location. Only one
+                    audit covering the same stone (or the whole location) can be in progress at a
+                    location at once.
                 </div>
             </div>
 
@@ -49,6 +51,18 @@
                                     @endforeach
                                 </select>
                                 <div class="invalid-feedback" id="err-location_id"></div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">Stone</label>
+                                <select id="category_id" name="category_id" class="form-select">
+                                    <option value="">All Stones</option>
+                                    @foreach ($categories as $cat)
+                                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="invalid-feedback" id="err-category_id"></div>
+                                <small class="text-muted">Optional - narrows the count to one stone type at this location.</small>
                             </div>
 
                             <div class="col-md-6">
@@ -143,6 +157,7 @@ $(function () {
 
         const payload = {
             location_id: $('#location_id').val(),
+            category_id: $('#category_id').val() || null,
             audit_date:  $('#audit_date').val(),
             note:        $('#note').val(),
         };

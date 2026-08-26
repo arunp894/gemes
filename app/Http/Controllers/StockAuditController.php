@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreStockAuditRequest;
+use App\Models\Category;
 use App\Models\Location;
 use App\Models\StockAudit;
 use App\Models\StockAuditItem;
@@ -54,8 +55,9 @@ class StockAuditController extends Controller
         ];
 
         return view('stock-audits.index', [
-            'locations' => Location::active()->orderBy('name')->get(['id', 'location_code', 'name']),
-            'stats'     => $stats,
+            'locations'  => Location::active()->orderBy('name')->get(['id', 'location_code', 'name']),
+            'categories' => Category::active()->ordered()->get(['id', 'name']),
+            'stats'      => $stats,
         ]);
     }
 
@@ -69,6 +71,9 @@ class StockAuditController extends Controller
         if ($locationId = $request->query('location_id')) {
             $q->where('location_id', $locationId);
         }
+        if ($categoryId = $request->query('category_id')) {
+            $q->where('category_id', $categoryId);
+        }
 
         return DataTables::eloquent($q)
             ->addIndexColumn()
@@ -77,6 +82,7 @@ class StockAuditController extends Controller
             )
             ->editColumn('audit_date', fn (StockAudit $a) => optional($a->audit_date)->format('d M Y'))
             ->addColumn('location_label', fn (StockAudit $a) => $a->location ? e($a->location->name) : '—')
+            ->addColumn('category_label', fn (StockAudit $a) => $a->category ? e($a->category->name) : 'All Stones')
             ->addColumn('progress_label', fn (StockAudit $a) =>
                 '<span class="fw-semibold">' . (int) $a->matched_total . ' / ' . (int) $a->expected_total . '</span>'
                 . ' <span class="text-muted fs-xxs">(' . $a->progressPercent() . '%)</span>'
@@ -110,7 +116,8 @@ class StockAuditController extends Controller
     public function create(): View
     {
         return view('stock-audits.create', [
-            'locations' => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'type']),
+            'locations'  => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'type']),
+            'categories' => Category::active()->ordered()->get(['id', 'name']),
         ]);
     }
 
@@ -315,7 +322,7 @@ class StockAuditController extends Controller
         $sheet->setTitle('Missing Stock');
 
         $sheet->fromArray(
-            ['#', 'Lot Code', 'Product', 'SKU', 'Category', 'Supplier', 'Invoice #', 'Purchase Date', 'Cost Price', 'Qty Missing'],
+            ['#', 'Lot Code', 'Product', 'SKU', 'Stone', 'Supplier', 'Invoice #', 'Purchase Date', 'Cost Price', 'Qty Missing'],
             null,
             'A1'
         );
@@ -359,7 +366,7 @@ class StockAuditController extends Controller
 
     public function exportPdf(StockAudit $stockAudit)
     {
-        $stockAudit->load(['location', 'creator']);
+        $stockAudit->load(['location', 'creator', 'category']);
         $items = $this->service->missingItemsQuery($stockAudit)->get();
 
         $pdf = Pdf::loadView('stock-audits.missing-report-pdf', [

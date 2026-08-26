@@ -14,6 +14,7 @@ class StockAuditRepository
     {
         return StockAudit::query()->with([
             'location:id,location_code,name',
+            'category:id,name',
         ]);
     }
 
@@ -21,6 +22,7 @@ class StockAuditRepository
     {
         return StockAudit::with([
             'location',
+            'category',
             'creator:id,name',
             'updater:id,name',
         ])->find($id);

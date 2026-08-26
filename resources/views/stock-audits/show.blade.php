@@ -45,6 +45,10 @@
                             <td class="fw-semibold">{{ $audit->location?->name }}</td>
                         </tr>
                         <tr>
+                            <td class="text-muted">Stone</td>
+                            <td>{{ $audit->categoryLabel() }}</td>
+                        </tr>
+                        <tr>
                             <td class="text-muted">Audit Date</td>
                             <td>{{ optional($audit->audit_date)->format('d M Y') }}</td>
                         </tr>
@@ -179,7 +183,7 @@
                                 <th>Product</th>
                                 <th>SKU</th>
                                 <th class="text-end">Carat</th>
-                                <th>Category</th>
+                                <th>Stone</th>
                                 <th>Supplier</th>
                                 <th>Invoice #</th>
                                 <th>Purchase Date</th>

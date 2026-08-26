@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Category;
 use App\Models\Location;
 use App\Models\StockAudit;
 use App\Models\StockAuditItem;
@@ -42,7 +43,11 @@ class StockAuditService
     /* ─── Start ────────────────────────────────────────────── */
 
     /**
-     * Expected payload: ['location_id' => int, 'audit_date' => ?string, 'note' => ?string]
+     * Expected payload: ['location_id' => int, 'category_id' => ?int, 'audit_date' => ?string, 'note' => ?string]
+     *
+     * category_id is optional - the audit's "Stone" scope. Null covers
+     * every category at the location (the original behaviour); set it
+     * to snapshot just that category's on-hand pieces instead.
      */
     public function start(array $data): StockAudit
     {
@@ -53,19 +58,40 @@ class StockAuditService
         if (! Location::whereKey($locationId)->exists()) {
             throw new InvalidArgumentException('Selected location was not found.');
         }
-        if (StockAudit::where('location_id', $locationId)->inProgress()->exists()) {
+
+        $categoryId = ! empty($data['category_id']) ? (int) $data['category_id'] : null;
+        if ($categoryId !== null && ! Category::whereKey($categoryId)->exists()) {
+            throw new InvalidArgumentException('Selected stone was not found.');
+        }
+
+        // A whole-location audit and a category-scoped audit physically
+        // overlap at that location (the same shelves get walked either
+        // way), so only one of: this exact category, or the all-stones
+        // audit, can be in progress here at once. Two DIFFERENT
+        // categories at the same location don't overlap and can run
+        // side by side.
+        $conflict = StockAudit::where('location_id', $locationId)->inProgress();
+        if ($categoryId !== null) {
+            $conflict->where(function ($q) use ($categoryId) {
+                $q->whereNull('category_id')->orWhere('category_id', $categoryId);
+            });
+        }
+        if ($conflict->exists()) {
             throw new InvalidArgumentException(
-                'An audit is already in progress for this location. Complete or cancel it before starting another.'
+                $categoryId !== null
+                    ? 'An audit already in progress for this location covers this stone. Complete or cancel it before starting another.'
+                    : 'An audit is already in progress for this location. Complete or cancel it before starting another.'
             );
         }
 
-        return DB::transaction(function () use ($locationId, $data) {
+        return DB::transaction(function () use ($locationId, $categoryId, $data) {
             $date = Carbon::parse($data['audit_date'] ?? now()->toDateString());
 
             $audit = new StockAudit([
                 'audit_number' => StockAudit::generateAuditNumber($date),
                 'audit_date'   => $date->toDateString(),
                 'location_id'  => $locationId,
+                'category_id'  => $categoryId,
                 'status'       => StockAudit::STATUS_IN_PROGRESS,
                 'started_at'   => now(),
                 'note'         => $data['note'] ?? null,
@@ -76,7 +102,7 @@ class StockAuditService
             // this location right now. Scanning below matches against
             // this list only, never a live re-query, so a sale rung up
             // on the floor mid-count can't move the goalposts.
-            $pieces = $this->stock->onHandPiecesForLocation($locationId);
+            $pieces = $this->stock->onHandPiecesForLocation($locationId, $categoryId);
 
             $now  = now();
             $rows = $pieces->map(fn ($p) => [

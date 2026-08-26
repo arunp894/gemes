@@ -10,6 +10,9 @@
             <h4 class="page-main-title m-0">
                 <i class="ti ti-scan text-primary me-2"></i>{{ $audit->audit_number }}
                 <span class="fs-sm text-muted fw-normal ms-2">{{ $audit->location?->name }}</span>
+                @if ($audit->category)
+                    <span class="badge badge-soft-info fs-xxs align-middle ms-1">{{ $audit->category->name }}</span>
+                @endif
             </h4>
         </div>
         <div class="text-end">

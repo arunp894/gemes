@@ -52,6 +52,7 @@ class StockAudit extends Model
         'audit_number',
         'audit_date',
         'location_id',
+        'category_id',
         'status',
         'expected_total',
         'matched_total',
@@ -126,6 +127,15 @@ class StockAudit extends Model
         return $this->belongsTo(Location::class);
     }
 
+    /**
+     * Optional category ("Stone") scope. Null means the audit covers
+     * every category at its location - see categoryLabel().
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
     public function items(): HasMany
     {
         return $this->hasMany(StockAuditItem::class);
@@ -170,6 +180,18 @@ class StockAudit extends Model
             self::STATUS_CANCELLED   => 'badge-soft-danger',
             default                  => 'badge-soft-secondary',
         };
+    }
+
+    /* --- Category ("Stone") helpers --- */
+
+    /**
+     * Display label for the audit's category scope - the category name
+     * when the audit was narrowed to one, or "All Stones" for an
+     * unscoped (whole-location) audit.
+     */
+    public function categoryLabel(): string
+    {
+        return $this->category?->name ?? 'All Stones';
     }
 
     /* ─── Progress helpers ─────────────────────────────────── */

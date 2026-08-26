@@ -16,6 +16,7 @@ class StoreStockAuditRequest extends FormRequest
     {
         return [
             'location_id' => ['required', 'integer', Rule::exists('locations', 'id')->whereNull('deleted_at')],
+            'category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')->whereNull('deleted_at')],
             'audit_date'  => ['nullable', 'date'],
             'note'        => ['nullable', 'string', 'max:2000'],
         ];
@@ -25,6 +26,7 @@ class StoreStockAuditRequest extends FormRequest
     {
         return [
             'location_id' => 'Location',
+            'category_id' => 'Stone',
         ];
     }
 }

@@ -566,16 +566,32 @@ class StockService
      * barcode, lot_code, on_hand — ordered by purchase_product_id for
      * stable, resumable chunking on large (10k+ item) locations.
      */
-    public function onHandPiecesForLocation(int $locationId): Collection
+    public function onHandPiecesForLocation(int $locationId, ?int $categoryId = null): Collection
     {
         $signedSql = "SUM(CASE WHEN stock_movements.direction = 'in' THEN stock_movements.qty "
             . "ELSE -stock_movements.qty END)";
 
-        return DB::table('stock_movements')
+        $query = DB::table('stock_movements')
             ->join('purchase_products', 'purchase_products.id', '=', 'stock_movements.purchase_product_id')
             ->where('stock_movements.location_id', $locationId)
             ->whereNull('stock_movements.deleted_at')
-            ->whereNull('purchase_products.deleted_at')
+            ->whereNull('purchase_products.deleted_at');
+
+        // Optional category ("Stone") scope so a stock audit can be
+        // narrowed to a single category's stock at the location instead
+        // of everything on hand there. Joined only when requested - the
+        // unscoped call stays a straight two-table query, unchanged from
+        // before this parameter existed. Filters on the same
+        // stock_movements.product_id that flows into stock_audit_items,
+        // so it matches exactly what the audit's own "Category" report
+        // column later reads back off that row.
+        if ($categoryId !== null) {
+            $query->join('products', 'products.id', '=', 'stock_movements.product_id')
+                ->whereNull('products.deleted_at')
+                ->where('products.category_id', $categoryId);
+        }
+
+        return $query
             ->groupBy(
                 'stock_movements.purchase_product_id',
                 'stock_movements.product_id',
