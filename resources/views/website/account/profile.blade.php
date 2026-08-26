@@ -9,13 +9,13 @@
   <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(0,191,176,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,191,176,.025) 1px,transparent 1px);background-size:60px 60px"></div>
   <div style="position:relative;z-index:1;text-align:center">
     <div class="sg-eyebrow" style="margin-bottom:6px">My Account</div>
-    <h1 style="font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:700">{{ $customer->name }}</h1>
+    <h1 class="sg-acct-hero-title" style="font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:700">{{ $customer->name }}</h1>
     <p style="font-size:13px;color:var(--white-faint);margin-top:4px">{{ $customer->customer_code }}</p>
   </div>
 </div>
 
-<div style="padding:48px 60px;background:var(--dark-900);min-height:60vh">
-  <div style="display:grid;grid-template-columns:260px 1fr;gap:36px;max-width:1200px;margin:0 auto">
+<div class="sg-acct-wrap" style="padding:48px 60px;background:var(--dark-900);min-height:60vh">
+  <div class="sg-acct-grid" style="display:grid;grid-template-columns:260px 1fr;gap:36px;max-width:1200px;margin:0 auto">
 
     {{-- Sidebar nav --}}
     <div>
@@ -68,7 +68,7 @@
       @endif
 
       {{-- Quick stats --}}
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px">
+      <div class="sg-acct-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px">
         @php
           $totalOrders = $customer->sales()->count();
           $totalSpent  = $customer->sales()->where('status','!=','cancelled')->sum('grand_total');
@@ -101,7 +101,8 @@
             <p style="font-size:14px">No orders yet. <a href="{{ route('website.collections') }}" style="color:var(--teal-300);text-decoration:none">Browse our collection</a></p>
           </div>
         @else
-          <table style="width:100%;border-collapse:collapse">
+          <div class="sg-table-scroll" style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;min-width:640px">
             <thead>
               <tr style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-faint)">
                 <th style="padding:12px 22px;text-align:left;font-weight:500">Order</th>
@@ -132,6 +133,7 @@
               @endforeach
             </tbody>
           </table>
+          </div>
         @endif
       </div>
 
@@ -141,7 +143,7 @@
           <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600">Contact Details</div>
           <a href="{{ route('website.account.edit') }}" style="font-size:12px;color:var(--teal-300);text-decoration:none;letter-spacing:1px;text-transform:uppercase">Edit →</a>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:13px">
+        <div class="sg-acct-contact-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:13px">
           <div><span style="color:var(--white-faint)">Email</span><br><span style="color:var(--white-dim);margin-top:4px;display:block">{{ $customer->email }}</span></div>
           <div><span style="color:var(--white-faint)">Phone</span><br><span style="color:var(--white-dim);margin-top:4px;display:block">{{ $customer->phone ?: '—' }}</span></div>
           <div style="grid-column:1/-1"><span style="color:var(--white-faint)">Address</span><br>
@@ -161,4 +163,22 @@
     </div>
   </div>
 </div>
+
+@push('head_styles')
+<style>
+@media(max-width:1024px){
+  .sg-acct-wrap{padding:40px 24px !important}
+}
+@media(max-width:768px){
+  .sg-acct-hero-title{font-size:30px !important}
+  .sg-acct-grid{grid-template-columns:1fr !important;gap:24px !important}
+  .sg-acct-stats{grid-template-columns:1fr 1fr !important}
+}
+@media(max-width:480px){
+  .sg-acct-wrap{padding:32px 16px !important}
+  .sg-acct-stats{grid-template-columns:1fr !important}
+  .sg-acct-contact-grid{grid-template-columns:1fr !important}
+}
+</style>
+@endpush
 @endsection

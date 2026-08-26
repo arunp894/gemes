@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div style="min-height:70vh;display:flex;align-items:center;justify-content:center;background:var(--dark-900);padding:60px 20px">
+<div class="sg-success-wrap" style="min-height:70vh;display:flex;align-items:center;justify-content:center;background:var(--dark-900);padding:60px 20px">
   <div style="max-width:600px;width:100%;text-align:center">
 
     {{-- Animated checkmark --}}
@@ -13,7 +13,7 @@
     </div>
 
     <div class="sg-eyebrow" style="text-align:center;margin-bottom:10px">Payment Successful</div>
-    <h1 style="font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:700;margin-bottom:14px">
+    <h1 class="sg-success-title" style="font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:700;margin-bottom:14px">
       Thank <em style="color:var(--teal-300);font-style:italic">You</em>!
     </h1>
     <p style="font-size:16px;color:var(--white-dim);margin-bottom:10px;line-height:1.7">
@@ -66,4 +66,12 @@
   </div>
 </div>
 
+@push('head_styles')
+<style>
+@media(max-width:480px){
+  .sg-success-wrap{padding:40px 16px !important}
+  .sg-success-title{font-size:36px !important}
+}
+</style>
+@endpush
 @endsection

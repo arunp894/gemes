@@ -6,15 +6,15 @@
 @section('content')
 
 {{-- HERO BAND --}}
-<div style="height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--dark-900),var(--dark-750));border-bottom:1px solid rgba(0,191,176,.1);text-align:center;position:relative;overflow:hidden">
+<div class="sg-checkout-hero" style="height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--dark-900),var(--dark-750));border-bottom:1px solid rgba(0,191,176,.1);text-align:center;position:relative;overflow:hidden">
   <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(0,191,176,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,191,176,.025) 1px,transparent 1px);background-size:60px 60px"></div>
   <div style="position:relative;z-index:1">
     <div class="sg-eyebrow" style="text-align:center;margin-bottom:8px">Secure Payment</div>
-    <h1 style="font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:700">Check<em style="color:var(--teal-300);font-style:italic">out</em></h1>
+    <h1 class="sg-checkout-hero-title" style="font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:700">Check<em style="color:var(--teal-300);font-style:italic">out</em></h1>
   </div>
 </div>
 
-<div style="padding:60px;background:var(--dark-900);min-height:70vh">
+<div class="sg-checkout-wrap" style="padding:60px;background:var(--dark-900);min-height:70vh">
 
   @if(!empty($removedItems))
   <div style="margin-bottom:24px;padding:16px 20px;background:rgba(220,80,80,.08);border:1px solid rgba(220,80,80,.2);border-radius:4px;color:#e07070;font-size:13px;line-height:1.6">
@@ -22,10 +22,10 @@
   </div>
   @endif
 
-  <div style="display:grid;grid-template-columns:1fr 380px;gap:40px;align-items:start">
+  <div class="sg-checkout-grid" style="display:grid;grid-template-columns:1fr 380px;gap:40px;align-items:start">
 
     {{-- LEFT: Payment --}}
-    <div>
+    <div class="sg-checkout-payment">
       <h3 style="font-family:'Cormorant Garamond',serif;font-size:28px;margin-bottom:24px">Payment</h3>
 
       {{-- Customer info card --}}
@@ -97,7 +97,7 @@
     </div>
 
     {{-- RIGHT: Order Summary --}}
-    <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:28px;position:sticky;top:80px">
+    <div class="sg-checkout-summary" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:28px;position:sticky;top:80px">
       <h4 style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:20px">Order Summary</h4>
 
       {{-- Items --}}
@@ -146,6 +146,26 @@
 
   </div>
 </div>
+
+@push('head_styles')
+<style>
+@media(max-width:1024px){
+  .sg-checkout-wrap{padding:48px 24px !important}
+}
+@media(max-width:768px){
+  .sg-checkout-hero{height:150px !important}
+  .sg-checkout-hero-title{font-size:34px !important}
+  .sg-checkout-grid{grid-template-columns:1fr !important;gap:24px !important}
+  .sg-checkout-summary{position:static !important;order:-1 !important}
+  .sg-checkout-payment{order:1 !important}
+}
+@media(max-width:480px){
+  .sg-checkout-wrap{padding:32px 16px !important}
+  .sg-checkout-hero{height:130px !important}
+  .sg-checkout-hero-title{font-size:28px !important}
+}
+</style>
+@endpush
 
 @endsection
 
