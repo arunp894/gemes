@@ -1,7 +1,7 @@
 @extends('layout.app')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid dashboard-page">
 
     {{-- ── Page title ─────────────────────────────────────── --}}
     <div class="page-title-head d-flex align-items-center mb-3">
@@ -16,12 +16,28 @@
         </div>
     </div>
 
+    {{-- ── Personalized greeting banner ─────────────────────── --}}
+    @php
+        $hour = now()->hour;
+        $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
+        $firstName = explode(' ', trim(auth()->user()->name ?? 'there'))[0];
+    @endphp
+    <div class="dashboard-greeting mb-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div>
+                <h4 class="mb-1">{{ $greeting }}, {{ $firstName }} <span class="dashboard-wave">👋</span></h4>
+                <p class="mb-0 text-white-50">{{ now()->format('l, d F Y') }} — here's what's happening with your gemstone business today.</p>
+            </div>
+            <i class="ti ti-diamond dashboard-greeting-icon"></i>
+        </div>
+    </div>
+
     {{-- ── Row 1: KPI stat cards ───────────────────────────── --}}
     <div class="row g-3 mb-3">
 
         {{-- Sales Revenue --}}
         <div class="col-xl-3 col-md-6">
-            <div class="card card-h-100">
+            <div class="card card-h-100 dashboard-kpi-card dashboard-kpi-success">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
@@ -52,7 +68,7 @@
 
         {{-- Purchase Spend --}}
         <div class="col-xl-3 col-md-6">
-            <div class="card card-h-100">
+            <div class="card card-h-100 dashboard-kpi-card dashboard-kpi-primary">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
@@ -83,7 +99,7 @@
 
         {{-- Products --}}
         <div class="col-xl-3 col-md-6">
-            <div class="card card-h-100">
+            <div class="card card-h-100 dashboard-kpi-card dashboard-kpi-warning">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
@@ -109,7 +125,7 @@
 
         {{-- Customers --}}
         <div class="col-xl-3 col-md-6">
-            <div class="card card-h-100">
+            <div class="card card-h-100 dashboard-kpi-card dashboard-kpi-info">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
@@ -142,7 +158,7 @@
         <div class="col-xl-8">
             <div class="card card-h-100">
                 <div class="card-header justify-content-between">
-                    <h4 class="card-title">Sales vs Purchases — Last 12 Months</h4>
+                    <h4 class="card-title"><i class="ti ti-chart-area text-primary me-2"></i>Sales vs Purchases — Last 12 Months</h4>
                     <div class="d-flex gap-2">
                         <span class="badge bg-success-subtle text-success px-2 py-1 rounded-pill fs-12">
                             <i class="ti ti-circle-filled me-1" style="font-size:8px"></i> Sales
@@ -162,7 +178,7 @@
         <div class="col-xl-4">
             <div class="card card-h-100">
                 <div class="card-header">
-                    <h4 class="card-title">Today's Summary</h4>
+                    <h4 class="card-title"><i class="ti ti-sparkles text-warning me-2"></i>Today's Summary</h4>
                 </div>
                 <div class="card-body">
                     <div id="dashboard-today-chart" class="apex-charts" style="min-height:180px"></div>
@@ -218,7 +234,7 @@
         <div class="col-xl-7">
             <div class="card">
                 <div class="card-header justify-content-between">
-                    <h4 class="card-title">Recent Sales</h4>
+                    <h4 class="card-title"><i class="ti ti-receipt text-success me-2"></i>Recent Sales</h4>
                     <a href="{{ route('sales.create') }}" class="btn btn-sm btn-primary">
                         <i class="ti ti-plus me-1"></i> New Sale
                     </a>
@@ -276,7 +292,7 @@
         <div class="col-xl-5">
             <div class="card">
                 <div class="card-header justify-content-between">
-                    <h4 class="card-title">Recent Purchases</h4>
+                    <h4 class="card-title"><i class="ti ti-truck-delivery text-primary me-2"></i>Recent Purchases</h4>
                     <a href="{{ route('purchases.create') }}" class="btn btn-sm btn-primary">
                         <i class="ti ti-plus me-1"></i> New Purchase
                     </a>
@@ -335,42 +351,42 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="card-title">Quick Actions</h4>
+                    <h4 class="card-title"><i class="ti ti-bolt text-warning me-2"></i>Quick Actions</h4>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-6 col-md-3 col-xl-2">
-                            <a href="{{ route('sales.create') }}" class="btn btn-outline-success w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <a href="{{ route('sales.create') }}" class="btn btn-outline-success w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-plus-circle fs-24"></i>
                                 <span class="fs-sm fw-semibold">New Sale</span>
                             </a>
                         </div>
                         <div class="col-6 col-md-3 col-xl-2">
-                            <a href="{{ route('purchases.create') }}" class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <a href="{{ route('purchases.create') }}" class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-truck-delivery fs-24"></i>
                                 <span class="fs-sm fw-semibold">New Purchase</span>
                             </a>
                         </div>
                         <div class="col-6 col-md-3 col-xl-2">
-                            <a href="{{ route('products.create') }}" class="btn btn-outline-warning w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <a href="{{ route('products.create') }}" class="btn btn-outline-warning w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-diamond fs-24"></i>
                                 <span class="fs-sm fw-semibold">Add Product</span>
                             </a>
                         </div>
                         <div class="col-6 col-md-3 col-xl-2">
-                            <a href="{{ route('suppliers.create') }}" class="btn btn-outline-secondary w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <a href="{{ route('suppliers.create') }}" class="btn btn-outline-secondary w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-building fs-24"></i>
                                 <span class="fs-sm fw-semibold">Add Supplier</span>
                             </a>
                         </div>
                         <div class="col-6 col-md-3 col-xl-2">
-                            <a href="{{ route('customers.create') }}" class="btn btn-outline-info w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <a href="{{ route('customers.create') }}" class="btn btn-outline-info w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-user-plus fs-24"></i>
                                 <span class="fs-sm fw-semibold">Add Customer</span>
                             </a>
                         </div>
                         <div class="col-6 col-md-3 col-xl-2">
-                            <a href="{{ route('stock.index') }}" class="btn btn-outline-dark w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <a href="{{ route('stock.index') }}" class="btn btn-outline-dark w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-stack-2 fs-24"></i>
                                 <span class="fs-sm fw-semibold">View Stock</span>
                             </a>
@@ -384,6 +400,93 @@
 
 </div>
 @endsection
+
+@push('styles')
+<style>
+    /* ==========================================================
+       Dashboard — compact spacing + a few creative touches
+       (greeting banner, accent borders, hover-lift). Scoped under
+       .dashboard-page so nothing here leaks into other pages.
+       ========================================================== */
+    .dashboard-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .dashboard-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .dashboard-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #1e3a8a, #1d4ed8);
+    }
+    .dashboard-page .breadcrumb { font-size: 0.75rem; }
+
+    /* Greeting banner */
+    .dashboard-greeting {
+        background: linear-gradient(135deg, #1e3a8a 0%, #1d4ed8 55%, #14b8a6 100%);
+        border-radius: 12px;
+        padding: 20px 24px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+    }
+    .dashboard-greeting h4 { color: #fff; font-weight: 700; }
+    .dashboard-wave { display: inline-block; animation: dashboard-wave-anim 2.2s ease-in-out infinite; transform-origin: 70% 70%; }
+    @keyframes dashboard-wave-anim {
+        0%, 60%, 100% { transform: rotate(0deg); }
+        10% { transform: rotate(14deg); }
+        20% { transform: rotate(-8deg); }
+        30% { transform: rotate(14deg); }
+        40% { transform: rotate(-4deg); }
+        50% { transform: rotate(10deg); }
+    }
+    .dashboard-greeting-icon {
+        font-size: 3.5rem;
+        opacity: 0.18;
+        position: relative;
+    }
+
+    /* KPI cards — accent top border + hover lift */
+    .dashboard-page .dashboard-kpi-card {
+        border-top: 3px solid transparent;
+        border-radius: 10px;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .dashboard-page .dashboard-kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08); }
+    .dashboard-page .dashboard-kpi-success { border-top-color: #0acf97; }
+    .dashboard-page .dashboard-kpi-primary { border-top-color: #3d7cc9; }
+    .dashboard-page .dashboard-kpi-warning { border-top-color: #f9bf59; }
+    .dashboard-page .dashboard-kpi-info    { border-top-color: #5bc3e1; }
+
+    /* Chart / list cards */
+    .dashboard-page .card { border-radius: 10px; }
+
+    /* Recent tables: subtle compact rows */
+    .dashboard-page table.table-custom tbody td { padding-top: 10px; padding-bottom: 10px; }
+    .dashboard-page table.table-custom tbody tr:hover { background: #f8fafc; }
+
+    /* Quick actions — lively hover */
+    .dashboard-page .dashboard-quick-action {
+        border-radius: 10px;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+    .dashboard-page .dashboard-quick-action:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+    }
+</style>
+@endpush
 
 @push('scripts')
 @php

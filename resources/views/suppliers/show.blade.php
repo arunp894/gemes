@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="container-fluid supplier-show-page">
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
@@ -20,7 +20,7 @@
     </div>
 
     {{-- ─── Tabs ─── --}}
-    <ul class="nav nav-tabs nav-bordered mb-3">
+    <ul class="nav nav-tabs nav-bordered mb-3 supplier-tabs">
         <li class="nav-item">
             <a href="#supplier-details" data-bs-toggle="tab" aria-expanded="true" class="nav-link active">
                 <i class="ti ti-building-store fs-lg me-1 align-middle"></i>
@@ -96,7 +96,7 @@
                                 <a href="{{ route('suppliers.edit', $supplier) }}" class="btn btn-primary btn-sm">
                                     <i class="ti ti-edit me-1"></i> Edit
                                 </a>
-                                <a href="{{ route('suppliers.index') }}" class="btn btn-light btn-sm">Back</a>
+                                <a href="{{ route('suppliers.index') }}" class="btn btn-secondary btn-sm">Back</a>
                             </div>
                             @endpermission
                         </div>
@@ -106,7 +106,8 @@
                 <div class="col-lg-8">
                     {{-- Contact --}}
                     <div class="card">
-                        <div class="card-header border-light">
+                        <div class="card-header border-light d-flex align-items-center gap-2">
+                            <i class="ti ti-address-book fs-18 text-primary"></i>
                             <h5 class="card-title mb-0">Contact</h5>
                         </div>
                         <div class="card-body">
@@ -140,7 +141,8 @@
 
                     {{-- Tax & Compliance --}}
                     <div class="card">
-                        <div class="card-header border-light">
+                        <div class="card-header border-light d-flex align-items-center gap-2">
+                            <i class="ti ti-receipt-tax fs-18 text-primary"></i>
                             <h5 class="card-title mb-0">Tax &amp; Compliance</h5>
                         </div>
                         <div class="card-body">
@@ -156,7 +158,8 @@
 
                     {{-- Address --}}
                     <div class="card">
-                        <div class="card-header border-light">
+                        <div class="card-header border-light d-flex align-items-center gap-2">
+                            <i class="ti ti-map-pin fs-18 text-primary"></i>
                             <h5 class="card-title mb-0">Address</h5>
                         </div>
                         <div class="card-body">
@@ -182,7 +185,8 @@
 
                     {{-- Financial --}}
                     <div class="card">
-                        <div class="card-header border-light">
+                        <div class="card-header border-light d-flex align-items-center gap-2">
+                            <i class="ti ti-wallet fs-18 text-primary"></i>
                             <h5 class="card-title mb-0">Financial</h5>
                         </div>
                         <div class="card-body">
@@ -218,39 +222,35 @@
         <div class="tab-pane" id="supplier-purchases">
 
             {{-- Summary cards --}}
-            <div class="row g-3 mb-3">
-                <div class="col-6 col-md-3">
-                    <div class="card mb-0">
-                        <div class="card-body">
-                            <p class="text-muted mb-1 fs-xxs text-uppercase">Total Purchases</p>
-                            <h4 class="mb-0">{{ number_format($purchaseStats['count']) }}</h4>
-                        </div>
+            <div class="stat-cards-row mb-3">
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-primary"><i class="ti ti-shopping-cart"></i></div>
+                    <div class="stat-body">
+                        <div class="stat-value">{{ number_format($purchaseStats['count']) }}</div>
+                        <div class="stat-label">Total Purchases</div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="card mb-0">
-                        <div class="card-body">
-                            <p class="text-muted mb-1 fs-xxs text-uppercase">Posted</p>
-                            <h4 class="mb-0">{{ number_format($purchaseStats['posted']) }}</h4>
-                        </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-success"><i class="ti ti-circle-check"></i></div>
+                    <div class="stat-body">
+                        <div class="stat-value">{{ number_format($purchaseStats['posted']) }}</div>
+                        <div class="stat-label">Posted</div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="card mb-0">
-                        <div class="card-body">
-                            <p class="text-muted mb-1 fs-xxs text-uppercase">Total Amount</p>
-                            <h4 class="mb-0">{{ app(\App\Services\SettingService::class)->formatMoney($purchaseStats['total']) }}</h4>
-                        </div>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-cyan"><i class="ti ti-cash"></i></div>
+                    <div class="stat-body">
+                        <div class="stat-value">{{ app(\App\Services\SettingService::class)->formatMoney($purchaseStats['total']) }}</div>
+                        <div class="stat-label">Total Amount</div>
                     </div>
                 </div>
-                <div class="col-6 col-md-3">
-                    <div class="card mb-0">
-                        <div class="card-body">
-                            <p class="text-muted mb-1 fs-xxs text-uppercase">Due Amount</p>
-                            <h4 class="mb-0 {{ $purchaseStats['due'] > 0 ? 'text-danger' : '' }}">
-                                {{ app(\App\Services\SettingService::class)->formatMoney($purchaseStats['due']) }}
-                            </h4>
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-danger"><i class="ti ti-alert-circle"></i></div>
+                    <div class="stat-body">
+                        <div class="stat-value {{ $purchaseStats['due'] > 0 ? 'text-danger' : '' }}">
+                            {{ app(\App\Services\SettingService::class)->formatMoney($purchaseStats['due']) }}
                         </div>
+                        <div class="stat-label">Due Amount</div>
                     </div>
                 </div>
             </div>
@@ -266,23 +266,33 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-1">
-                        <div>
-                            <select id="supplierPurchasePerPage" class="form-select form-control my-1 my-md-0">
-                                <option value="5">5</option>
-                                <option value="10" selected>10</option>
-                                <option value="15">15</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                            </select>
-                        </div>
                         <select id="supplierPurchaseStatusFilter" class="form-select form-control">
                             <option value="">All Status</option>
                             <option value="draft">Draft</option>
                             <option value="posted">Posted</option>
                             <option value="cancelled">Cancelled</option>
                         </select>
+
+                        <div class="dropdown">
+                            <button type="button" id="supplierPurchaseDateFilterBtn" class="btn btn-icon btn-sm date-filter-btn"
+                                    data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
+                                    title="Filter by date range">
+                                <i class="ti ti-filter"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end p-3 date-filter-menu">
+                                <label class="form-label small mb-1">From</label>
+                                <input type="date" id="supplierPurchaseDateFrom" class="form-control form-control-sm mb-2">
+                                <label class="form-label small mb-1">To</label>
+                                <input type="date" id="supplierPurchaseDateTo" class="form-control form-control-sm mb-3">
+                                <div class="d-flex gap-2">
+                                    <button type="button" id="supplierPurchaseDateApply" class="btn btn-primary btn-sm flex-grow-1">Apply</button>
+                                    <button type="button" id="supplierPurchaseDateClear" class="btn btn-secondary btn-sm">Clear</button>
+                                </div>
+                            </div>
+                        </div>
+
                         @permission('purchases.create')
-                        <a href="{{ route('purchases.create') }}" class="btn btn-primary ms-1">
+                        <a href="{{ route('purchases.create') }}" class="add-btn ms-1">
                             <i class="ti ti-plus fs-sm me-2"></i> Purchase
                         </a>
                         @endpermission
@@ -291,17 +301,17 @@
 
                 <div class="table-responsive">
                     <table id="supplierPurchasesTable" class="table table-custom table-centered table-hover w-100 mb-0">
-                        <thead class="bg-light bg-opacity-25 thead-sm">
+                        <thead class="thead-sm">
                             <tr class="text-uppercase fs-xxs">
                                 <th class="text-center" style="width: 1%;">S.No</th>
-                                <th>Invoice #</th>
-                                <th>Date</th>
-                                <th>Location</th>
-                                <th class="text-end">Grand Total</th>
-                                <th class="text-end">Paid</th>
-                                <th class="text-end">Due</th>
-                                <th>Status</th>
-                                <th class="text-center" style="width: 1%;">Actions</th>
+                                <th><i class="ti ti-file-invoice me-1"></i>Invoice #</th>
+                                <th><i class="ti ti-calendar me-1"></i>Date</th>
+                                <th><i class="ti ti-map-pin me-1"></i>Location</th>
+                                <th class="text-end"><i class="ti ti-cash me-1"></i>Grand Total</th>
+                                <th class="text-end"><i class="ti ti-check me-1"></i>Paid</th>
+                                <th class="text-end"><i class="ti ti-alert-circle me-1"></i>Due</th>
+                                <th><i class="ti ti-toggle-right me-1"></i>Status</th>
+                                <th class="text-center" style="width: 1%;"><i class="ti ti-settings me-1"></i>Actions</th>
                             </tr>
                         </thead>
                     </table>
@@ -309,7 +319,16 @@
                 <div class="card-footer border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div id="supplierPurchasesInfoSlot" class="text-muted small"></div>
-                        <div id="supplierPurchasesPaginationSlot"></div>
+                        <div class="d-flex align-items-center gap-2 supplier-purchases-footer-right">
+                            <select id="supplierPurchasePerPage" class="form-select form-select-sm" style="width: auto;">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+                            <div id="supplierPurchasesPaginationSlot"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -325,12 +344,197 @@
 
 @push('styles')
 <style>
+    /* ==========================================================
+       Supplier Details / Purchases show page — compact ERP styling
+       Scoped under .supplier-show-page so nothing here leaks into
+       other pages that share the same layout/theme classes.
+       ========================================================== */
+    .supplier-show-page {
+        --ssp-primary: #1d4ed8;
+        --ssp-primary-dark: #1e3a8a;
+        --ssp-cyan: #14b8a6;
+        --ssp-success: #059669;
+        --ssp-warning: #d97706;
+        --ssp-danger: #dc2626;
+        --ssp-border: #e2e8f0;
+        --ssp-text: #1e293b;
+        --ssp-text-muted: #64748b;
+        padding-top: 0;
+        padding-bottom: 20px;
+    }
+
+    /* Page header */
+    .supplier-show-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid var(--ssp-border);
+    }
+    .supplier-show-page .page-title-head > * { display: flex; align-items: center; }
+    .supplier-show-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .supplier-show-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, var(--ssp-primary-dark), var(--ssp-primary));
+    }
+    .supplier-show-page .breadcrumb { font-size: 0.75rem; }
+
+    /* Tabs */
+    .supplier-show-page .supplier-tabs .nav-link {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        padding: 8px 14px;
+        color: var(--ssp-text-muted);
+    }
+    .supplier-show-page .supplier-tabs .nav-link.active {
+        color: var(--ssp-primary);
+        border-color: var(--ssp-border) var(--ssp-border) var(--ssp-primary);
+        border-bottom-width: 2px;
+    }
+
+    /* Cards */
+    .supplier-show-page .card { border-radius: 10px; box-shadow: none; border: 1px solid var(--ssp-border); }
+    .supplier-show-page .card-body { padding: 16px; }
+    .supplier-show-page .card-header { padding: 10px 16px; }
+    .supplier-show-page .card-title { font-size: 0.9375rem; font-weight: 700; }
+    .supplier-show-page dl.row dt, .supplier-show-page dl.row dd { margin-bottom: 8px; }
+
+    /* Summary stat cards (Purchases tab) */
+    .supplier-show-page .stat-cards-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+    }
+    .supplier-show-page .stat-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff;
+        border: 1px solid var(--ssp-border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .supplier-show-page .stat-icon {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+    .supplier-show-page .stat-icon-primary { background: #eff6ff; color: var(--ssp-primary); }
+    .supplier-show-page .stat-icon-success { background: #ecfdf5; color: var(--ssp-success); }
+    .supplier-show-page .stat-icon-cyan    { background: #f0fdfa; color: var(--ssp-cyan); }
+    .supplier-show-page .stat-icon-danger  { background: #fef2f2; color: var(--ssp-danger); }
+    .supplier-show-page .stat-value { font-size: 1.25rem; font-weight: 700; line-height: 1.2; color: var(--ssp-text); }
+    .supplier-show-page .stat-label { font-size: 0.75rem; color: var(--ssp-text-muted); font-weight: 500; }
+    @media (max-width: 992px) {
+        .supplier-show-page .stat-cards-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Toolbar */
     .app-search { position: relative; }
     .app-search > .app-search-icon {
         position: absolute; right: 0.75rem; top: 50%;
         transform: translateY(-50%); pointer-events: none;
     }
     .app-search > .form-control { padding-right: 2.25rem; min-width: 180px; }
+    .supplier-show-page .add-btn {
+        display: inline-flex;
+        align-items: center;
+        background: linear-gradient(135deg, var(--ssp-primary-dark), var(--ssp-primary));
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 9px 18px;
+        font-weight: 600;
+        font-size: 0.8125rem;
+        text-decoration: none;
+    }
+    .supplier-show-page .add-btn:hover { color: #fff; box-shadow: 0 4px 10px rgba(29, 78, 216, 0.25); }
+
+    /* Date-range filter */
+    .supplier-show-page .date-filter-btn {
+        position: relative;
+        width: 38px; height: 38px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border: 1px solid var(--ssp-border);
+        color: var(--ssp-text-muted);
+        background: #fff;
+    }
+    .supplier-show-page .date-filter-btn:hover { color: var(--ssp-primary); border-color: var(--ssp-primary); }
+    .supplier-show-page .date-filter-btn.date-filter-active { color: var(--ssp-primary); border-color: var(--ssp-primary); background: #eff6ff; }
+    .supplier-show-page .date-filter-btn.date-filter-active::after {
+        content: '';
+        position: absolute;
+        top: 4px; right: 4px;
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: var(--ssp-primary);
+        border: 1.5px solid #fff;
+    }
+    .supplier-show-page .date-filter-menu { min-width: 240px; }
+
+    /* Table */
+    .supplier-show-page #supplierPurchasesTable thead th {
+        background: #f1f5f9;
+        font-weight: 700;
+        font-size: 0.6875rem;
+        letter-spacing: 0.03em;
+        padding: 8px 12px;
+    }
+    .supplier-show-page #supplierPurchasesTable tbody td { padding: 8px 12px; font-size: 0.8125rem; }
+    .supplier-show-page #supplierPurchasesTable tbody tr:hover { background: #f8fafc; }
+    .supplier-show-page #supplierPurchasesTable thead th span.dt-column-order:before,
+    .supplier-show-page #supplierPurchasesTable thead th span.dt-column-order:after { color: #475569; }
+    .supplier-show-page #supplierPurchasesTable thead th span.dt-column-order:before { opacity: .45; }
+    .supplier-show-page #supplierPurchasesTable thead th span.dt-column-order:after { opacity: .9; }
+
+    /* Status pill (3-state: draft/posted/cancelled) */
+    .supplier-show-page .status-pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
+    }
+    .supplier-show-page .status-pill .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .supplier-show-page .status-draft     { background: #fffbeb; color: var(--ssp-warning); }
+    .supplier-show-page .status-draft .status-dot     { background: var(--ssp-warning); }
+    .supplier-show-page .status-posted    { background: #ecfdf5; color: var(--ssp-success); }
+    .supplier-show-page .status-posted .status-dot    { background: var(--ssp-success); }
+    .supplier-show-page .status-cancelled { background: #fef2f2; color: var(--ssp-danger); }
+    .supplier-show-page .status-cancelled .status-dot { background: var(--ssp-danger); }
+
+    /* Action buttons */
+    .supplier-show-page .action-btn {
+        width: 30px; height: 30px; border-radius: 7px;
+        display: inline-flex; align-items: center; justify-content: center;
+        transition: all 0.2s ease; text-decoration: none;
+    }
+    .supplier-show-page .action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+    .supplier-show-page .action-view { color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; }
+
+    /* Loading indicator */
+    .supplier-show-page .dataTables_processing { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+    .supplier-show-page .supplier-show-loading {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: #fff; border: 1px solid var(--ssp-border);
+        padding: 8px 18px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
+    }
+    .supplier-show-page .supplier-show-loading .spinner-border { width: 1rem; height: 1rem; color: var(--ssp-primary); border-width: 0.15em; }
 
     #supplierPurchasesTable_wrapper .dataTables_length,
     #supplierPurchasesTable_wrapper .dataTables_filter { display: none !important; }
@@ -338,6 +542,16 @@
     #supplierPurchasesInfoSlot .dataTables_info { padding: 0; color: var(--bs-body-color); font-size: 0.875rem; }
     #supplierPurchasesPaginationSlot .pagination { margin-bottom: 0; }
     #supplierPurchasesPaginationSlot .dataTables_paginate { margin: 0; }
+
+    /* Info left; per-page selector + pagination right (natural DOM order —
+       both live inside .supplier-purchases-footer-right together now) */
+    .supplier-show-page .supplier-purchases-footer-right #supplierPurchasePerPage { min-width: 62px; }
+    .supplier-show-page .supplier-purchases-footer-right {
+        margin-left: auto;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+    .supplier-show-page #supplierPurchasesPaginationSlot .pagination { justify-content: flex-end; }
 </style>
 @endpush
 
@@ -360,9 +574,11 @@
                     type: 'GET',
                     data: function (d) {
                         d.status = $('#supplierPurchaseStatusFilter').val();
+                        d.date_from = $('#supplierPurchaseDateFrom').val();
+                        d.date_to = $('#supplierPurchaseDateTo').val();
                     },
                 },
-                dom: 'rt<"d-none datatables-tail"ip>',
+                dom: 'rt<"datatables-tail"ip>',
                 pageLength: 10,
                 order: [[2, 'desc']],
                 columns: [
@@ -382,7 +598,7 @@
                     infoFiltered: ' (filtered from _MAX_ total)',
                     emptyTable: 'No purchases recorded for this supplier yet.',
                     zeroRecords: 'No purchases match your search.',
-                    processing: '<div class="spinner-border spinner-border-sm text-primary"></div>',
+                    processing: '<div class="supplier-show-loading"><span class="spinner-border spinner-border-sm"></span>Loading purchases&hellip;</div>',
                     paginate: {
                         previous: '<i class="ti ti-chevron-left"></i>',
                         next:     '<i class="ti ti-chevron-right"></i>',
@@ -390,7 +606,7 @@
                 },
                 initComplete: function () {
                     $('#supplierPurchasesInfoSlot').append($('#supplierPurchasesTable_info'));
-                    $('#supplierPurchasesPaginationSlot').append($('#supplierPurchasesTable_paginate'));
+                    $('#supplierPurchasesPaginationSlot').append($('.datatables-tail'));
                 },
             });
 
@@ -407,6 +623,25 @@
 
             $('#supplierPurchaseStatusFilter').on('change', function () {
                 dt.draw();
+            });
+
+            function updateDateFilterIndicator() {
+                const active = $('#supplierPurchaseDateFrom').val() || $('#supplierPurchaseDateTo').val();
+                $('#supplierPurchaseDateFilterBtn').toggleClass('date-filter-active', !!active);
+            }
+
+            $('#supplierPurchaseDateApply').on('click', function () {
+                updateDateFilterIndicator();
+                dt.draw();
+                $('#supplierPurchaseDateFilterBtn').dropdown('hide');
+            });
+
+            $('#supplierPurchaseDateClear').on('click', function () {
+                $('#supplierPurchaseDateFrom').val('');
+                $('#supplierPurchaseDateTo').val('');
+                updateDateFilterIndicator();
+                dt.draw();
+                $('#supplierPurchaseDateFilterBtn').dropdown('hide');
             });
         }
 

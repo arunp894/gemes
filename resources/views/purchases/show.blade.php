@@ -3,21 +3,114 @@
 @section('title', 'Purchase ' . $purchase->invoice_number)
 
 @section('content')
-<div class="container-fluid">
+
+@push('styles')
+<style>
+    /* ==========================================================
+       Purchase show/view page — compact ERP styling
+       Scoped under .purchases-show-page so nothing here leaks into
+       other pages that share the same layout/theme classes.
+       ========================================================== */
+    .purchases-show-page {
+        --psp-primary: #1d4ed8;
+        --psp-primary-dark: #1e3a8a;
+        --psp-success: #059669;
+        --psp-warning: #d97706;
+        --psp-danger: #dc2626;
+        --psp-border: #e2e8f0;
+        --psp-text-muted: #64748b;
+        padding-top: 0;
+        padding-bottom: 20px;
+    }
+    .purchases-show-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid var(--psp-border);
+        flex-wrap: wrap;
+        row-gap: 8px;
+    }
+    .purchases-show-page .page-main-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .purchases-show-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, var(--psp-primary-dark), var(--psp-primary));
+    }
+    .purchases-show-page .card { border-radius: 10px; box-shadow: none; border: 1px solid var(--psp-border); }
+    .purchases-show-page .card-header { padding: 10px 16px; }
+    .purchases-show-page .card-title { font-size: 0.9375rem; font-weight: 700; }
+
+    /* Status pill (3-state, shared meaning with the index/create pages) */
+    .purchases-show-page .status-pill {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;
+        vertical-align: middle;
+    }
+    .purchases-show-page .status-pill .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+    .purchases-show-page .status-draft     { background: #fffbeb; color: var(--psp-warning); }
+    .purchases-show-page .status-draft .status-dot     { background: var(--psp-warning); }
+    .purchases-show-page .status-posted    { background: #ecfdf5; color: var(--psp-success); }
+    .purchases-show-page .status-posted .status-dot    { background: var(--psp-success); }
+    .purchases-show-page .status-cancelled { background: #fef2f2; color: var(--psp-danger); }
+    .purchases-show-page .status-cancelled .status-dot { background: var(--psp-danger); }
+
+    /* Action buttons (payment remove) */
+    .purchases-show-page .action-btn {
+        width: 28px; height: 28px; border-radius: 7px;
+        display: inline-flex; align-items: center; justify-content: center;
+        transition: all 0.2s ease; text-decoration: none; border: 1px solid transparent;
+    }
+    .purchases-show-page .action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+    .purchases-show-page .action-delete { color: #dc2626; background: #fef2f2; border-color: #fecaca; }
+
+    /* Confirmation modal icon */
+    .confirm-modal-icon {
+        width: 56px; height: 56px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem;
+    }
+    .confirm-modal-icon-success { background: #ecfdf5; color: var(--psp-success); }
+    .confirm-modal-icon-danger  { background: #fef2f2; color: var(--psp-danger); }
+</style>
+@endpush
+
+<div class="container-fluid purchases-page purchases-show-page">
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
             <h4 class="page-main-title m-0">
                 Purchase
                 <span class="badge bg-soft-primary text-primary ms-2">{{ $purchase->invoice_number }}</span>
-                <span class="badge {{ $purchase->statusBadgeClass() }} ms-1">{{ $purchase->statusLabel() }}</span>
-                <span class="badge {{ $purchase->paymentStatusBadgeClass() }} ms-1">{{ $purchase->paymentStatusLabel() }}</span>
+                @php
+                    $statusPillClass = match ($purchase->status) {
+                        'posted'    => 'status-pill status-posted',
+                        'cancelled' => 'status-pill status-cancelled',
+                        default     => 'status-pill status-draft',
+                    };
+                    $paymentPillClass = match ($purchase->payment_status) {
+                        'paid'    => 'status-pill status-posted',
+                        'partial' => 'status-pill status-draft',
+                        default   => 'status-pill status-cancelled',
+                    };
+                @endphp
+                <span class="{{ $statusPillClass }} ms-1"><span class="status-dot"></span>{{ $purchase->statusLabel() }}</span>
+                <span class="{{ $paymentPillClass }} ms-1"><span class="status-dot"></span>{{ $purchase->paymentStatusLabel() }}</span>
             </h4>
         </div>
         <div class="text-end d-flex gap-1 align-items-center">
             @permission('purchases.edit')
                 @if (! $editBlockReason)
-                    <a href="{{ route('purchases.edit', $purchase) }}" class="btn btn-soft-primary btn-sm">
+                    <a href="{{ route('purchases.edit', $purchase) }}" class="btn btn-primary btn-sm">
                         <i class="ti ti-edit me-1"></i> Edit
                     </a>
                 @endif
@@ -25,17 +118,19 @@
 
             @permission('purchases.post')
                 @if ($purchase->isDraft())
-                    <button type="button" class="btn btn-soft-success btn-sm" id="postBtn" data-id="{{ $purchase->id }}">
+                    <button type="button" class="btn btn-success btn-sm" id="postBtn" data-id="{{ $purchase->id }}">
                         <i class="ti ti-check me-1"></i> Post
                     </button>
                 @endif
             @endpermission
 
-            <a href="{{ route('purchases.index') }}" class="btn btn-light btn-sm">
+            <a href="{{ route('purchases.index') }}" class="btn btn-secondary btn-sm">
                 <i class="ti ti-arrow-left me-1"></i> Back
             </a>
         </div>
     </div>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="purchaseShowToastContainer" style="z-index: 1080;"></div>
 
     @if (session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -65,6 +160,10 @@
         {{-- ─── Left: invoice ─── --}}
         <div class="col-xl-10">
             <div class="card">
+                <div class="card-header border-light d-flex align-items-center gap-2">
+                    <i class="ti ti-list-details fs-18 text-primary"></i>
+                    <h5 class="card-title mb-0">Purchase Items</h5>
+                </div>
                 <div class="card-body">
 
                     <div class="row mb-4">
@@ -109,17 +208,17 @@
                                         <input type="checkbox" class="form-check-input" id="labelSelectAll" title="Select all">
                                     </th>
                                     <th>#</th>
-                                    <th>Product</th>
-                                    <th>Country of Origin</th>
-                                    <th>Pcs</th>
-                                    <th class="text-end">Carat</th>
-                                    <th>Barcode</th>
-                                    <th>Lot Code</th>
+                                    <th><i class="ti ti-diamond me-1"></i>Product</th>
+                                    <th><i class="ti ti-map-pin me-1"></i>Origin</th>
+                                    <th><i class="ti ti-stack-2 me-1"></i>Pcs</th>
+                                    <th class="text-end"><i class="ti ti-scale me-1"></i>Carat</th>
+                                    <th><i class="ti ti-barcode me-1"></i>Barcode</th>
+                                    <th><i class="ti ti-tag me-1"></i>Lot</th>
                                     {{-- Rack column hidden --}}
-                                    <th class="text-end">Price</th>
-                                    <th class="text-end">Selling Price</th>
+                                    <th class="text-end"><i class="ti ti-cash me-1"></i>Price</th>
+                                    <th class="text-end"><i class="ti ti-world me-1"></i>S.Price</th>
                                     {{-- Tax and Disc columns hidden --}}
-                                    <th class="text-end">Net</th>
+                                    <th class="text-end"><i class="ti ti-calculator me-1"></i>Net</th>
                                     <th style="width:90px;">Copies</th>
                                 </tr>
                             </thead>
@@ -192,7 +291,8 @@
         {{-- ─── Right: summary ─── --}}
         <div class="col-xl-2">
             <div class="card position-sticky" style="top: 1rem;">
-                <div class="card-header border-light">
+                <div class="card-header border-light d-flex align-items-center gap-2">
+                    <i class="ti ti-receipt-2 fs-18 text-primary"></i>
                     <h5 class="card-title mb-0">Summary</h5>
                 </div>
                 <div class="card-body">
@@ -236,7 +336,10 @@
 
             {{-- Payments list + add-payment form --}}
             <div class="card">
-                <div class="card-header border-light"><h5 class="card-title mb-0">Payments</h5></div>
+                <div class="card-header border-light d-flex align-items-center gap-2">
+                    <i class="ti ti-credit-card fs-18 text-primary"></i>
+                    <h5 class="card-title mb-0">Payments</h5>
+                </div>
                 <div class="card-body p-0">
                     @if ($purchase->payments->isEmpty())
                         <p class="text-muted small text-center py-3 mb-0">No payments recorded.</p>
@@ -248,8 +351,9 @@
                                         <span class="badge {{ $p->methodBadgeClass() }} fs-xxs">{{ $p->methodLabel() }}</span>
                                         @permission('purchases.edit')
                                         @if (! $purchase->isCancelled())
-                                            <button type="button" class="btn btn-default btn-icon btn-sm text-danger js-remove-payment"
+                                            <button type="button" class="action-btn action-delete js-remove-payment"
                                                 data-url="{{ route('purchases.payments.destroy', [$purchase, $p]) }}"
+                                                data-amount="{{ number_format(abs((float) $p->amount), 2) }}"
                                                 title="Remove">
                                                 <i class="ti ti-x"></i>
                                             </button>
@@ -286,14 +390,61 @@
                             value="{{ now()->toDateString() }}" required>
                         <input type="text" class="form-control form-control-sm mb-2" id="paymentReference"
                             placeholder="Reference (optional)">
-                        <button type="submit" class="btn btn-primary btn-sm w-100" id="paymentSubmitBtn">
-                            Save
+                        <button type="submit" class="btn btn-success btn-sm w-100" id="paymentSubmitBtn">
+                            <i class="ti ti-device-floppy me-1"></i> Save
                         </button>
                         <div id="paymentError" class="alert alert-danger mt-2 mb-0 py-2 small d-none"></div>
                     </form>
                 </div>
                 @endif
                 @endpermission
+            </div>
+        </div>
+    </div>
+
+    {{-- ==================== Post Confirmation Modal ==================== --}}
+    <div class="modal fade" id="postPurchaseModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4 px-4">
+                    <div class="confirm-modal-icon confirm-modal-icon-success mx-auto mb-3">
+                        <i class="ti ti-check"></i>
+                    </div>
+                    <h5 class="modal-title mb-2">Post this purchase?</h5>
+                    <p class="text-muted mb-0">
+                        This posts the stock into the ledger and locks the supplier/date. This action can be undone
+                        by cancelling the purchase afterward, but not by editing it back to draft.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirmPostBtn">
+                        <i class="ti ti-check me-1"></i>Post Purchase
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ==================== Remove Payment Confirmation Modal ==================== --}}
+    <div class="modal fade" id="removePaymentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4 px-4">
+                    <div class="confirm-modal-icon confirm-modal-icon-danger mx-auto mb-3">
+                        <i class="ti ti-trash"></i>
+                    </div>
+                    <h5 class="modal-title mb-2">Remove this payment?</h5>
+                    <p class="text-muted mb-0">
+                        Remove the <strong id="removePaymentAmount"></strong> payment? This can't be undone.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmRemovePaymentBtn">
+                        <i class="ti ti-trash me-1"></i>Remove Payment
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -304,14 +455,56 @@
 (function () {
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
+    function showToast(type, message) {
+        const container = document.getElementById('purchaseShowToastContainer');
+        if (!container) return;
+        const isSuccess = type === 'success';
+        const el = document.createElement('div');
+        el.className = 'toast align-items-center border-0 text-bg-' + (isSuccess ? 'success' : 'danger');
+        el.setAttribute('role', 'alert');
+        el.innerHTML = '<div class="d-flex">'
+            + '<div class="toast-body d-flex align-items-center gap-2">'
+            + '<i class="ti ' + (isSuccess ? 'ti-circle-check' : 'ti-alert-circle') + ' fs-lg"></i>'
+            + $('<div/>').text(message).html()
+            + '</div>'
+            + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>'
+            + '</div>';
+        container.appendChild(el);
+        const toast = new bootstrap.Toast(el, { delay: 2500 });
+        el.addEventListener('hidden.bs.toast', () => el.remove());
+        toast.show();
+    }
+
     const postBtn = document.getElementById('postBtn');
     if (postBtn) {
+        const postModalEl = document.getElementById('postPurchaseModal');
+        const postModal = new bootstrap.Modal(postModalEl);
+
         postBtn.addEventListener('click', function () {
-            if (!confirm('Post this purchase?')) return;
+            postModal.show();
+        });
+
+        document.getElementById('confirmPostBtn').addEventListener('click', function () {
+            const btn = this;
+            btn.disabled = true;
             fetch(`/purchases/${postBtn.dataset.id}/post`, {
                 method: 'PATCH',
                 headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-            }).then(r => r.json()).then(() => window.location.reload());
+            })
+            .then(async (r) => {
+                const data = await r.json().catch(() => ({}));
+                if (!r.ok) {
+                    showToast('error', data.message || 'Could not post this purchase.');
+                    btn.disabled = false;
+                    return;
+                }
+                showToast('success', data.message || 'Purchase posted.');
+                setTimeout(() => window.location.reload(), 600);
+            })
+            .catch(() => {
+                showToast('error', 'Network error. Please try again.');
+                btn.disabled = false;
+            });
         });
     }
 
@@ -347,7 +540,8 @@
                     btn.disabled = false;
                     return;
                 }
-                window.location.reload();
+                showToast('success', 'Payment recorded.');
+                setTimeout(() => window.location.reload(), 600);
             })
             .catch(() => {
                 errBox.textContent = 'Network error. Please try again.';
@@ -357,20 +551,41 @@
         });
     }
 
+    const removePaymentModalEl = document.getElementById('removePaymentModal');
+    const removePaymentModal = new bootstrap.Modal(removePaymentModalEl);
+    let pendingRemovePaymentUrl = null;
+
     document.querySelectorAll('.js-remove-payment').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            if (!confirm('Remove this payment?')) return;
-            fetch(this.dataset.url, {
-                method: 'DELETE',
-                headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-            })
-            .then(async (r) => {
-                const data = await r.json().catch(() => ({}));
-                if (!r.ok) { alert(data.message || 'Failed.'); return; }
-                window.location.reload();
-            })
-            .catch(() => alert('Network error.'));
+            pendingRemovePaymentUrl = this.dataset.url;
+            document.getElementById('removePaymentAmount').textContent = this.dataset.amount;
+            removePaymentModal.show();
         });
+    });
+
+    document.getElementById('confirmRemovePaymentBtn').addEventListener('click', function () {
+        if (!pendingRemovePaymentUrl) return;
+        const btn = this;
+        btn.disabled = true;
+        fetch(pendingRemovePaymentUrl, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
+        })
+        .then(async (r) => {
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) {
+                showToast('error', data.message || 'Could not remove payment.');
+                btn.disabled = false;
+                return;
+            }
+            showToast('success', data.message || 'Payment removed.');
+            setTimeout(() => window.location.reload(), 600);
+        })
+        .catch(() => {
+            showToast('error', 'Network error. Please try again.');
+            btn.disabled = false;
+        })
+        .finally(() => { removePaymentModal.hide(); pendingRemovePaymentUrl = null; });
     });
 
     // Print labels: select rows + copies, submit to a new tab.

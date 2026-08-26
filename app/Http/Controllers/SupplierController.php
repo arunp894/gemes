@@ -208,11 +208,15 @@ class SupplierController extends Controller
     {
         $supplier->load(['creator', 'updater']);
 
+        $row = $supplier->purchases()
+            ->selectRaw("COUNT(*) as count, SUM(status = 'posted') as posted, COALESCE(SUM(grand_total),0) as total, COALESCE(SUM(due_amount),0) as due")
+            ->first();
+
         $purchaseStats = [
-            'count'  => $supplier->purchases()->count(),
-            'posted' => $supplier->purchases()->posted()->count(),
-            'total'  => (float) $supplier->purchases()->sum('grand_total'),
-            'due'    => (float) $supplier->purchases()->sum('due_amount'),
+            'count'  => (int) $row->count,
+            'posted' => (int) $row->posted,
+            'total'  => (float) $row->total,
+            'due'    => (float) $row->due,
         ];
 
         return view('suppliers.show', compact('supplier', 'purchaseStats'));
@@ -231,6 +235,12 @@ class SupplierController extends Controller
         if ($status = $request->query('status')) {
             $query->where('status', $status);
         }
+        if ($dateFrom = $request->query('date_from')) {
+            $query->whereDate('purchase_date', '>=', $dateFrom);
+        }
+        if ($dateTo = $request->query('date_to')) {
+            $query->whereDate('purchase_date', '<=', $dateTo);
+        }
 
         return DataTables::eloquent($query)
             ->addIndexColumn()
@@ -248,11 +258,16 @@ class SupplierController extends Controller
             ->editColumn('paid_amount', fn (Purchase $p) => $this->settings->formatMoney($p->paid_amount))
             ->editColumn('due_amount', fn (Purchase $p) => $this->settings->formatMoney($p->due_amount))
             ->addColumn('status_badge', function (Purchase $p) {
-                return '<span class="badge ' . $p->statusBadgeClass() . '">' . $p->statusLabel() . '</span>';
+                $class = match ($p->status) {
+                    'posted'    => 'status-pill status-posted',
+                    'cancelled' => 'status-pill status-cancelled',
+                    default     => 'status-pill status-draft',
+                };
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . $p->statusLabel() . '</span>';
             })
             ->addColumn('actions', function (Purchase $p) {
                 return '<div class="d-flex justify-content-center">'
-                    . '<a href="' . route('purchases.show', $p) . '" class="btn btn-sm btn-soft-secondary" title="View"><i class="ti ti-eye"></i></a>'
+                    . '<a href="' . route('purchases.show', $p) . '" class="action-btn action-view" title="View"><i class="ti ti-eye"></i></a>'
                     . '</div>';
             })
             ->rawColumns(['invoice_link', 'location_label', 'status_badge', 'actions'])

@@ -56,7 +56,7 @@ class ProductController extends Controller
     public function data(Request $request): JsonResponse
     {
         $query = Product::query()
-            ->with(['category', 'primaryBarcode']);
+            ->with(['category', 'primaryBarcode', 'media']);
 
         // Filter: category (direct match).
         if ($request->filled('category_id')) {

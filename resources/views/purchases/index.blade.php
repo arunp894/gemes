@@ -79,13 +79,21 @@
                         </div>
                     </div>
 
-                    <div class="d-flex align-items-center gap-1">
+                    <div class="d-flex align-items-center flex-wrap gap-1">
                         <div>
                             <select id="purchasePerPage" class="form-select form-control my-1 my-md-0">
                                 <option value="10" selected>10</option>
                                 <option value="25">25</option>
                                 <option value="50">50</option>
                                 <option value="100">100</option>
+                            </select>
+                        </div>
+                        <div style="min-width: 170px;">
+                            <select id="purchaseSupplierFilter" class="form-select form-control">
+                                <option value="">All Suppliers</option>
+                                @foreach ($suppliers as $s)
+                                    <option value="{{ $s->id }}">{{ $s->company_name ?: $s->name }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="app-search">
@@ -106,6 +114,25 @@
                             </select>
                             <i class="ti ti-credit-card app-search-icon text-muted"></i>
                         </div>
+
+                        <div class="dropdown">
+                            <button type="button" id="purchaseDateFilterBtn" class="btn btn-icon btn-sm date-filter-btn"
+                                    data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"
+                                    title="Filter by date range">
+                                <i class="ti ti-filter"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end p-3 date-filter-menu">
+                                <label class="form-label small mb-1">From</label>
+                                <input type="date" id="purchaseDateFrom" class="form-control form-control-sm mb-2">
+                                <label class="form-label small mb-1">To</label>
+                                <input type="date" id="purchaseDateTo" class="form-control form-control-sm mb-3">
+                                <div class="d-flex gap-2">
+                                    <button type="button" id="purchaseDateApply" class="btn btn-primary btn-sm flex-grow-1">Apply</button>
+                                    <button type="button" id="purchaseDateClear" class="btn btn-secondary btn-sm">Clear</button>
+                                </div>
+                            </div>
+                        </div>
+
                         @permission('purchases.create')
                         <a href="{{ route('purchases.create') }}" class="add-btn ms-1">
                             <i class="ti ti-plus fs-sm me-2"></i> Purchase
@@ -292,6 +319,42 @@
         font-size: 0.8125rem;
         border-color: var(--purchases-border);
     }
+
+    /* Supplier filter (Select2) — match the compact toolbar control sizing above */
+    .purchases-page .card-header .select2-container--default .select2-selection--single {
+        height: 38px;
+        padding: 0.4rem 0.65rem;
+        font-size: 0.8125rem;
+        border: 1px solid var(--purchases-border);
+        border-radius: 0.375rem;
+        display: flex;
+        align-items: center;
+    }
+    .purchases-page .card-header .select2-container--default .select2-selection--single .select2-selection__rendered { padding: 0; line-height: normal; }
+    .purchases-page .card-header .select2-container--default .select2-selection--single .select2-selection__arrow { height: 100%; top: 0; right: 6px; }
+    .purchases-page .card-header .select2-container--default .select2-selection--single .select2-selection__clear { margin-right: 6px; }
+
+    /* Date-range filter */
+    .purchases-page .date-filter-btn {
+        position: relative;
+        width: 38px; height: 38px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border: 1px solid var(--purchases-border);
+        color: var(--purchases-text-muted);
+        background: #fff;
+    }
+    .purchases-page .date-filter-btn:hover { color: var(--purchases-primary); border-color: var(--purchases-primary); }
+    .purchases-page .date-filter-btn.date-filter-active { color: var(--purchases-primary); border-color: var(--purchases-primary); background: #eff6ff; }
+    .purchases-page .date-filter-btn.date-filter-active::after {
+        content: '';
+        position: absolute;
+        top: 4px; right: 4px;
+        width: 7px; height: 7px;
+        border-radius: 50%;
+        background: var(--purchases-primary);
+        border: 1.5px solid #fff;
+    }
+    .purchases-page .date-filter-menu { min-width: 240px; }
 
     /* Primary "+ Purchase" button */
     .purchases-page .add-btn {
@@ -485,6 +548,9 @@
             data: function (d) {
                 d.status = $('#purchaseStatusFilter').val();
                 d.payment_status = $('#purchasePaymentFilter').val();
+                d.supplier_id = $('#purchaseSupplierFilter').val();
+                d.date_from = $('#purchaseDateFrom').val();
+                d.date_to = $('#purchaseDateTo').val();
             }
         },
         dom: 'rt<"datatables-tail"ip>',
@@ -538,6 +604,29 @@
         searchTimer = setTimeout(() => table.search(v).draw(), 250);
     });
     $('#purchaseStatusFilter, #purchasePaymentFilter').on('change', () => table.draw());
+
+    $('#purchaseSupplierFilter').select2({
+        width: '100%',
+        placeholder: 'All Suppliers',
+        allowClear: true,
+    }).on('change', () => table.draw());
+
+    function updatePurchaseDateFilterIndicator() {
+        const active = $('#purchaseDateFrom').val() || $('#purchaseDateTo').val();
+        $('#purchaseDateFilterBtn').toggleClass('date-filter-active', !!active);
+    }
+    $('#purchaseDateApply').on('click', function () {
+        updatePurchaseDateFilterIndicator();
+        table.draw();
+        $('#purchaseDateFilterBtn').dropdown('hide');
+    });
+    $('#purchaseDateClear').on('click', function () {
+        $('#purchaseDateFrom, #purchaseDateTo').val('');
+        updatePurchaseDateFilterIndicator();
+        table.draw();
+        $('#purchaseDateFilterBtn').dropdown('hide');
+    });
+
     $('#purchasePerPage').on('change', function () {
         table.page.len(parseInt(this.value, 10)).draw();
     });

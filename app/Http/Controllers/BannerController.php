@@ -44,7 +44,7 @@ class BannerController extends Controller
 
     public function data(Request $request): JsonResponse
     {
-        $query = Banner::query()->withoutTrashed();
+        $query = Banner::query()->withoutTrashed()->with('media');
 
         return DataTables::of($query)
             ->addIndexColumn()

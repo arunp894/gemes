@@ -44,7 +44,7 @@ class BlogController extends Controller
 
     public function data(Request $request): JsonResponse
     {
-        $query = Blog::query();
+        $query = Blog::query()->with('media');
 
         return DataTables::of($query)
             ->addIndexColumn()

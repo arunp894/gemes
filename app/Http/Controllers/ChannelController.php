@@ -31,7 +31,8 @@ class ChannelController extends Controller
 
     public function data(Request $request): JsonResponse
     {
-        $q = Channel::query();
+        $q = Channel::query()
+            ->withCount(['sales as sales_count' => fn ($query) => $query->withTrashed()]);
 
         if ($request->filled('status') && $request->query('status') !== '') {
             $q->where('status', (bool) $request->query('status'));
@@ -51,9 +52,7 @@ class ChannelController extends Controller
                 '<span class="status-pill ' . ($c->isActive() ? 'status-active' : 'status-inactive') . '">'
                 . '<span class="status-dot"></span>' . e($c->statusLabel()) . '</span>'
             )
-            ->addColumn('sales_count', fn(Channel $c) =>
-                $c->sales()->withTrashed()->count()
-            )
+            ->addColumn('sales_count', fn(Channel $c) => $c->sales_count)
             ->addColumn('actions', function (Channel $c) {
                 $canEdit   = auth()->user()?->hasPermission('channels.edit')   ?? false;
                 $canDelete = auth()->user()?->hasPermission('channels.delete') ?? false;

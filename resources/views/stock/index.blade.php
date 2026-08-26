@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="container-fluid stock-page">
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
@@ -19,7 +19,7 @@
         </div>
     </div>
 
-    <ul class="nav nav-tabs mb-3" id="stockReportTabs" role="tablist">
+    <ul class="nav nav-tabs mb-3 stock-tabs" id="stockReportTabs" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active" id="onHandTab" data-bs-toggle="tab" data-bs-target="#onHandPane"
                 type="button" role="tab" aria-controls="onHandPane" aria-selected="true">
@@ -43,8 +43,14 @@
 
                     <div class="card" id="categoryRollupCard">
                         <div class="card-header border-light d-flex align-items-center justify-content-between">
-                            <h5 class="card-title mb-0">By Stone</h5>
-                            <small class="text-muted">Click a stone to filter the table below</small>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="ti ti-diamond fs-18 text-primary"></i>
+                                <h5 class="card-title mb-0">By Stone</h5>
+                            </div>
+                            <small class="text-muted">
+                                <span id="categoryRollupCount" class="fw-semibold text-primary me-2"></span>
+                                Click a stone to filter the table below
+                            </small>
                         </div>
                         <div class="card-body">
                             <div class="row g-2" id="categoryRollup">
@@ -95,7 +101,7 @@
                                 </div>
 
                                 @permission('stock-transfers.create')
-                                <a href="{{ route('stock-transfers.create') }}" class="btn btn-primary ms-1">
+                                <a href="{{ route('stock-transfers.create') }}" class="add-btn ms-1">
                                     <i class="ti ti-transfer fs-sm me-2"></i> New Transfer
                                 </a>
                                 @endpermission
@@ -107,11 +113,11 @@
                                 <thead class="bg-light align-middle bg-opacity-25 thead-sm">
                                     <tr class="text-uppercase fs-xxs">
                                         <th class="text-center" style="width: 1%;">S.No</th>
-                                        <th>Product</th>
-                                        <th>Location</th>
-                                        <th class="text-end">On Hand</th>
-                                        <th class="text-end">Remaining Ct</th>
-                                        <th class="text-center" style="width: 1%;">Ledger</th>
+                                        <th><i class="ti ti-diamond me-1"></i>Product</th>
+                                        <th><i class="ti ti-map-pin me-1"></i>Location</th>
+                                        <th class="text-end"><i class="ti ti-stack-2 me-1"></i>On Hand</th>
+                                        <th class="text-end"><i class="ti ti-scale me-1"></i>Remaining Ct</th>
+                                        <th class="text-center" style="width: 1%;"><i class="ti ti-history me-1"></i>Ledger</th>
                                     </tr>
                                 </thead>
                             </table>
@@ -133,44 +139,26 @@
             <div class="row">
                 <div class="col-12">
 
-                    <div class="row g-3 mb-3">
-                        <div class="col-6 col-lg-4">
-                            <div class="card h-100 mb-0">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <span class="avatar avatar-sm bg-danger-subtle text-danger rounded">
-                                            <i class="ti ti-package-export fs-md"></i>
-                                        </span>
-                                        <span class="text-muted small">Qty Sold</span>
-                                    </div>
-                                    <h3 class="mb-0" id="salesKpiQty">—</h3>
-                                </div>
+                    <div class="stat-cards-row mb-3">
+                        <div class="stat-card">
+                            <div class="stat-icon stat-icon-danger"><i class="ti ti-package-export"></i></div>
+                            <div class="stat-body">
+                                <div class="stat-value" id="salesKpiQty">—</div>
+                                <div class="stat-label">Qty Sold</div>
                             </div>
                         </div>
-                        <div class="col-6 col-lg-4">
-                            <div class="card h-100 mb-0">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <span class="avatar avatar-sm bg-primary-subtle text-primary rounded">
-                                            <i class="ti ti-box fs-md"></i>
-                                        </span>
-                                        <span class="text-muted small">Products Sold</span>
-                                    </div>
-                                    <h3 class="mb-0" id="salesKpiProducts">—</h3>
-                                </div>
+                        <div class="stat-card">
+                            <div class="stat-icon stat-icon-primary"><i class="ti ti-box"></i></div>
+                            <div class="stat-body">
+                                <div class="stat-value" id="salesKpiProducts">—</div>
+                                <div class="stat-label">Products Sold</div>
                             </div>
                         </div>
-                        <div class="col-6 col-lg-4">
-                            <div class="card h-100 mb-0">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <span class="avatar avatar-sm bg-warning-subtle text-warning rounded">
-                                            <i class="ti ti-receipt fs-md"></i>
-                                        </span>
-                                        <span class="text-muted small">Sales</span>
-                                    </div>
-                                    <h3 class="mb-0" id="salesKpiCount">—</h3>
-                                </div>
+                        <div class="stat-card">
+                            <div class="stat-icon stat-icon-warning"><i class="ti ti-receipt"></i></div>
+                            <div class="stat-body">
+                                <div class="stat-value" id="salesKpiCount">—</div>
+                                <div class="stat-label">Sales</div>
                             </div>
                         </div>
                     </div>
@@ -223,12 +211,12 @@
                                 <thead class="bg-light align-middle bg-opacity-25 thead-sm">
                                     <tr class="text-uppercase fs-xxs">
                                         <th class="text-center" style="width: 1%;">S.No</th>
-                                        <th>Product</th>
-                                        <th>Location</th>
-                                        <th class="text-end">Qty Sold</th>
-                                        <th class="text-end">Sales</th>
-                                        <th>Last Sale</th>
-                                        <th class="text-center" style="width: 1%;">Ledger</th>
+                                        <th><i class="ti ti-diamond me-1"></i>Product</th>
+                                        <th><i class="ti ti-map-pin me-1"></i>Location</th>
+                                        <th class="text-end"><i class="ti ti-package-export me-1"></i>Qty Sold</th>
+                                        <th class="text-end"><i class="ti ti-cash me-1"></i>Sales</th>
+                                        <th><i class="ti ti-calendar me-1"></i>Last Sale</th>
+                                        <th class="text-center" style="width: 1%;"><i class="ti ti-history me-1"></i>Ledger</th>
                                     </tr>
                                 </thead>
                             </table>
@@ -253,16 +241,139 @@
 
 @push('styles')
 <style>
+    /* ==========================================================
+       Stock Report page — compact ERP styling
+       Scoped under .stock-page so nothing here leaks into other
+       pages that share the same layout/theme classes.
+       ========================================================== */
+    .stock-page {
+        --stock-primary: #1d4ed8;
+        --stock-primary-dark: #1e3a8a;
+        --stock-success: #059669;
+        --stock-warning: #d97706;
+        --stock-danger: #dc2626;
+        --stock-border: #e2e8f0;
+        --stock-text-muted: #64748b;
+        padding-top: 0;
+        padding-bottom: 20px;
+    }
+    .stock-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid var(--stock-border);
+    }
+    .stock-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .stock-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, var(--stock-primary-dark), var(--stock-primary));
+    }
+    .stock-page .breadcrumb { font-size: 0.75rem; }
+
+    /* Tabs */
+    .stock-page .stock-tabs .nav-link { font-size: 0.8125rem; font-weight: 600; padding: 8px 14px; }
+    .stock-page .stock-tabs .nav-link.active { color: var(--stock-primary); }
+
+    .stock-page .card { border-radius: 10px; box-shadow: none; border: 1px solid var(--stock-border); }
+    .stock-page .card-header { padding: 10px 16px; }
+    .stock-page .card-title { font-size: 0.9375rem; font-weight: 700; }
+
+    /* Toolbar */
     .app-search { position: relative; }
     .app-search > .app-search-icon { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none; }
     .app-search > .form-control { padding-right: 2.25rem; min-width: 200px; }
+    .stock-page .card-header .form-control,
+    .stock-page .card-header .form-select { height: 38px; font-size: 0.8125rem; }
+    .stock-page .add-btn {
+        display: inline-flex; align-items: center;
+        background: linear-gradient(135deg, var(--stock-primary-dark), var(--stock-primary));
+        color: #fff; border: none; border-radius: 8px; padding: 9px 18px;
+        font-weight: 600; font-size: 0.8125rem; text-decoration: none;
+    }
+    .stock-page .add-btn:hover { color: #fff; box-shadow: 0 4px 10px rgba(29, 78, 216, 0.25); }
+
+    /* Category rollup cards */
+    .stock-page .category-card { cursor: pointer; transition: box-shadow .15s, border-color .15s; border-radius: 8px; }
+    .stock-page .category-card:hover { box-shadow: 0 0 0 1px rgba(var(--bs-primary-rgb),.25); }
+
+    /* Large stone catalogues (100+): denser tiles in a scrollable panel
+       instead of an ever-growing page. */
+    .stock-page #categoryRollup.rollup-scroll {
+        max-height: 340px;
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+    .stock-page .category-card-compact .card-body { padding: 8px 10px; }
+    .stock-page .category-card-compact h4 { font-size: 1.1rem; }
+
+    /* Summary stat cards (Sales Report tab) */
+    .stock-page .stat-cards-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .stock-page .stat-card {
+        display: flex; align-items: center; gap: 12px;
+        background: #fff; border: 1px solid var(--stock-border); border-radius: 10px;
+        padding: 14px 16px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .stock-page .stat-icon {
+        flex-shrink: 0; width: 40px; height: 40px; border-radius: 8px;
+        display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem;
+    }
+    .stock-page .stat-icon-primary { background: #eff6ff; color: var(--stock-primary); }
+    .stock-page .stat-icon-warning { background: #fffbeb; color: var(--stock-warning); }
+    .stock-page .stat-icon-danger  { background: #fef2f2; color: var(--stock-danger); }
+    .stock-page .stat-value { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
+    .stock-page .stat-label { font-size: 0.75rem; color: var(--stock-text-muted); font-weight: 500; }
+    @media (max-width: 768px) { .stock-page .stat-cards-row { grid-template-columns: repeat(1, 1fr); } }
+
+    /* Tables */
+    .stock-page #stockTable thead th,
+    .stock-page #salesReportTable thead th {
+        background: #f1f5f9; font-weight: 700; font-size: 0.6875rem; letter-spacing: 0.03em; padding: 8px 12px;
+    }
+    .stock-page #stockTable tbody td,
+    .stock-page #salesReportTable tbody td { padding: 8px 12px; font-size: 0.8125rem; }
+    .stock-page #stockTable tbody tr:hover,
+    .stock-page #salesReportTable tbody tr:hover { background: #f8fafc; }
+    .stock-page span.dt-column-order:before,
+    .stock-page span.dt-column-order:after { color: #475569; }
+    .stock-page span.dt-column-order:before { opacity: .45; }
+    .stock-page span.dt-column-order:after { opacity: .9; }
+
+    /* Ledger action links */
+    .stock-page .action-link {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 5px 12px; border-radius: 7px; font-size: 0.75rem; font-weight: 600;
+        text-decoration: none; transition: all 0.2s ease;
+    }
+    .stock-page .action-link:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+    .stock-page .action-link-view   { color: #2563eb; background: #eff6ff; border: 1px solid #bfdbfe; }
+    .stock-page .action-link-danger { color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; }
+
+    /* Loading indicator */
+    .stock-page .dataTables_processing { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+    .stock-page .stock-loading {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: #fff; border: 1px solid var(--stock-border);
+        padding: 8px 18px; border-radius: 999px; font-size: 0.8125rem; font-weight: 600;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
+    }
+    .stock-page .stock-loading .spinner-border { width: 1rem; height: 1rem; color: var(--stock-primary); border-width: 0.15em; }
+
     #stockTable_wrapper .dataTables_length, #stockTable_wrapper .dataTables_filter { display: none !important; }
     #stockInfoSlot .dataTables_info { padding: 0; font-size: 0.875rem; }
     #salesReportTable_wrapper .dataTables_length, #salesReportTable_wrapper .dataTables_filter { display: none !important; }
     #salesInfoSlot .dataTables_info { padding: 0; font-size: 0.875rem; }
-    .category-card { cursor: pointer; transition: box-shadow .15s, border-color .15s; }
-    .category-card:hover { box-shadow: 0 0 0 1px rgba(var(--bs-primary-rgb),.25); }
-    .avatar.avatar-sm { width: 32px; height: 32px; display:inline-flex; align-items:center; justify-content:center; border-radius: .375rem; }
 </style>
 @endpush
 
@@ -281,7 +392,7 @@ $(function () {
                 d.category_id = $('#stockCategoryFilter').val();
             },
         },
-        dom: 'rt<"datatables-tail"ip>',
+        dom: 'rt<"stock-tail"ip>',
         pageLength: 25,
         columns: [
             { data: 'DT_RowIndex',    name: 'DT_RowIndex',     orderable: false, searchable: false, className: 'text-center' },
@@ -294,12 +405,12 @@ $(function () {
         language: {
             info: 'Showing _START_ to _END_ of _TOTAL_ rows',
             emptyTable: 'No stock recorded yet.',
-            processing: '<div class="spinner-border spinner-border-sm text-primary"></div>',
+            processing: '<div class="stock-loading"><span class="spinner-border spinner-border-sm"></span>Loading stock&hellip;</div>',
             paginate: { previous: '<i class="ti ti-chevron-left"></i>', next: '<i class="ti ti-chevron-right"></i>' },
         },
         initComplete: function () {
             $('#stockInfoSlot').append($('#stockTable_info'));
-            $('#stockPaginationSlot').append($('.datatables-tail'));
+            $('#stockPaginationSlot').append($('.stock-tail'));
         },
     });
 
@@ -337,13 +448,28 @@ $(function () {
                 const wrap = $('#categoryRollup').empty();
                 if (!data.ok || !data.categories || data.categories.length === 0) {
                     wrap.append('<div class="col-12 text-muted small">No stock recorded yet.</div>');
+                    $('#categoryRollupCount').text('');
+                    wrap.removeClass('rollup-scroll');
                     return;
                 }
+
+                // Large stone catalogues (100+) render as a denser, scrollable
+                // grid instead of pushing the rest of the page down — same
+                // data/click-to-filter behavior either way, just more compact.
+                const isLarge = data.categories.length > 100;
+                wrap.toggleClass('rollup-scroll', isLarge);
+                $('#categoryRollupCount').text(
+                    isLarge ? `${data.categories.length} stones — scroll for more` : ''
+                );
+                const colClass = isLarge
+                    ? 'col-6 col-sm-4 col-md-3 col-lg-2 col-xl-2'
+                    : 'col-6 col-md-4 col-lg-3 col-xl-2';
+
                 data.categories.forEach((c) => {
                     const safeName = $('<div>').text(c.category_name).html();
                     const card = $(`
-                        <div class="col-6 col-md-4 col-lg-3 col-xl-2">
-                            <div class="card h-100 mb-0 category-card border" role="button" data-category-id="${c.category_id}">
+                        <div class="${colClass}">
+                            <div class="card h-100 mb-0 category-card border${isLarge ? ' category-card-compact' : ''}" role="button" data-category-id="${c.category_id}">
                                 <div class="card-body py-2 px-3">
                                     <div class="small text-muted text-truncate" title="${safeName}">${safeName}</div>
                                     <div class="d-flex align-items-baseline justify-content-between">
@@ -409,7 +535,7 @@ $(function () {
                     d.category_id = $('#salesCategoryFilter').val();
                 },
             },
-            dom: 'rt<"d-none datatables-tail"ip>',
+            dom: 'rt<"sales-tail"ip>',
             pageLength: 25,
             columns: [
                 { data: 'DT_RowIndex',    name: 'DT_RowIndex',    orderable: false, searchable: false, className: 'text-center' },
@@ -423,12 +549,12 @@ $(function () {
             language: {
                 info: 'Showing _START_ to _END_ of _TOTAL_ rows',
                 emptyTable: 'No sales recorded yet.',
-                processing: '<div class="spinner-border spinner-border-sm text-primary"></div>',
+                processing: '<div class="stock-loading"><span class="spinner-border spinner-border-sm"></span>Loading sales&hellip;</div>',
                 paginate: { previous: '<i class="ti ti-chevron-left"></i>', next: '<i class="ti ti-chevron-right"></i>' },
             },
             initComplete: function () {
                 $('#salesInfoSlot').append($('#salesReportTable_info'));
-                $('#salesPaginationSlot').append($('#salesReportTable_paginate'));
+                $('#salesPaginationSlot').append($('.sales-tail'));
             },
         });
 

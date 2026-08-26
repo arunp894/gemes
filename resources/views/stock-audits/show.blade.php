@@ -222,7 +222,7 @@ $(function () {
         responsive: false,
         order: [[0, 'asc']],
         ajax: '{{ route('stock-audits.missing-data', $audit) }}',
-        dom: 'rt<"d-none datatables-tail"ip>',
+        dom: 'rt<"datatables-tail"ip>',
         columns: [
             { data: 'DT_RowIndex',      name: 'DT_RowIndex', orderable: false, searchable: false, className: 'text-center' },
             { data: 'lot_code_label',   name: 'lot_code',    orderable: false, searchable: false },
@@ -244,7 +244,7 @@ $(function () {
         },
         initComplete: function () {
             $('#missingInfoSlot').append($('#missingTable_info'));
-            $('#missingPaginationSlot').append($('#missingTable_paginate'));
+            $('#missingPaginationSlot').append($('.datatables-tail'));
         },
     });
 

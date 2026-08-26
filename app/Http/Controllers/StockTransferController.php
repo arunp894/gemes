@@ -77,7 +77,7 @@ class StockTransferController extends Controller
             ->addColumn('to_label', fn (StockTransfer $t) =>
                 $t->toLocation ? e($t->toLocation->name) : '—'
             )
-            ->addColumn('line_count', fn (StockTransfer $t) => $t->lines()->count())
+            ->addColumn('line_count', fn (StockTransfer $t) => $t->lines_count)
             ->addColumn('status_badge', function (StockTransfer $t) {
                 $map = [
                     StockTransfer::STATUS_DRAFT      => 'status-draft',
