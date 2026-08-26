@@ -240,9 +240,28 @@ class ProductController extends Controller
             'barcodes.channels',
         ]);
 
+        $categories = Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone', 'display_order']);
+
+        // The product's own category may since have been deactivated or
+        // soft-deleted. Without a matching <option> the <select> falls back
+        // to its placeholder, and the gemstone panel (including Carat
+        // Weight) — whose visibility is read off the selected <option>'s
+        // data-gemstone attribute, see _product_app_script.blade.php — is
+        // wrongly hidden even though the product IS a gemstone product.
+        if ($product->category_id && ! $categories->contains('id', $product->category_id)) {
+            $currentCategory = Category::withTrashed()
+                ->find($product->category_id, ['id', 'name', 'code', 'is_gemstone', 'display_order']);
+
+            if ($currentCategory) {
+                $categories = $categories->push($currentCategory)
+                    ->sortBy(fn (Category $category) => [$category->display_order, $category->name])
+                    ->values();
+            }
+        }
+
         return view('products.edit', [
             'product'    => $product,
-            'categories' => Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
+            'categories' => $categories,
             'channels'   => Channel::active()->ordered()->get(['id', 'name', 'code']),
             'countriesOfOrigin' => CountryOfOrigin::active()->ordered()->get(['id', 'name']),
         ]);

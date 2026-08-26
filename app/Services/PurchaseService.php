@@ -587,10 +587,22 @@ class PurchaseService
                     // Carat weight is the one field genuinely meant to
                     // stay in sync post-creation — correcting a weighed
                     // figure after the fact should reach the product too.
+                    // Website visibility is the other: a box row can be
+                    // listed/unlisted individually well after the purchase
+                    // was first saved (see the website_enabled migration),
+                    // so it has to reach the product on every edit too, not
+                    // just at row-creation time. `status` is deliberately
+                    // left alone here — unlike at creation, it's now an
+                    // independently managed field (Products page toggle /
+                    // edit form), so this sync must not clobber it.
                     // Everything else the line/row carries is a
                     // creation-time template only (see class docblock).
                     if ($existingRow->product_id) {
-                        Product::whereKey($existingRow->product_id)->update(['carat_weight' => $caratWeight]);
+                        Product::whereKey($existingRow->product_id)->update([
+                            'carat_weight'    => $caratWeight,
+                            'website_enabled' => $websiteEnabled,
+                            'website_price'   => $websitePrice,
+                        ]);
                     }
                 } else {
                     $product = Product::create([
