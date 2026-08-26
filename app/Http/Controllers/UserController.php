@@ -34,7 +34,18 @@ class UserController extends Controller
     public function index(): View
     {
         $roles = Role::orderBy('name')->get(['id', 'name', 'slug', 'is_super']);
-        return view('users.index', compact('roles'));
+
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = User::selectRaw('COUNT(*) as total, SUM(is_active = 1) as active, SUM(is_active = 0) as inactive')
+            ->first();
+
+        $stats = [
+            'users_total'    => (int) $counts->total,
+            'users_active'   => (int) $counts->active,
+            'users_inactive' => (int) $counts->inactive,
+        ];
+
+        return view('users.index', compact('roles', 'stats'));
     }
 
     /**
@@ -52,29 +63,19 @@ class UserController extends Controller
                     . 'type="checkbox" value="' . $user->id . '" />';
             })
             ->editColumn('name', function (User $user) {
-                $initial = strtoupper(mb_substr($user->name, 0, 1));
                 $locationBadge = $user->locations->isNotEmpty()
-                    ? $user->locations->map(fn ($l) =>
+                    ? '<div class="mt-1">' . $user->locations->map(fn ($l) =>
                         '<span class="badge badge-soft-secondary fs-xxs ms-1"><i class="ti ti-map-pin me-1"></i>' . e($l->name) . '</span>'
-                      )->implode('')
+                      )->implode('') . '</div>'
                     : '';
                 return '
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-sm me-2">
-                            <span class="avatar-title bg-primary-subtle text-primary rounded-circle fw-bold">'
-                                . e($initial) .
-                            '</span>
-                        </div>
-                        <div>
-                            <h5 class="mb-0 fs-base">
-                                <a href="' . route('users.show', $user) . '" class="link-reset">'
-                                    . e($user->name) .
-                                '</a>
-                            </h5>
-                            <small class="text-muted">' . e($user->email) . '</small>'
-                            . $locationBadge .
-                        '</div>
-                    </div>
+                    <div class="user-name-cell">
+                        <a href="' . route('users.show', $user) . '" class="user-name-link">'
+                            . e($user->name) .
+                        '</a>
+                        <small class="d-block text-muted">' . e($user->email) . '</small>'
+                        . $locationBadge .
+                    '</div>
                 ';
             })
             ->addColumn('roles_badges', function (User $user) {
@@ -87,9 +88,9 @@ class UserController extends Controller
                 })->implode('');
             })
             ->addColumn('status_badge', function (User $user) {
-                $class = $user->is_active ? 'badge-soft-success' : 'badge-soft-danger';
+                $class = $user->is_active ? 'status-pill status-active' : 'status-pill status-inactive';
                 $label = $user->is_active ? 'Active' : 'Inactive';
-                return '<span class="badge ' . $class . ' fs-xxs">' . $label . '</span>';
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . $label . '</span>';
             })
             ->editColumn('created_at', function (User $user) {
                 return optional($user->created_at)->format('d M, Y') ?? '—';
@@ -102,23 +103,23 @@ class UserController extends Controller
                 $destroy = route('users.destroy', $user);
 
                 $toggleIcon = $user->is_active ? 'ti-toggle-right' : 'ti-toggle-left';
-                $disabled   = $isSelf ? 'disabled title="Cannot act on your own account"' : '';
+                $disabledAttr  = $isSelf ? 'disabled title="Cannot act on your own account"' : '';
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
-                        <a href="' . $show . '" class="btn btn-default btn-icon btn-sm" title="View">
-                            <i class="ti ti-eye fs-lg"></i>
+                        <a href="' . $show . '" class="action-btn action-view" title="View">
+                            <i class="ti ti-eye"></i>
                         </a>
-                        <a href="' . $edit . '" class="btn btn-default btn-icon btn-sm" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
+                        <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
+                            <i class="ti ti-edit"></i>
                         </a>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-toggle-status" ' . $disabled . '
+                        <button type="button" class="action-btn action-toggle js-toggle-status" ' . $disabledAttr . '
                             data-url="' . $toggle . '" title="Toggle Status">
-                            <i class="ti ' . $toggleIcon . ' fs-lg"></i>
+                            <i class="ti ' . $toggleIcon . '"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-delete text-danger" ' . $disabled . '
+                        <button type="button" class="action-btn action-delete js-delete" ' . $disabledAttr . '
                             data-url="' . $destroy . '" data-name="' . e($user->name) . '" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
                 ';

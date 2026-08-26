@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="container-fluid stones-page">
 
     {{-- Page title --}}
     <div class="page-title-head d-flex align-items-center">
@@ -14,10 +14,13 @@
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="#">Stones</a></li>                
+                <li class="breadcrumb-item"><a href="#">Stones</a></li>
             </ol>
         </div>
     </div>
+
+    {{-- Toast notifications for AJAX actions (status toggle, delete) --}}
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="stonesToastContainer" style="z-index: 1080;"></div>
 
     {{-- Flash messages --}}
     @if (session('success'))
@@ -32,6 +35,31 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     @endif
+
+    {{-- Summary cards --}}
+    <div class="stat-cards-row">
+        <div class="stat-card">
+            <div class="stat-icon stat-icon-primary"><i class="ti ti-diamond"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">{{ $stats['stones_total'] }}</div>
+                <div class="stat-label">Total Stones</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon stat-icon-success"><i class="ti ti-circle-check"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">{{ $stats['stones_active'] }}</div>
+                <div class="stat-label">Active Stones</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon stat-icon-danger"><i class="ti ti-circle-x"></i></div>
+            <div class="stat-body">
+                <div class="stat-value">{{ $stats['stones_inactive'] }}</div>
+                <div class="stat-label">Inactive Stones</div>
+            </div>
+        </div>
+    </div>
 
     <div class="row">
         <div class="col-12">
@@ -66,7 +94,7 @@
                             <i class="ti ti-circle app-search-icon text-muted"></i>
                         </div>
 
-                        <a href="#!" class="btn btn-primary ms-1" data-bs-toggle="modal"
+                        <a href="#!" class="add-btn ms-1" data-bs-toggle="modal"
                             data-bs-target="#addCategoryModal">
                             <i class="ti ti-plus fs-sm me-2"></i> Add Stone
                         </a>
@@ -76,19 +104,18 @@
                 {{-- Table --}}
                 <div class="table-responsive">
                     <table id="categoriesTable" class="table table-custom table-centered table-select table-hover w-100 mb-0">
-                        <thead class="bg-light align-middle bg-opacity-25 thead-sm">
+                        <thead class="align-middle thead-sm">
                             <tr class="text-uppercase fs-xxs">
                                 <th class="ps-3" style="width: 1%;">
                                     <input id="categorySelectAll" class="form-check-input form-check-input-light fs-14 mt-0"
                                         type="checkbox" />
                                 </th>
                                 <th class="text-center" style="width: 1%;">S.No</th>
-                                <th>Stone Name</th>
-                                <th>Code</th>
-                                <th>Display Order</th>
-                                <th>Status</th>
-                                <th>Last Modified</th>
-                                <th class="text-center" style="width: 1%;">Actions</th>
+                                <th><i class="ti ti-diamond me-1"></i>Stone Name</th>
+                                <th><i class="ti ti-barcode me-1"></i>Code</th>
+                                <th><i class="ti ti-toggle-right me-1"></i>Status</th>
+                                <th><i class="ti ti-calendar-time me-1"></i>Last Modified</th>
+                                <th class="text-center" style="width: 1%;"><i class="ti ti-settings me-1"></i>Actions</th>
                             </tr>
                         </thead>
                     </table>
@@ -187,19 +214,340 @@
     </div>
     {{-- ==================== /Modal ==================== --}}
 
+    {{-- ==================== Delete Confirmation Modal ==================== --}}
+    <div class="modal fade" id="deleteStoneModal" tabindex="-1" aria-labelledby="deleteStoneModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4 px-4">
+                    <div class="delete-modal-icon mx-auto mb-3">
+                        <i class="ti ti-trash"></i>
+                    </div>
+                    <h5 class="modal-title mb-2" id="deleteStoneModalLabel">Delete this stone?</h5>
+                    <p class="text-muted mb-0">
+                        Are you sure you want to delete <strong id="deleteStoneName"></strong>?
+                        This is a soft delete and can be restored later if needed.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteStoneBtn">
+                        <i class="ti ti-trash me-1"></i>Delete Stone
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{-- ==================== /Delete Confirmation Modal ==================== --}}
+
 </div>
 
 @endsection
 
 @push('styles')
 <style>
+    /* ==========================================================
+       Stones (Category) page — compact ERP styling
+       Scoped entirely under .stones-page so nothing here leaks
+       into other modules that share the same layout/theme classes.
+       ========================================================== */
+    .stones-page {
+        --stones-primary: #1d4ed8;
+        --stones-primary-dark: #1e3a8a;
+        --stones-cyan: #14b8a6;
+        --stones-success: #059669;
+        --stones-warning: #d97706;
+        --stones-danger: #dc2626;
+        --stones-bg: #f8fafc;
+        --stones-surface: #ffffff;
+        --stones-border: #e2e8f0;
+        --stones-text: #1e293b;
+        --stones-text-muted: #64748b;
+        padding-top: 0;
+        padding-bottom: 20px;
+    }
+
+    /* ---------- Page header ---------- */
+    .stones-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid var(--stones-border);
+    }
+    .stones-page .page-title-head > * { display: flex; align-items: center; }
+    .stones-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        color: var(--stones-text);
+        position: relative;
+        padding-left: 12px;
+    }
+    .stones-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 2px;
+        bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, var(--stones-primary), var(--stones-cyan));
+    }
+    .stones-page .breadcrumb { font-size: 0.75rem; }
+
+    /* ---------- Summary cards ---------- */
+    .stones-page .stat-cards-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    .stones-page .stat-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--stones-surface);
+        border: 1px solid var(--stones-border);
+        border-radius: 10px;
+        padding: 14px 16px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .stones-page .stat-icon {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+    }
+    .stones-page .stat-icon-primary { background: #eff6ff; color: var(--stones-primary); }
+    .stones-page .stat-icon-success { background: #ecfdf5; color: var(--stones-success); }
+    .stones-page .stat-icon-danger  { background: #fef2f2; color: var(--stones-danger); }
+    .stones-page .stat-value { font-size: 1.375rem; font-weight: 700; line-height: 1.2; color: var(--stones-text); }
+    .stones-page .stat-label { font-size: 0.75rem; color: var(--stones-text-muted); font-weight: 500; }
+
+    @media (max-width: 992px) {
+        .stones-page .stat-cards-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ---------- Card ---------- */
+    .stones-page .card {
+        border: 1px solid var(--stones-border);
+        border-radius: 10px;
+        box-shadow: none;
+    }
+    .stones-page .card-header {
+        padding: 12px 16px;
+        background: var(--stones-surface);
+    }
+    .stones-page .card-footer { padding: 10px 16px; }
+
     /* Tighten the app-search wrapper so the dropdowns look right in the card header */
-    .app-search { position: relative; }
-    .app-search > .app-search-icon {
+    .stones-page .app-search { position: relative; }
+    .stones-page .app-search > .app-search-icon {
         position: absolute; right: 0.75rem; top: 50%;
         transform: translateY(-50%); pointer-events: none;
     }
-    .app-search > .form-control { padding-right: 2.25rem; min-width: 180px; }
+    .stones-page .app-search > .form-control { padding-right: 2.25rem; min-width: 180px; }
+    .stones-page .card-header .form-control,
+    .stones-page .card-header .form-select {
+        height: 38px;
+        font-size: 0.8125rem;
+        border-color: var(--stones-border);
+    }
+
+    /* Primary "Add Stone" button */
+    .stones-page .add-btn {
+        display: inline-flex;
+        align-items: center;
+        background: linear-gradient(135deg, var(--stones-primary-dark), var(--stones-primary));
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 9px 18px;
+        font-weight: 600;
+        font-size: 0.8125rem;
+        text-decoration: none;
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+    .stones-page .add-btn:hover {
+        color: #fff;
+        box-shadow: 0 4px 10px rgba(29, 78, 216, 0.25);
+        transform: translateY(-1px);
+    }
+
+    /* ---------- Table ---------- */
+    .stones-page #categoriesTable thead th {
+        background: #f1f5f9;
+        color: var(--stones-text);
+        font-weight: 700;
+        font-size: 0.6875rem;
+        letter-spacing: 0.03em;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--stones-border);
+    }
+
+    /* Sort arrows are too faint (low opacity) against the light header background — darken them */
+    .stones-page #categoriesTable thead th span.dt-column-order:before,
+    .stones-page #categoriesTable thead th span.dt-column-order:after {
+        color: #475569;
+    }
+    .stones-page #categoriesTable thead th span.dt-column-order:before { opacity: .45; }
+    .stones-page #categoriesTable thead th span.dt-column-order:after { opacity: .9; }
+    .stones-page #categoriesTable thead th.dt-ordering-asc span.dt-column-order:before,
+    .stones-page #categoriesTable thead th.dt-ordering-desc span.dt-column-order:after {
+        color: var(--stones-primary);
+        opacity: 1;
+    }
+    .stones-page #categoriesTable tbody td {
+        padding: 6px 12px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--stones-border);
+        font-size: 0.8125rem;
+    }
+    .stones-page #categoriesTable tbody tr {
+        transition: background 0.2s ease;
+    }
+    .stones-page #categoriesTable tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    /* Stone name + thumbnail */
+    .stones-page .stone-name-cell {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .stones-page .stone-thumb {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        overflow: hidden;
+        flex-shrink: 0;
+        border: 1px solid var(--stones-border);
+    }
+    .stones-page .stone-thumb-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .stones-page .stone-thumb-placeholder {
+        width: 100%;
+        height: 100%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        color: var(--stones-text-muted);
+    }
+    .stones-page .stone-name-link {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--stones-text);
+        text-decoration: none;
+    }
+    .stones-page .stone-name-link:hover { color: var(--stones-primary); }
+
+    /* Status pill */
+    .stones-page .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .stones-page .status-pill .status-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .stones-page .status-active { background: #ecfdf5; color: var(--stones-success); }
+    .stones-page .status-active .status-dot { background: var(--stones-success); }
+    .stones-page .status-inactive { background: #fef2f2; color: var(--stones-danger); }
+    .stones-page .status-inactive .status-dot { background: var(--stones-danger); }
+
+    /* Action buttons */
+    .stones-page .action-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 7px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+    .stones-page .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    }
+    .stones-page .action-view {
+        color: #2563eb;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+    }
+    .stones-page .action-edit {
+        color: #059669;
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+    }
+    .stones-page .action-toggle {
+        color: #d97706;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+    }
+    .stones-page .action-delete {
+        color: #dc2626;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+    }
+
+    /* DataTables "processing" loading indicator */
+    .stones-page .dataTables_processing {
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
+    .stones-page .stones-loading {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--stones-surface);
+        border: 1px solid var(--stones-border);
+        padding: 8px 18px;
+        border-radius: 999px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--stones-text);
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
+    }
+    .stones-page .stones-loading .spinner-border {
+        width: 1rem;
+        height: 1rem;
+        color: var(--stones-primary);
+        border-width: 0.15em;
+    }
+
+    /* Delete confirmation modal */
+    .stones-page .delete-modal-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #fef2f2;
+        color: var(--stones-danger);
+        font-size: 1.5rem;
+    }
 
     /* Hide DataTables built-in length+filter+info+paginate (we render our own slots) */
     #categoriesTable_wrapper .dataTables_length,
@@ -209,6 +557,11 @@
     #categoriesInfoSlot .dataTables_info { padding: 0; color: var(--bs-body-color); font-size: 0.875rem; }
     #categoriesPaginationSlot .pagination { margin-bottom: 0; }
     #categoriesPaginationSlot .dataTables_paginate { margin: 0; }
+
+    /* "Showing x to y..." info on the left, pagination on the right — overrides the
+       app-wide pagination-left/info-right order, scoped to this page only. */
+    .stones-page .card-footer #categoriesInfoSlot { order: 1; }
+    .stones-page .card-footer #categoriesPaginationSlot { order: 2; }
 </style>
 @endpush
 
@@ -217,12 +570,33 @@
     $(function () {
         const csrfToken = $('meta[name="csrf-token"]').attr('content');
 
+        // ============= Toast helper =============
+        function showToast(type, message) {
+            const isSuccess = type === 'success';
+            const el = document.createElement('div');
+            el.className = 'toast align-items-center border-0 text-bg-' + (isSuccess ? 'success' : 'danger');
+            el.setAttribute('role', 'alert');
+            el.setAttribute('aria-live', 'assertive');
+            el.setAttribute('aria-atomic', 'true');
+            el.innerHTML = '<div class="d-flex">'
+                + '<div class="toast-body d-flex align-items-center gap-2">'
+                + '<i class="ti ' + (isSuccess ? 'ti-circle-check' : 'ti-alert-circle') + ' fs-lg"></i>'
+                + $('<div/>').text(message).html()
+                + '</div>'
+                + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>'
+                + '</div>';
+            document.getElementById('stonesToastContainer').appendChild(el);
+            const toast = new bootstrap.Toast(el, { delay: 3000 });
+            el.addEventListener('hidden.bs.toast', () => el.remove());
+            toast.show();
+        }
+
         // ============= DataTable =============
         const dt = $('#categoriesTable').DataTable({
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[4, 'asc'], [2, 'asc']], // display_order asc, then name asc
+            order: [[2, 'asc']], // name asc
             ajax: {
                 url: '{{ route('categories.data') }}',
                 type: 'GET',
@@ -235,7 +609,6 @@
                 { data: 'DT_RowIndex',         name: 'DT_RowIndex',               orderable: false, searchable: false, className: 'text-center' },
                 { data: 'name',                name: 'categories.name' },
                 { data: 'code',                name: 'categories.code' },
-                { data: 'display_order',       name: 'categories.display_order' },
                 { data: 'status_badge',        name: 'categories.status',         searchable: true },
                 { data: 'updated_at',          name: 'categories.updated_at' },
                 { data: 'action',              name: 'action',                    orderable: false, searchable: false, className: 'text-center' },
@@ -246,7 +619,7 @@
                 infoFiltered: ' (filtered from _MAX_ total)',
                 emptyTable: 'No stones yet. Click "Add Stone" to get started.',
                 zeroRecords: 'No stones match your search.',
-                processing: '<div class="spinner-border spinner-border-sm text-primary"></div>',
+                processing: '<div class="stones-loading"><span class="spinner-border spinner-border-sm"></span>Loading stones&hellip;</div>',
                 paginate: {
                     previous: '<i class="ti ti-chevron-left"></i>',
                     next:     '<i class="ti ti-chevron-right"></i>',
@@ -274,7 +647,7 @@
 
         // Status filter — column index 4 is the status_badge column
         $('#categoryStatusFilter').on('change', function () {
-            dt.column(5).search(this.value).draw();
+            dt.column(4).search(this.value).draw();
         });
 
         // ============= Select-all =============
@@ -289,29 +662,60 @@
                 url: url,
                 type: 'PATCH',
                 headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-                success: function (res) { if (res.success) dt.ajax.reload(null, false); },
-                error: function () { alert('Failed to update status.'); },
+                success: function (res) {
+                    if (res.success) {
+                        dt.ajax.reload(null, false);
+                        showToast('success', 'Stone marked as ' + (res.label || (res.status ? 'Active' : 'Inactive')) + '.');
+                    } else {
+                        showToast('error', res.message || 'Failed to update status.');
+                    }
+                },
+                error: function (xhr) {
+                    const msg = (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'Failed to update status.';
+                    showToast('error', msg);
+                },
             });
         });
 
-        // ============= Delete =============
+        // ============= Delete (styled confirmation modal) =============
+        const deleteModalEl = document.getElementById('deleteStoneModal');
+        const deleteModal = new bootstrap.Modal(deleteModalEl);
+        let pendingDeleteUrl = null;
+
         $('#categoriesTable tbody').on('click', '.js-delete', function () {
-            const url  = $(this).data('url');
-            const name = $(this).data('name');
-            if (!confirm('Delete stone "' + name + '"? (This is a soft delete.)')) return;
+            pendingDeleteUrl = $(this).data('url');
+            $('#deleteStoneName').text($(this).data('name'));
+            deleteModal.show();
+        });
+
+        $('#confirmDeleteStoneBtn').on('click', function () {
+            if (!pendingDeleteUrl) return;
+            const $btn = $(this).prop('disabled', true);
+
             $.ajax({
-                url: url,
+                url: pendingDeleteUrl,
                 type: 'DELETE',
                 headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                 success: function (res) {
-                    if (res.success) dt.ajax.reload(null, false);
-                    else alert(res.message || 'Could not delete stone.');
+                    if (res.success) {
+                        dt.ajax.reload(null, false);
+                        showToast('success', res.message || 'Stone deleted successfully.');
+                    } else {
+                        showToast('error', res.message || 'Could not delete stone.');
+                    }
                 },
                 error: function (xhr) {
                     const msg = (xhr.responseJSON && xhr.responseJSON.message)
                         ? xhr.responseJSON.message
                         : 'Failed to delete stone.';
-                    alert(msg);
+                    showToast('error', msg);
+                },
+                complete: function () {
+                    $btn.prop('disabled', false);
+                    pendingDeleteUrl = null;
+                    deleteModal.hide();
                 },
             });
         });

@@ -29,7 +29,17 @@ class BannerController extends Controller
      */
     public function index(): View
     {
-        return view('banners.index');
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = Banner::selectRaw('COUNT(*) as total, SUM(status = 1) as active, SUM(status = 0) as inactive')
+            ->first();
+
+        $stats = [
+            'banners_total'    => (int) $counts->total,
+            'banners_active'   => (int) $counts->active,
+            'banners_inactive' => (int) $counts->inactive,
+        ];
+
+        return view('banners.index', compact('stats'));
     }
 
     public function data(Request $request): JsonResponse
@@ -44,18 +54,16 @@ class BannerController extends Controller
             })
             ->editColumn('title', function (Banner $banner) {
                 $thumb = $banner->image_thumb_url
-                    ? '<img src="' . e($banner->image_thumb_url) . '" alt="" class="rounded me-2" width="48" height="32" style="object-fit:cover;">'
-                    : '<span class="avatar-sm me-2"><span class="avatar-title bg-light text-muted rounded fs-xl"><i class="ti ti-photo"></i></span></span>';
+                    ? '<img src="' . e($banner->image_thumb_url) . '" alt="' . e($banner->title) . '" class="banner-thumb-img" />'
+                    : '<span class="banner-thumb-placeholder"><i class="ti ti-photo"></i></span>';
 
                 $sub = $banner->subtitle ? '<small class="d-block text-muted">' . e($banner->subtitle) . '</small>' : '';
 
                 return '
-                    <div class="d-flex align-items-center">
-                        ' . $thumb . '
+                    <div class="banner-name-cell">
+                        <div class="banner-thumb">' . $thumb . '</div>
                         <div>
-                            <h5 class="mb-0 fs-base">
-                                <a href="' . route('banners.show', $banner) . '" class="link-reset">' . e($banner->title) . '</a>
-                            </h5>
+                            <a href="' . route('banners.show', $banner) . '" class="banner-name-link">' . e($banner->title) . '</a>
                             ' . $sub . '
                         </div>
                     </div>
@@ -69,8 +77,8 @@ class BannerController extends Controller
                 return $banner->liveBadge();
             })
             ->addColumn('status_badge', function (Banner $banner) {
-                return '<span class="badge ' . $banner->statusBadgeClass() . ' fs-xxs">'
-                    . e($banner->statusLabel()) . '</span>';
+                $class = $banner->isActive() ? 'status-pill status-active' : 'status-pill status-inactive';
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . e($banner->statusLabel()) . '</span>';
             })
             ->addColumn('date_range', function (Banner $banner) {
                 $from = $banner->starts_at ? $banner->starts_at->format('d M Y') : '<span class="text-muted">—</span>';
@@ -93,19 +101,19 @@ class BannerController extends Controller
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
-                        <a href="' . $show . '" class="btn btn-default btn-icon btn-sm" title="View">
-                            <i class="ti ti-eye fs-lg"></i>
+                        <a href="' . $show . '" class="action-btn action-view" title="View">
+                            <i class="ti ti-eye"></i>
                         </a>
-                        <a href="' . $edit . '" class="btn btn-default btn-icon btn-sm" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
+                        <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
+                            <i class="ti ti-edit"></i>
                         </a>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-toggle-status"
+                        <button type="button" class="action-btn action-toggle js-toggle-status"
                             data-url="' . $toggle . '" title="Toggle Status">
-                            <i class="ti ' . $toggleIcon . ' fs-lg"></i>
+                            <i class="ti ' . $toggleIcon . '"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-delete text-danger"
+                        <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($banner->title) . '" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
                 ';

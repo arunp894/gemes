@@ -38,8 +38,24 @@ class StockAuditController extends Controller
 
     public function index(): View
     {
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = StockAudit::selectRaw(
+            "COUNT(*) as total,
+             SUM(status = 'in_progress') as in_progress,
+             SUM(status = 'completed') as completed,
+             SUM(status = 'cancelled') as cancelled"
+        )->first();
+
+        $stats = [
+            'audits_total'       => (int) $counts->total,
+            'audits_in_progress' => (int) $counts->in_progress,
+            'audits_completed'   => (int) $counts->completed,
+            'audits_cancelled'   => (int) $counts->cancelled,
+        ];
+
         return view('stock-audits.index', [
             'locations' => Location::active()->orderBy('name')->get(['id', 'location_code', 'name']),
+            'stats'     => $stats,
         ]);
     }
 
@@ -65,16 +81,22 @@ class StockAuditController extends Controller
                 '<span class="fw-semibold">' . (int) $a->matched_total . ' / ' . (int) $a->expected_total . '</span>'
                 . ' <span class="text-muted fs-xxs">(' . $a->progressPercent() . '%)</span>'
             )
-            ->addColumn('status_badge', fn (StockAudit $a) =>
-                '<span class="badge ' . $a->statusBadgeClass() . ' fs-xxs">' . e($a->statusLabel()) . '</span>'
-            )
+            ->addColumn('status_badge', function (StockAudit $a) {
+                $class = match ($a->status) {
+                    StockAudit::STATUS_IN_PROGRESS => 'status-pill status-in-progress',
+                    StockAudit::STATUS_COMPLETED   => 'status-pill status-completed',
+                    StockAudit::STATUS_CANCELLED   => 'status-pill status-cancelled',
+                    default                          => 'status-pill',
+                };
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . e($a->statusLabel()) . '</span>';
+            })
             ->addColumn('actions', function (StockAudit $a) {
                 $canScan = auth()->user()?->hasPermission('stock-audits.scan') ?? false;
 
                 $html = '<div class="d-flex gap-1 justify-content-center">';
-                $html .= '<a href="' . route('stock-audits.show', $a) . '" class="btn btn-default btn-icon btn-sm" title="View"><i class="ti ti-eye fs-lg"></i></a>';
+                $html .= '<a href="' . route('stock-audits.show', $a) . '" class="action-btn action-view" title="View"><i class="ti ti-eye"></i></a>';
                 if ($a->isInProgress() && $canScan) {
-                    $html .= '<a href="' . route('stock-audits.scan', $a) . '" class="btn btn-default btn-icon btn-sm text-info" title="Continue Scanning"><i class="ti ti-scan fs-lg"></i></a>';
+                    $html .= '<a href="' . route('stock-audits.scan', $a) . '" class="action-btn action-scan" title="Continue Scanning"><i class="ti ti-scan"></i></a>';
                 }
                 $html .= '</div>';
                 return $html;

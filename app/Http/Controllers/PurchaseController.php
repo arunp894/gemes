@@ -167,15 +167,15 @@ class PurchaseController extends Controller
                 $canPost   = auth()->user()?->hasPermission('purchases.post')   ?? false;
 
                 $html = '<div class="d-flex gap-1 justify-content-center">';
-                $html .= '<a href="' . route('purchases.show', $p) . '" class="btn btn-sm btn-soft-secondary" title="View"><i class="ti ti-eye"></i></a>';
+                $html .= '<a href="' . route('purchases.show', $p) . '" class="action-btn action-view" title="View"><i class="ti ti-eye"></i></a>';
                 if ($canEdit && ! $p->editBlockReason($this->purchaseEditDays())) {
-                    $html .= '<a href="' . route('purchases.edit', $p) . '" class="btn btn-sm btn-soft-primary" title="Edit"><i class="ti ti-edit"></i></a>';
+                    $html .= '<a href="' . route('purchases.edit', $p) . '" class="action-btn action-edit" title="Edit"><i class="ti ti-edit"></i></a>';
                 }
                 if ($canPost && $p->isDraft()) {
-                    $html .= '<button type="button" class="btn btn-sm btn-soft-success js-post-purchase" data-id="' . $p->id . '" title="Post"><i class="ti ti-check"></i></button>';
+                    $html .= '<button type="button" class="action-btn action-post js-post-purchase" data-id="' . $p->id . '" title="Post"><i class="ti ti-check"></i></button>';
                 }
                 if ($canDelete) {
-                    $html .= '<button type="button" class="btn btn-sm btn-soft-danger js-delete-purchase" data-id="' . $p->id . '" title="Delete"><i class="ti ti-trash"></i></button>';
+                    $html .= '<button type="button" class="action-btn action-delete js-delete-purchase" data-id="' . $p->id . '" data-invoice="' . e($p->invoice_number) . '" title="Delete"><i class="ti ti-trash"></i></button>';
                 }
                 $html .= '</div>';
                 return $html;

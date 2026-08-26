@@ -19,7 +19,17 @@ class CategoryController extends Controller
      */
     public function index(): View
     {
-        return view('categories.index');
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = Category::selectRaw('COUNT(*) as total, SUM(status = 1) as active, SUM(status = 0) as inactive')
+            ->first();
+
+        $stats = [
+            'stones_total'    => (int) $counts->total,
+            'stones_active'   => (int) $counts->active,
+            'stones_inactive' => (int) $counts->inactive,
+        ];
+
+        return view('categories.index', compact('stats'));
     }
 
     /**
@@ -28,7 +38,8 @@ class CategoryController extends Controller
      */
     public function data(Request $request): JsonResponse
     {
-        $query = Category::query();
+        // Eager-load media so the thumbnail column doesn't issue one query per row.
+        $query = Category::query()->with('media');
 
         return DataTables::of($query)
             ->addIndexColumn()
@@ -39,18 +50,16 @@ class CategoryController extends Controller
             ->editColumn('name', function (Category $category) {
                 $thumb = $category->thumb_url;
                 $imgHtml = $thumb
-                    ? '<img src="' . e($thumb) . '" alt="' . e($category->name) . '" class="img-fluid rounded" />'
-                    : '<span class="d-inline-flex align-items-center justify-content-center bg-light text-muted rounded w-100 h-100"><i class="ti ti-photo"></i></span>';
+                    ? '<img src="' . e($thumb) . '" alt="' . e($category->name) . '" class="stone-thumb-img" />'
+                    : '<span class="stone-thumb-placeholder"><i class="ti ti-photo"></i></span>';
 
                 return '
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-md me-3">' . $imgHtml . '</div>
+                    <div class="stone-name-cell">
+                        <div class="stone-thumb">' . $imgHtml . '</div>
                         <div>
-                            <h5 class="mb-0">
-                                <a href="' . route('categories.show', $category) . '" class="link-reset">'
-                                    . e($category->name) .
-                                '</a>
-                            </h5>
+                            <a href="' . route('categories.show', $category) . '" class="stone-name-link">'
+                                . e($category->name) .
+                            '</a>
                         </div>
                     </div>
                 ';
@@ -59,16 +68,13 @@ class CategoryController extends Controller
                 return '<code class="text-muted">' . e($category->code) . '</code>';
             })
             ->addColumn('status_badge', function (Category $category) {
-                $class = $category->isActive() ? 'badge-soft-success' : 'badge-soft-danger';
+                $class = $category->isActive() ? 'status-pill status-active' : 'status-pill status-inactive';
                 $label = $category->statusLabel();
-                return '<span class="badge ' . $class . ' fs-xxs">' . $label . '</span>';
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . $label . '</span>';
             })
             ->editColumn('updated_at', function (Category $category) {
                 $dt = $category->updated_at;
-                if (!$dt) {
-                    return '—';
-                }
-                return $dt->format('d M, Y') . ' <small class="text-muted">' . $dt->format('h:i A') . '</small>';
+                return $dt ? $dt->format('d M, Y') : '—';
             })
             ->addColumn('action', function (Category $category) {
                 $show    = route('categories.show', $category);
@@ -80,19 +86,19 @@ class CategoryController extends Controller
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
-                        <a href="' . $show . '" class="btn btn-default btn-icon btn-sm" title="View">
-                            <i class="ti ti-eye fs-lg"></i>
+                        <a href="' . $show . '" class="action-btn action-view" title="View">
+                            <i class="ti ti-eye"></i>
                         </a>
-                        <a href="' . $edit . '" class="btn btn-default btn-icon btn-sm" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
+                        <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
+                            <i class="ti ti-edit"></i>
                         </a>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-toggle-status"
+                        <button type="button" class="action-btn action-toggle js-toggle-status"
                             data-url="' . $toggle . '" title="Toggle Status">
-                            <i class="ti ' . $toggleIcon . ' fs-lg"></i>
+                            <i class="ti ' . $toggleIcon . '"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-delete text-danger"
+                        <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($category->name) . '" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
                 ';

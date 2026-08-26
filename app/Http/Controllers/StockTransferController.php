@@ -31,7 +31,24 @@ class StockTransferController extends Controller
 
     public function index(): View
     {
-        return view('stock-transfers.index');
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = StockTransfer::selectRaw(
+            "COUNT(*) as total,
+             SUM(status = 'draft') as draft,
+             SUM(status = 'in_transit') as in_transit,
+             SUM(status = 'received') as received,
+             SUM(status = 'cancelled') as cancelled"
+        )->first();
+
+        $stats = [
+            'total'      => (int) $counts->total,
+            'draft'      => (int) $counts->draft,
+            'in_transit' => (int) $counts->in_transit,
+            'received'   => (int) $counts->received,
+            'cancelled'  => (int) $counts->cancelled,
+        ];
+
+        return view('stock-transfers.index', compact('stats'));
     }
 
     public function data(Request $request): JsonResponse
@@ -61,27 +78,34 @@ class StockTransferController extends Controller
                 $t->toLocation ? e($t->toLocation->name) : '—'
             )
             ->addColumn('line_count', fn (StockTransfer $t) => $t->lines()->count())
-            ->addColumn('status_badge', fn (StockTransfer $t) =>
-                '<span class="badge ' . $t->statusBadgeClass() . ' fs-xxs">' . e($t->statusLabel()) . '</span>'
-            )
+            ->addColumn('status_badge', function (StockTransfer $t) {
+                $map = [
+                    StockTransfer::STATUS_DRAFT      => 'status-draft',
+                    StockTransfer::STATUS_IN_TRANSIT => 'status-transit',
+                    StockTransfer::STATUS_RECEIVED   => 'status-received',
+                    StockTransfer::STATUS_CANCELLED  => 'status-cancelled',
+                ];
+                $class = 'status-pill ' . ($map[$t->status] ?? 'status-draft');
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . e($t->statusLabel()) . '</span>';
+            })
             ->addColumn('actions', function (StockTransfer $t) {
                 $canEdit = auth()->user()?->hasPermission('stock-transfers.edit') ?? false;
                 $canPost = auth()->user()?->hasPermission('stock-transfers.post') ?? false;
                 $canDel  = auth()->user()?->hasPermission('stock-transfers.delete') ?? false;
 
-                $html = '<div class="d-flex gap-1 justify-content-center">';
-                $html .= '<a href="' . route('stock-transfers.show', $t) . '" class="btn btn-default btn-icon btn-sm" title="View"><i class="ti ti-eye fs-lg"></i></a>';
+                $html = '<div class="d-flex justify-content-center gap-1">';
+                $html .= '<a href="' . route('stock-transfers.show', $t) . '" class="action-btn action-view" title="View"><i class="ti ti-eye"></i></a>';
                 if ($canEdit && $t->isEditable()) {
-                    $html .= '<a href="' . route('stock-transfers.edit', $t) . '" class="btn btn-default btn-icon btn-sm" title="Edit"><i class="ti ti-edit fs-lg"></i></a>';
+                    $html .= '<a href="' . route('stock-transfers.edit', $t) . '" class="action-btn action-edit" title="Edit"><i class="ti ti-edit"></i></a>';
                 }
                 if ($canPost && $t->isDraft()) {
-                    $html .= '<button type="button" class="btn btn-default btn-icon btn-sm js-status-action text-info" data-url="' . route('stock-transfers.post', $t) . '" data-confirm="Post transfer? Stock will leave the source location." title="Post"><i class="ti ti-send fs-lg"></i></button>';
+                    $html .= '<button type="button" class="action-btn action-post js-status-action" data-kind="post" data-url="' . route('stock-transfers.post', $t) . '" data-confirm="Post transfer? Stock will leave the source location." title="Post"><i class="ti ti-send"></i></button>';
                 }
                 if ($canPost && $t->isInTransit()) {
-                    $html .= '<button type="button" class="btn btn-default btn-icon btn-sm js-status-action text-success" data-url="' . route('stock-transfers.receive', $t) . '" data-confirm="Mark transfer as received? Stock will arrive at the destination." title="Receive"><i class="ti ti-check fs-lg"></i></button>';
+                    $html .= '<button type="button" class="action-btn action-receive js-status-action" data-kind="receive" data-url="' . route('stock-transfers.receive', $t) . '" data-confirm="Mark transfer as received? Stock will arrive at the destination." title="Receive"><i class="ti ti-check"></i></button>';
                 }
                 if ($canDel && ($t->isDraft() || $t->isInTransit())) {
-                    $html .= '<button type="button" class="btn btn-default btn-icon btn-sm js-status-action text-danger" data-url="' . route('stock-transfers.cancel', $t) . '" data-confirm="Cancel this transfer? In-transit stock will return to the source." title="Cancel"><i class="ti ti-ban fs-lg"></i></button>';
+                    $html .= '<button type="button" class="action-btn action-cancel js-status-action" data-kind="cancel" data-url="' . route('stock-transfers.cancel', $t) . '" data-confirm="Cancel this transfer? In-transit stock will return to the source." title="Cancel"><i class="ti ti-ban"></i></button>';
                 }
                 $html .= '</div>';
                 return $html;

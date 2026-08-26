@@ -14,8 +14,19 @@ class RackController extends Controller
 {
     public function index(): View
     {
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = Rack::selectRaw('COUNT(*) as total, SUM(status = 1) as active, SUM(status = 0) as inactive')
+            ->first();
+
+        $stats = [
+            'racks_total'    => (int) $counts->total,
+            'racks_active'   => (int) $counts->active,
+            'racks_inactive' => (int) $counts->inactive,
+        ];
+
         return view('racks.index', [
             'suggestedCode' => Rack::generateNextCode(),
+            'stats'         => $stats,
         ]);
     }
 
@@ -39,8 +50,18 @@ class RackController extends Controller
 
         return DataTables::eloquent($q)
             ->addIndexColumn()
+            ->editColumn('code', fn (Rack $r) =>
+                '<code class="text-muted">' . e($r->code) . '</code>'
+            )
+            ->editColumn('name', fn (Rack $r) =>
+                '<span class="rack-name">' . e($r->name) . '</span>'
+            )
             ->addColumn('status_badge', fn (Rack $r) =>
-                '<span class="badge ' . $r->statusBadgeClass() . '">' . $r->statusLabel() . '</span>'
+                '<span class="status-pill ' . ($r->isActive() ? 'status-active' : 'status-inactive') . '">'
+                    . '<span class="status-dot"></span>' . $r->statusLabel() . '</span>'
+            )
+            ->editColumn('created_at', fn (Rack $r) =>
+                $r->created_at ? $r->created_at->format('d M, Y') : '—'
             )
             ->addColumn('actions', function (Rack $r) {
                 $canEdit   = auth()->user()?->hasPermission('racks.edit')   ?? false;
@@ -48,16 +69,16 @@ class RackController extends Controller
 
                 $html = '<div class="d-flex gap-1 justify-content-center">';
                 if ($canEdit) {
-                    $html .= '<a href="' . route('racks.edit', $r) . '" class="btn btn-sm btn-soft-primary"><i class="ti ti-edit"></i></a>';
-                    $html .= '<button type="button" class="btn btn-sm btn-soft-secondary js-toggle-rack" data-id="' . $r->id . '"><i class="ti ti-toggle-' . ($r->isActive() ? 'right' : 'left') . '"></i></button>';
+                    $html .= '<a href="' . route('racks.edit', $r) . '" class="action-btn action-edit" title="Edit"><i class="ti ti-edit"></i></a>';
+                    $html .= '<button type="button" class="action-btn action-toggle js-toggle-rack" data-id="' . $r->id . '" data-url="' . route('racks.toggle-status', $r) . '" title="Toggle Status"><i class="ti ti-toggle-' . ($r->isActive() ? 'right' : 'left') . '"></i></button>';
                 }
                 if ($canDelete) {
-                    $html .= '<button type="button" class="btn btn-sm btn-soft-danger js-delete-rack" data-id="' . $r->id . '"><i class="ti ti-trash"></i></button>';
+                    $html .= '<button type="button" class="action-btn action-delete js-delete-rack" data-id="' . $r->id . '" data-url="' . route('racks.destroy', $r) . '" data-name="' . e($r->name) . '" title="Delete"><i class="ti ti-trash"></i></button>';
                 }
                 $html .= '</div>';
                 return $html;
             })
-            ->rawColumns(['status_badge', 'actions'])
+            ->rawColumns(['code', 'name', 'status_badge', 'actions'])
             ->toJson();
     }
 

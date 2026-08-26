@@ -22,7 +22,17 @@ class CustomerController extends Controller
 {
     public function index(): View
     {
-        return view('customers.index');
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = Customer::selectRaw('COUNT(*) as total, SUM(status = 1) as active, SUM(status = 0) as inactive')
+            ->first();
+
+        $stats = [
+            'customers_total'    => (int) $counts->total,
+            'customers_active'   => (int) $counts->active,
+            'customers_inactive' => (int) $counts->inactive,
+        ];
+
+        return view('customers.index', compact('stats'));
     }
 
     public function data(Request $request): JsonResponse
@@ -39,26 +49,16 @@ class CustomerController extends Controller
                 return '<code class="text-muted">' . e($c->customer_code) . '</code>';
             })
             ->editColumn('name', function (Customer $c) {
-                $initial = strtoupper(mb_substr($c->display_name, 0, 1) ?: '?');
-                $sub     = $c->company_name && $c->name !== $c->company_name
+                $sub = $c->company_name && $c->name !== $c->company_name
                     ? e($c->name)
                     : ($c->phone ? e($c->phone) : e($c->email));
 
                 return '
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-sm me-2">
-                            <span class="avatar-title bg-primary-subtle text-primary rounded-circle fw-bold">'
-                    . e($initial) .
-                    '</span>
-                        </div>
-                        <div>
-                            <h5 class="mb-0 fs-base">
-                                <a href="' . route('customers.show', $c) . '" class="link-reset">'
+                    <div class="customer-name-cell">
+                        <a href="' . route('customers.show', $c) . '" class="customer-name-link">'
                     . e($c->display_name) .
                     '</a>
-                            </h5>
-                            <small class="text-muted">' . $sub . '</small>
-                        </div>
+                        <small class="d-block text-muted">' . $sub . '</small>
                     </div>
                 ';
             })
@@ -78,7 +78,9 @@ class CustomerController extends Controller
                 return $parts ? e(implode(', ', $parts)) : '<span class="text-muted fs-xs">—</span>';
             })
             ->addColumn('status_badge', function (Customer $c) {
-                return '<span class="badge ' . $c->statusBadgeClass() . ' fs-xxs">' . $c->statusLabel() . '</span>';
+                $class = $c->isActive() ? 'status-pill status-active' : 'status-pill status-inactive';
+                $label = $c->statusLabel();
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . $label . '</span>';
             })
             ->editColumn('created_at', function (Customer $c) {
                 return optional($c->created_at)->format('d M, Y') ?? '—';
@@ -92,13 +94,13 @@ class CustomerController extends Controller
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
-                        <a href="' . $show . '" class="btn btn-default btn-icon btn-sm" title="View"><i class="ti ti-eye fs-lg"></i></a>
-                        <a href="' . $edit . '" class="btn btn-default btn-icon btn-sm" title="Edit"><i class="ti ti-edit fs-lg"></i></a>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-toggle-status" data-url="' . $toggle . '" title="Toggle Status">
-                            <i class="ti ' . $icon . ' fs-lg"></i>
+                        <a href="' . $show . '" class="action-btn action-view" title="View"><i class="ti ti-eye"></i></a>
+                        <a href="' . $edit . '" class="action-btn action-edit" title="Edit"><i class="ti ti-edit"></i></a>
+                        <button type="button" class="action-btn action-toggle js-toggle-status" data-url="' . $toggle . '" title="Toggle Status">
+                            <i class="ti ' . $icon . '"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-delete text-danger" data-url="' . $destroy . '" data-name="' . e($c->display_name) . '" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
+                        <button type="button" class="action-btn action-delete js-delete" data-url="' . $destroy . '" data-name="' . e($c->display_name) . '" title="Delete">
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
                 ';
