@@ -106,7 +106,7 @@
                         <div class="app-search">
                             <select id="productWebsiteFilter" class="form-select form-control my-1 my-md-0">
                                 <option value="">Website: All</option>
-                                <option value="1">Enabled</option>
+                                <option value="1" selected>Enabled</option>
                                 <option value="0">Disabled</option>
                             </select>
                             <i class="ti ti-world app-search-icon text-muted"></i>
