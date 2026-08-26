@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="container-fluid stock-page">
 
     {{-- Page header --}}
     <div class="page-title-head d-flex align-items-center">
@@ -292,11 +292,61 @@
 
 @push('styles')
 <style>
-.src-link { transition: opacity .15s; }
-.src-link:hover { opacity: .8; }
-.filter-tab { border-radius: 4px; }
-.filter-tab.active { box-shadow: 0 0 0 2px rgba(var(--bs-primary-rgb),.25); }
-.avatar.avatar-sm { width: 32px; height: 32px; display:inline-flex; align-items:center; justify-content:center; border-radius: .375rem; }
+    /* ==========================================================
+       Product ledger page — shares the Stock module's visual
+       identity with stock/index.blade.php. Scoped under .stock-page.
+       ========================================================== */
+    .stock-page {
+        --stock-primary: #1d4ed8;
+        --stock-primary-dark: #1e3a8a;
+        --stock-success: #059669;
+        --stock-warning: #d97706;
+        --stock-danger: #dc2626;
+        --stock-border: #e2e8f0;
+        --stock-text-muted: #64748b;
+        padding-top: 0;
+        padding-bottom: 20px;
+    }
+    .stock-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid var(--stock-border);
+    }
+    .stock-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .stock-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, var(--stock-primary-dark), var(--stock-primary));
+    }
+    .stock-page .breadcrumb { font-size: 0.75rem; }
+
+    .stock-page .card { border-radius: 10px; box-shadow: none; border: 1px solid var(--stock-border); }
+    .stock-page .card-header { padding: 10px 16px; }
+    .stock-page .card-title { font-size: 0.9375rem; font-weight: 700; }
+
+    .stock-page #movementsTbl thead th {
+        background: #f1f5f9; font-weight: 700; font-size: 0.6875rem; letter-spacing: 0.03em; padding: 8px 12px;
+    }
+    .stock-page #movementsTbl tbody td { padding: 8px 12px; font-size: 0.8125rem; }
+    .stock-page #movementsTbl tbody tr:hover { background: #f8fafc; }
+
+    .src-link { transition: opacity .15s; }
+    .src-link:hover { opacity: .8; }
+    .filter-tab { border-radius: 4px; }
+    .filter-tab.active { box-shadow: 0 0 0 2px rgba(var(--bs-primary-rgb),.25); }
+    .avatar.avatar-sm { width: 32px; height: 32px; display:inline-flex; align-items:center; justify-content:center; border-radius: .375rem; }
 </style>
 @endpush
 

@@ -6,13 +6,13 @@
 
 <div style="height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--dark-900),var(--dark-750));border-bottom:1px solid rgba(0,191,176,.1);text-align:center">
   <div class="sg-eyebrow" style="margin-bottom:6px">My Account</div>
-  <h1 style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700">Order History</h1>
+  <h1 class="sg-orders-hero-title" style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:700">Order History</h1>
 </div>
 
-<div style="padding:48px 60px;background:var(--dark-900);min-height:60vh">
+<div class="sg-orders-wrap" style="padding:48px 60px;background:var(--dark-900);min-height:60vh">
   <div style="max-width:1100px;margin:0 auto">
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:10px">
       <a href="{{ route('website.account.profile') }}" style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal-300);text-decoration:none">← Back to Profile</a>
       <div style="font-size:13px;color:var(--white-faint)">{{ $orders->total() }} order(s)</div>
     </div>
@@ -25,7 +25,8 @@
       </div>
     @else
       <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;overflow:hidden">
-        <table style="width:100%;border-collapse:collapse">
+        <div class="sg-table-scroll" style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:820px">
           <thead>
             <tr style="background:rgba(0,191,176,.04);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-faint)">
               <th style="padding:14px 22px;text-align:left;font-weight:500">Order Number</th>
@@ -95,6 +96,7 @@
             @endforeach
           </tbody>
         </table>
+        </div>
       </div>
 
       {{-- Pagination --}}
@@ -124,4 +126,19 @@
 
   </div>
 </div>
+
+@push('head_styles')
+<style>
+@media(max-width:1024px){
+  .sg-orders-wrap{padding:40px 24px !important}
+}
+@media(max-width:768px){
+  .sg-orders-hero-title{font-size:28px !important}
+}
+@media(max-width:480px){
+  .sg-orders-wrap{padding:28px 16px !important}
+}
+.sg-table-scroll{-webkit-overflow-scrolling:touch}
+</style>
+@endpush
 @endsection

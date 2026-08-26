@@ -6,15 +6,15 @@
 @section('content')
 
 {{-- HERO BAND --}}
-<div style="height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--dark-900),var(--dark-750));border-bottom:1px solid rgba(0,191,176,.1);text-align:center;position:relative;overflow:hidden">
+<div class="sg-cart-hero" style="height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--dark-900),var(--dark-750));border-bottom:1px solid rgba(0,191,176,.1);text-align:center;position:relative;overflow:hidden">
   <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(0,191,176,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,191,176,.025) 1px,transparent 1px);background-size:60px 60px"></div>
   <div style="position:relative;z-index:1">
     <div class="sg-eyebrow" style="text-align:center;margin-bottom:10px">Your Selection</div>
-    <h1 style="font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:700">Shopping <em style="color:var(--teal-300);font-style:italic">Cart</em></h1>
+    <h1 class="sg-cart-hero-title" style="font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:700">Shopping <em style="color:var(--teal-300);font-style:italic">Cart</em></h1>
   </div>
 </div>
 
-<div style="padding:60px;background:var(--dark-900);min-height:60vh">
+<div class="sg-cart-wrap" style="padding:60px;background:var(--dark-900);min-height:60vh">
 
   @if(!empty($removedItems))
   <div style="margin-bottom:24px;padding:16px 20px;background:rgba(220,80,80,.08);border:1px solid rgba(220,80,80,.2);border-radius:4px;color:#e07070;font-size:13px;line-height:1.6">
@@ -31,7 +31,7 @@
       <a href="{{ route('website.collections') }}" class="sg-btn-primary">Shop Collections →</a>
     </div>
   @else
-    <div style="display:grid;grid-template-columns:1fr 340px;gap:32px;align-items:start">
+    <div class="sg-cart-grid" style="display:grid;grid-template-columns:1fr 340px;gap:32px;align-items:start">
 
       {{-- Cart Items --}}
       <div id="cartItemsWrap">
@@ -46,7 +46,7 @@
 
         @foreach($cart as $item)
         <div class="sg-cart-item" data-id="{{ $item['id'] }}"
-          style="display:flex;align-items:center;gap:20px;padding:20px;background:var(--dark-800);border:1px solid rgba(0,191,176,.08);border-radius:4px;margin-bottom:10px;transition:border-color .3s"
+          style="display:flex;align-items:center;gap:20px;padding:20px;background:var(--dark-800);border:1px solid rgba(0,191,176,.08);border-radius:4px;margin-bottom:10px;transition:border-color .3s;flex-wrap:wrap"
           onmouseenter="this.style.borderColor='rgba(0,191,176,.2)'" onmouseleave="this.style.borderColor='rgba(0,191,176,.08)'">
 
           {{-- Thumb --}}
@@ -100,7 +100,7 @@
       </div>
 
       {{-- Order Summary --}}
-      <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:28px;position:sticky;top:80px">
+      <div class="sg-order-summary" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:28px;position:sticky;top:80px">
         <h4 style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:20px">Order Summary</h4>
 
         <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:14px;color:var(--white-dim)">
@@ -140,6 +140,27 @@
   @endif
 
 </div>
+
+@push('head_styles')
+<style>
+@media(max-width:1024px){
+  .sg-cart-wrap{padding:48px 24px !important}
+}
+@media(max-width:768px){
+  .sg-cart-hero{height:160px !important}
+  .sg-cart-hero-title{font-size:36px !important}
+  .sg-cart-grid{grid-template-columns:1fr !important;gap:24px !important}
+  .sg-order-summary{position:static !important}
+}
+@media(max-width:480px){
+  .sg-cart-wrap{padding:32px 16px !important}
+  .sg-cart-hero{height:140px !important}
+  .sg-cart-hero-title{font-size:28px !important}
+  .sg-cart-item{gap:14px !important;padding:16px !important}
+  .sg-cart-item > div:first-child{width:64px !important;height:64px !important}
+}
+</style>
+@endpush
 @endsection
 
 @push('scripts')

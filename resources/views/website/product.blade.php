@@ -6,7 +6,7 @@
 @section('content')
 
 {{-- BREADCRUMB --}}
-<div style="display:flex;align-items:center;gap:10px;padding:20px 60px;font-size:12px;color:var(--white-faint);border-bottom:1px solid rgba(0,191,176,.06);background:var(--dark-800)">
+<div class="sg-sec-px" style="display:flex;align-items:center;gap:10px;padding:20px 0;font-size:12px;color:var(--white-faint);border-bottom:1px solid rgba(0,191,176,.06);background:var(--dark-800);flex-wrap:wrap">
   <a href="{{ route('website.home') }}" style="text-decoration:none;color:var(--white-faint);transition:color .3s" onmouseenter="this.style.color='var(--teal-300)'" onmouseleave="this.style.color='var(--white-faint)'">Home</a>
   <span style="color:rgba(0,191,176,.3)">›</span>
   <a href="{{ route('website.collections') }}" style="text-decoration:none;color:var(--white-faint);transition:color .3s" onmouseenter="this.style.color='var(--teal-300)'" onmouseleave="this.style.color='var(--white-faint)'">Collections</a>
@@ -19,11 +19,11 @@
 </div>
 
 {{-- PRODUCT DETAIL GRID --}}
-<div style="display:grid;grid-template-columns:1fr 1fr;min-height:80vh;background:var(--dark-900)">
+<div class="sg-product-detail-grid" style="background:var(--dark-900)">
 
   {{-- LEFT: Gallery --}}
   <div style="background:var(--dark-800);position:relative">
-    <div id="mainImgWrap" style="width:100%;height:520px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:radial-gradient(circle at 40% 40%,rgba(0,191,176,.15),rgba(4,14,13,.98))">
+    <div id="mainImgWrap" class="sg-main-img-wrap" style="width:100%;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:radial-gradient(circle at 40% 40%,rgba(0,191,176,.15),rgba(4,14,13,.98))">
       @if($product->primary_image_url)
         <img id="mainImg" src="{{ $product->primary_image_url }}" alt="{{ $product->title }}"
           style="max-width:90%;max-height:480px;object-fit:contain;transition:all .5s;filter:drop-shadow(0 0 32px rgba(0,191,176,.3))">
@@ -63,13 +63,13 @@
   </div>
 
   {{-- RIGHT: Product Info --}}
-  <div style="padding:44px 56px;overflow-y:auto">
+  <div class="sg-product-info" style="overflow-y:auto">
 
     <div style="font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--teal-400);margin-bottom:10px">
       {{ $product->category?->name ?? ($product->stone_type ?? 'Gemstone') }}
     </div>
 
-    <h1 style="font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:700;line-height:1.1;margin-bottom:14px">
+    <h1 class="sg-product-title" style="font-family:'Cormorant Garamond',serif;font-weight:700;line-height:1.1;margin-bottom:14px">
       {{ $product->display_website_title }}
     </h1>
 
@@ -80,7 +80,7 @@
     {{-- Price --}}
     <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:28px">
       @if($product->website_price)
-      <div style="font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:700;color:var(--teal-300)">
+      <div class="sg-product-price-lg" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:var(--teal-300)">
         {{ $settings->formatPrice($product->website_price) }}
       </div>
       <div style="font-size:17px;color:var(--white-faint)">{{ strtoupper($settings->get('currency_code', 'USD')) }}</div>
@@ -142,7 +142,7 @@
     </div>
 
     {{-- CTA --}}
-    <div style="display:flex;gap:10px;margin-bottom:28px">
+    <div class="sg-cta-row" style="margin-bottom:28px">
       @if($settings->bool('cart_enabled', true) && $product->website_price)
         <button id="addToCartBtn"
           onclick="addToCart({{ $product->id }}, this)"
@@ -164,8 +164,8 @@
           Enquire Now
         </button>
       @endif
-      <button title="Save to wishlist"
-        style="width:52px;background:transparent;border:1px solid rgba(0,191,176,.3);color:var(--teal-300);font-size:20px;cursor:pointer;border-radius:2px;transition:all .3s"
+      <button title="Save to wishlist" class="sg-wishlist-btn"
+        style="background:transparent;border:1px solid rgba(0,191,176,.3);color:var(--teal-300);font-size:20px;cursor:pointer;border-radius:2px;transition:all .3s"
         onmouseenter="this.style.background='rgba(0,191,176,.08)';this.style.borderColor='var(--teal-400)'" onmouseleave="this.style.background='';this.style.borderColor='rgba(0,191,176,.3)'">♡</button>
     </div>
 
@@ -173,8 +173,8 @@
     <div style="display:flex;gap:0;border-bottom:1px solid rgba(0,191,176,.14);margin-bottom:20px">
       @foreach(['story' => 'Story', 'shipping' => 'Shipping', 'returns' => 'Returns'] as $key => $label)
       <button onclick="switchTab('{{ $key }}', this)"
-        id="tab-btn-{{ $key }}"
-        style="padding:11px 22px;font-size:13px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:{{ $key==='story' ? 'var(--teal-300)' : 'var(--white-faint)' }};cursor:pointer;border:none;background:none;border-bottom:2px solid {{ $key==='story' ? 'var(--teal-400)' : 'transparent' }};margin-bottom:-1px;transition:all .3s">
+        id="tab-btn-{{ $key }}" class="sg-tab-btn"
+        style="font-size:13px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:{{ $key==='story' ? 'var(--teal-300)' : 'var(--white-faint)' }};cursor:pointer;border:none;background:none;border-bottom:2px solid {{ $key==='story' ? 'var(--teal-400)' : 'transparent' }};margin-bottom:-1px;transition:all .3s">
         {{ $label }}
       </button>
       @endforeach
@@ -194,8 +194,8 @@
 
 {{-- Related Products --}}
 @if($relatedProducts->isNotEmpty())
-<section style="padding:72px 60px;background:var(--dark-850)">
-  <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:36px" class="sg-reveal">
+<section class="sg-sec-px" style="padding:72px 0;background:var(--dark-850)">
+  <div class="sg-reveal sg-sec-header" style="margin-bottom:36px">
     <div>
       <div class="sg-eyebrow">You May Also Like</div>
       <h2 class="sg-section-title">Related <em>Gems</em></h2>
@@ -221,6 +221,40 @@
 @keyframes sg-spin-sm {
   from { display:inline-block; transform: rotate(0deg); }
   to   { display:inline-block; transform: rotate(360deg); }
+}
+
+/* ── Mobile responsiveness ─────────────────────────────────────── */
+.sg-sec-px{padding-left:60px;padding-right:60px}
+.sg-product-detail-grid{display:grid;grid-template-columns:1fr 1fr;min-height:80vh}
+.sg-main-img-wrap{height:520px}
+.sg-product-info{padding:44px 56px}
+.sg-product-title{font-size:48px}
+.sg-product-price-lg{font-size:44px}
+.sg-cta-row{display:flex;gap:10px}
+.sg-wishlist-btn{width:52px}
+.sg-tab-btn{padding:11px 22px}
+.sg-sec-header{display:flex;align-items:flex-end;justify-content:space-between}
+
+@media(max-width:1024px){
+  .sg-sec-px{padding-left:24px;padding-right:24px}
+  .sg-product-info{padding:36px 24px}
+}
+@media(max-width:768px){
+  .sg-product-detail-grid{grid-template-columns:1fr;min-height:0}
+  .sg-main-img-wrap{height:380px}
+  .sg-product-title{font-size:36px}
+  .sg-product-price-lg{font-size:36px}
+}
+@media(max-width:480px){
+  .sg-sec-px{padding-left:16px;padding-right:16px}
+  .sg-product-info{padding:28px 16px}
+  .sg-main-img-wrap{height:300px}
+  .sg-product-title{font-size:30px}
+  .sg-product-price-lg{font-size:30px}
+  .sg-cta-row{flex-direction:column}
+  .sg-wishlist-btn{width:100%;padding:14px}
+  .sg-tab-btn{padding:11px 12px;font-size:12px}
+  .sg-sec-header{flex-direction:column;align-items:flex-start;gap:12px}
 }
 </style>
 @endpush
