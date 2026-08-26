@@ -19,6 +19,7 @@
 .sg-related{max-width:1000px;margin:0 auto}
 .sg-related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:24px}
 @media(max-width:768px){.sg-post-title{font-size:30px}.sg-post-hero{padding:120px 0 24px}.sg-related-grid{grid-template-columns:1fr}}
+@media(max-width:480px){.sg-post-hero{padding:104px 0 20px}.sg-post-title{font-size:26px}.sg-post-body{font-size:15px}}
 </style>
 @endpush
 

@@ -18,11 +18,11 @@
       </div>
     @endif
 
-    <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:6px;padding:36px">
+    <div class="sg-auth-card" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:6px;padding:36px">
       <form method="POST" action="{{ route('website.auth.register.post') }}">
         @csrf
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div class="sg-form-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
           <div>
             <label class="sg-label">Full Name</label>
             <input type="text" name="name" value="{{ old('name') }}" required class="sg-input" placeholder="Your name">
@@ -38,7 +38,7 @@
           <input type="email" name="email" value="{{ old('email') }}" required class="sg-input" placeholder="you@example.com">
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">
+        <div class="sg-form-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px">
           <div>
             <label class="sg-label">Password</label>
             <input type="password" name="password" required class="sg-input" placeholder="Min. 8 characters">
@@ -64,8 +64,12 @@
 @push('head_styles')
 <style>
 .sg-label{display:block;font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-dim);margin-bottom:8px}
-.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(0,191,176,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:12px 16px;outline:none;transition:border .3s;display:block}
+.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(0,191,176,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:12px 16px;outline:none;transition:border .3s;display:block;min-height:44px}
 .sg-input:focus{border-color:var(--teal-400)}
+@media(max-width:480px){
+  .sg-auth-card{padding:24px !important}
+  .sg-form-grid-2{grid-template-columns:1fr !important}
+}
 </style>
 @endpush
 @endsection

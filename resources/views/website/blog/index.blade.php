@@ -19,6 +19,7 @@
 .sg-blog-pager{display:flex;justify-content:center;gap:12px;margin-top:56px}
 @media(max-width:1024px){.sg-blog-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){.sg-blog-grid{grid-template-columns:1fr}.sg-blog-hero{padding:120px 0 30px}}
+@media(max-width:480px){.sg-blog-hero{padding:110px 0 24px}.sg-blog-card-body{padding:18px}.sg-blog-title{font-size:19px}.sg-blog-pager{gap:10px}.sg-blog-pager .sg-btn-outline{flex:1;justify-content:center;padding:12px 16px}}
 </style>
 @endpush
 

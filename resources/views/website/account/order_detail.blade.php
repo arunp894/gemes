@@ -3,13 +3,13 @@
 @section('title', 'Order ' . $sale->sale_number . ' — Sukaina Gems')
 
 @section('content')
-<div style="padding:48px 60px;background:var(--dark-900);min-height:80vh">
+<div class="sg-orderdetail-wrap" style="padding:48px 60px;background:var(--dark-900);min-height:80vh">
   <div style="max-width:900px;margin:0 auto">
 
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px">
+    <div class="sg-orderdetail-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:16px">
       <div>
         <a href="{{ route('website.account.orders') }}" style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal-300);text-decoration:none">← Back to Orders</a>
-        <h1 style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;color:var(--white);margin-top:8px">{{ $sale->sale_number }}</h1>
+        <h1 class="sg-orderdetail-title" style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;color:var(--white);margin-top:8px">{{ $sale->sale_number }}</h1>
         <p style="font-size:13px;color:var(--white-faint);margin-top:4px">Placed on {{ $sale->sale_date->format('d F Y') }}</p>
       </div>
       <div style="text-align:right">
@@ -32,7 +32,7 @@
         <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600">Items Ordered</div>
       </div>
       @foreach($sale->lines as $line)
-        <div style="display:flex;align-items:center;gap:18px;padding:18px 22px;border-top:1px solid rgba(0,191,176,.06)">
+        <div class="sg-orderdetail-line" style="display:flex;align-items:center;gap:18px;padding:18px 22px;border-top:1px solid rgba(0,191,176,.06);flex-wrap:wrap">
           {{-- Product image --}}
           <div style="width:64px;height:64px;flex-shrink:0;background:var(--dark-750);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center">
             @if($line->product && $line->product->primary_thumb_url)
@@ -61,7 +61,7 @@
     </div>
 
     {{-- Totals + info --}}
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div class="sg-orderdetail-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
 
       {{-- Order summary --}}
       <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:22px">
@@ -140,4 +140,20 @@
 
   </div>
 </div>
+
+@push('head_styles')
+<style>
+@media(max-width:1024px){
+  .sg-orderdetail-wrap{padding:40px 24px !important}
+}
+@media(max-width:768px){
+  .sg-orderdetail-title{font-size:28px !important}
+  .sg-orderdetail-grid{grid-template-columns:1fr !important}
+}
+@media(max-width:480px){
+  .sg-orderdetail-wrap{padding:28px 16px !important}
+  .sg-orderdetail-line{gap:12px !important;padding:16px !important}
+}
+</style>
+@endpush
 @endsection

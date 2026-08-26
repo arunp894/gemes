@@ -48,13 +48,13 @@
         <button
           onclick="event.stopPropagation(); addToCart({{ $product->id }}, this)"
           class="sg-btn-add"
-          style="cursor:pointer;background:var(--teal-600);color:#fff;border:none"
+          style="cursor:pointer;background:var(--teal-600);color:#fff;border:none;padding:12px 14px"
           title="Add to cart">
           + Cart
         </button>
       @else
         {{-- Fallback: go to product page --}}
-        <a href="{{ route('website.product', $product) }}" class="sg-btn-add">View →</a>
+        <a href="{{ route('website.product', $product) }}" class="sg-btn-add" style="padding:12px 14px">View →</a>
       @endif
     </div>
   </div>

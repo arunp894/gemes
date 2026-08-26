@@ -36,6 +36,7 @@
     <div class="row g-3 mb-3">
 
         {{-- Sales Revenue --}}
+        @permission('sales.view')
         <div class="col-xl-3 col-md-6">
             <div class="card card-h-100 dashboard-kpi-card dashboard-kpi-success">
                 <div class="card-body">
@@ -65,8 +66,10 @@
                 </div>
             </div>
         </div>
+        @endpermission
 
         {{-- Purchase Spend --}}
+        @permission('purchases.view')
         <div class="col-xl-3 col-md-6">
             <div class="card card-h-100 dashboard-kpi-card dashboard-kpi-primary">
                 <div class="card-body">
@@ -96,8 +99,10 @@
                 </div>
             </div>
         </div>
+        @endpermission
 
         {{-- Products --}}
+        @permission('products.view')
         <div class="col-xl-3 col-md-6">
             <div class="card card-h-100 dashboard-kpi-card dashboard-kpi-warning">
                 <div class="card-body">
@@ -122,8 +127,10 @@
                 </div>
             </div>
         </div>
+        @endpermission
 
         {{-- Customers --}}
+        @permission('customers.view')
         <div class="col-xl-3 col-md-6">
             <div class="card card-h-100 dashboard-kpi-card dashboard-kpi-info">
                 <div class="card-body">
@@ -142,12 +149,15 @@
                         </div>
                     </div>
                     <div class="mt-2 pt-2 border-top border-dashed d-flex">
+                        @if($canSuppliers)
                         <span class="text-muted fs-sm"><i class="ti ti-building-store me-1"></i>{{ $totalSuppliers }} suppliers</span>
+                        @endif
                         <a href="{{ route('customers.index') }}" class="ms-auto text-primary fs-sm fw-semibold">View all &rarr;</a>
                     </div>
                 </div>
             </div>
         </div>
+        @endpermission
     </div>
     {{-- end KPI row --}}
 
@@ -155,17 +165,28 @@
     <div class="row g-3 mb-3">
 
         {{-- 12-Month Sales vs Purchases Trend --}}
+        @permission('sales.view|purchases.view')
         <div class="col-xl-8">
             <div class="card card-h-100">
                 <div class="card-header justify-content-between">
-                    <h4 class="card-title"><i class="ti ti-chart-area text-primary me-2"></i>Sales vs Purchases — Last 12 Months</h4>
+                    <h4 class="card-title"><i class="ti ti-chart-area text-primary me-2"></i>
+                        @if($canSales && $canPurchases) Sales vs Purchases
+                        @elseif($canSales) Sales
+                        @else Purchases
+                        @endif
+                        — Last 12 Months
+                    </h4>
                     <div class="d-flex gap-2">
+                        @if($canSales)
                         <span class="badge bg-success-subtle text-success px-2 py-1 rounded-pill fs-12">
                             <i class="ti ti-circle-filled me-1" style="font-size:8px"></i> Sales
                         </span>
+                        @endif
+                        @if($canPurchases)
                         <span class="badge bg-primary-subtle text-primary px-2 py-1 rounded-pill fs-12">
                             <i class="ti ti-circle-filled me-1" style="font-size:8px"></i> Purchases
                         </span>
+                        @endif
                     </div>
                 </div>
                 <div class="card-body pb-2">
@@ -173,17 +194,22 @@
                 </div>
             </div>
         </div>
+        @endpermission
 
         {{-- Today Summary --}}
+        @permission('sales.view|purchases.view|stock.view|suppliers.view')
         <div class="col-xl-4">
             <div class="card card-h-100">
                 <div class="card-header">
                     <h4 class="card-title"><i class="ti ti-sparkles text-warning me-2"></i>Today's Summary</h4>
                 </div>
                 <div class="card-body">
+                    @if($canSales || $canPurchases)
                     <div id="dashboard-today-chart" class="apex-charts" style="min-height:180px"></div>
+                    @endif
 
                     <div class="mt-3">
+                        @permission('sales.view')
                         <div class="d-flex align-items-center justify-content-between py-2 border-bottom border-dashed">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="avatar-sm avatar-title bg-success-subtle rounded-circle">
@@ -193,6 +219,8 @@
                             </div>
                             <span class="badge bg-success-subtle text-success fs-sm px-2">{{ $todaySalesCount }} invoices</span>
                         </div>
+                        @endpermission
+                        @permission('purchases.view')
                         <div class="d-flex align-items-center justify-content-between py-2 border-bottom border-dashed">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="avatar-sm avatar-title bg-primary-subtle rounded-circle">
@@ -202,6 +230,8 @@
                             </div>
                             <span class="badge bg-primary-subtle text-primary fs-sm px-2">{{ $todayPurchaseCount }} invoices</span>
                         </div>
+                        @endpermission
+                        @permission('stock.view')
                         <div class="d-flex align-items-center justify-content-between py-2 border-bottom border-dashed">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="avatar-sm avatar-title bg-warning-subtle rounded-circle">
@@ -211,6 +241,8 @@
                             </div>
                             <span class="badge bg-warning-subtle text-warning fs-sm px-2">{{ number_format($inStockCount) }}</span>
                         </div>
+                        @endpermission
+                        @permission('suppliers.view')
                         <div class="d-flex align-items-center justify-content-between py-2">
                             <div class="d-flex align-items-center gap-2">
                                 <span class="avatar-sm avatar-title bg-info-subtle rounded-circle">
@@ -220,10 +252,12 @@
                             </div>
                             <span class="badge bg-info-subtle text-info fs-sm px-2">{{ $activeSuppliers }}</span>
                         </div>
+                        @endpermission
                     </div>
                 </div>
             </div>
         </div>
+        @endpermission
     </div>
     {{-- end charts row --}}
 
@@ -231,13 +265,16 @@
     <div class="row g-3 mb-3">
 
         {{-- Recent Sales --}}
+        @permission('sales.view')
         <div class="col-xl-7">
             <div class="card">
                 <div class="card-header justify-content-between">
                     <h4 class="card-title"><i class="ti ti-receipt text-success me-2"></i>Recent Sales</h4>
+                    @permission('sales.create')
                     <a href="{{ route('sales.create') }}" class="btn btn-sm btn-primary">
                         <i class="ti ti-plus me-1"></i> New Sale
                     </a>
+                    @endpermission
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -287,15 +324,19 @@
                 </div>
             </div>
         </div>
+        @endpermission
 
         {{-- Recent Purchases --}}
+        @permission('purchases.view')
         <div class="col-xl-5">
             <div class="card">
                 <div class="card-header justify-content-between">
                     <h4 class="card-title"><i class="ti ti-truck-delivery text-primary me-2"></i>Recent Purchases</h4>
+                    @permission('purchases.create')
                     <a href="{{ route('purchases.create') }}" class="btn btn-sm btn-primary">
                         <i class="ti ti-plus me-1"></i> New Purchase
                     </a>
+                    @endpermission
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -343,10 +384,12 @@
                 </div>
             </div>
         </div>
+        @endpermission
     </div>
     {{-- end recent tables row --}}
 
     {{-- ── Row 4: Quick Actions ─────────────────────────────── --}}
+    @anypermission('sales.create', 'purchases.create', 'products.create', 'suppliers.create', 'customers.create', 'stock.view')
     <div class="row g-3">
         <div class="col-12">
             <div class="card">
@@ -355,47 +398,60 @@
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
+                        @permission('sales.create')
                         <div class="col-6 col-md-3 col-xl-2">
                             <a href="{{ route('sales.create') }}" class="btn btn-outline-success w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-plus-circle fs-24"></i>
                                 <span class="fs-sm fw-semibold">New Sale</span>
                             </a>
                         </div>
+                        @endpermission
+                        @permission('purchases.create')
                         <div class="col-6 col-md-3 col-xl-2">
                             <a href="{{ route('purchases.create') }}" class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-truck-delivery fs-24"></i>
                                 <span class="fs-sm fw-semibold">New Purchase</span>
                             </a>
                         </div>
+                        @endpermission
+                        @permission('products.create')
                         <div class="col-6 col-md-3 col-xl-2">
                             <a href="{{ route('products.create') }}" class="btn btn-outline-warning w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-diamond fs-24"></i>
                                 <span class="fs-sm fw-semibold">Add Product</span>
                             </a>
                         </div>
+                        @endpermission
+                        @permission('suppliers.create')
                         <div class="col-6 col-md-3 col-xl-2">
                             <a href="{{ route('suppliers.create') }}" class="btn btn-outline-secondary w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-building fs-24"></i>
                                 <span class="fs-sm fw-semibold">Add Supplier</span>
                             </a>
                         </div>
+                        @endpermission
+                        @permission('customers.create')
                         <div class="col-6 col-md-3 col-xl-2">
                             <a href="{{ route('customers.create') }}" class="btn btn-outline-info w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-user-plus fs-24"></i>
                                 <span class="fs-sm fw-semibold">Add Customer</span>
                             </a>
                         </div>
+                        @endpermission
+                        @permission('stock.view')
                         <div class="col-6 col-md-3 col-xl-2">
                             <a href="{{ route('stock.index') }}" class="btn btn-outline-dark w-100 py-3 d-flex flex-column align-items-center gap-1 dashboard-quick-action">
                                 <i class="ti ti-stack-2 fs-24"></i>
                                 <span class="fs-sm fw-semibold">View Stock</span>
                             </a>
                         </div>
+                        @endpermission
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    @endanypermission
     {{-- end quick actions --}}
 
 </div>
@@ -491,10 +547,27 @@
 @push('scripts')
 @php
     $chartMonths       = $months;
-    $chartSalesData    = $salesData;
-    $chartPurchaseData = $purchaseData;
     $todaySales        = $todaySalesCount;
     $todayPurchases    = $todayPurchaseCount;
+
+    $trendSeries = [];
+    if ($canSales) {
+        $trendSeries[] = ['name' => 'Sales', 'data' => $salesData];
+    }
+    if ($canPurchases) {
+        $trendSeries[] = ['name' => 'Purchases', 'data' => $purchaseData];
+    }
+
+    $todaySeries = [];
+    $todayLabels = [];
+    if ($canSales) {
+        $todaySeries[] = $todaySales;
+        $todayLabels[] = 'Sales Today';
+    }
+    if ($canPurchases) {
+        $todaySeries[] = $todayPurchases;
+        $todayLabels[] = 'Purchases Today';
+    }
 @endphp
 <script>
 (function () {
@@ -506,11 +579,11 @@
     var textCol  = isDark ? '#adb5bd' : '#6c757d';
 
     /* ── 12-Month Sales vs Purchases area chart ─────────────────── */
+    var trendSeries = @json($trendSeries);
+    var trendEl = document.querySelector('#dashboard-trend-chart');
+    if (trendEl && trendSeries.length) {
     var trendOptions = {
-        series: [
-            { name: 'Sales',     data: @json($chartSalesData) },
-            { name: 'Purchases', data: @json($chartPurchaseData) }
-        ],
+        series: trendSeries,
         chart: {
             type: 'area',
             height: 280,
@@ -564,13 +637,17 @@
         }
     };
 
-    var trendChart = new ApexCharts(document.querySelector('#dashboard-trend-chart'), trendOptions);
+    var trendChart = new ApexCharts(trendEl, trendOptions);
     trendChart.render();
+    }
 
     /* ── Today's donut chart ────────────────────────────────────── */
+    var todaySeries = @json($todaySeries);
+    var todayEl = document.querySelector('#dashboard-today-chart');
+    if (todayEl && todaySeries.length) {
     var todayOptions = {
-        series:  [@json($todaySales), @json($todayPurchases)],
-        labels:  ['Sales Today', 'Purchases Today'],
+        series:  todaySeries,
+        labels:  @json($todayLabels),
         chart: {
             type: 'donut',
             height: 180,
@@ -602,8 +679,9 @@
         }
     };
 
-    var todayChart = new ApexCharts(document.querySelector('#dashboard-today-chart'), todayOptions);
+    var todayChart = new ApexCharts(todayEl, todayOptions);
     todayChart.render();
+    }
 
 })();
 </script>

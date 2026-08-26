@@ -19,7 +19,7 @@
       <div style="padding:14px 18px;background:rgba(80,200,130,.1);border:1px solid rgba(80,200,130,.25);border-radius:4px;font-size:13px;color:#7ec87e;margin-bottom:20px">{{ session('success') }}</div>
     @endif
 
-    <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:6px;padding:36px">
+    <div class="sg-auth-card" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:6px;padding:36px">
 
       @if($errors->any())
         <div style="padding:14px 18px;background:rgba(220,80,80,.1);border:1px solid rgba(220,80,80,.25);border-radius:4px;font-size:13px;color:#e07070;margin-bottom:24px">
@@ -62,8 +62,11 @@
 
 @push('head_styles')
 <style>
-.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(0,191,176,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:12px 16px;outline:none;transition:border .3s;display:block}
+.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(0,191,176,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:12px 16px;outline:none;transition:border .3s;display:block;min-height:44px}
 .sg-input:focus{border-color:var(--teal-400)}
+@media(max-width:480px){
+  .sg-auth-card{padding:24px !important}
+}
 </style>
 @endpush
 @endsection

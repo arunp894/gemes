@@ -3,12 +3,12 @@
 @section('title', 'Edit Profile — Sukaina Gems')
 
 @section('content')
-<div style="min-height:calc(100vh - 64px);padding:60px;background:var(--dark-900)">
+<div class="sg-editprofile-wrap" style="min-height:calc(100vh - 64px);padding:60px;background:var(--dark-900)">
   <div style="max-width:800px;margin:0 auto">
 
     <div style="margin-bottom:32px">
       <a href="{{ route('website.account.profile') }}" style="font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal-300);text-decoration:none">← Back to Profile</a>
-      <h1 style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;color:var(--white);margin-top:10px">Edit Profile</h1>
+      <h1 class="sg-editprofile-title" style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;color:var(--white);margin-top:10px">Edit Profile</h1>
     </div>
 
     @if(session('success'))
@@ -22,14 +22,14 @@
     @endif
 
     {{-- Profile form --}}
-    <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:32px;margin-bottom:24px">
+    <div class="sg-editprofile-card" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:32px;margin-bottom:24px">
       <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(0,191,176,.08)">Personal Information</div>
 
       <form method="POST" action="{{ route('website.account.update') }}">
         @csrf
         @method('PATCH')
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+        <div class="sg-form-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
           <div>
             <label class="sg-label">Full Name *</label>
             <input type="text" name="name" value="{{ old('name', $customer->name) }}" required class="sg-input">
@@ -54,7 +54,7 @@
           <label class="sg-label">Address Line 2</label>
           <input type="text" name="address_line2" value="{{ old('address_line2', $customer->address_line2) }}" class="sg-input" placeholder="Apt, Suite, etc.">
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="sg-form-grid-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
           <div>
             <label class="sg-label">City</label>
             <input type="text" name="city" value="{{ old('city', $customer->city) }}" class="sg-input">
@@ -78,14 +78,14 @@
     </div>
 
     {{-- Change password --}}
-    <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:32px">
+    <div class="sg-editprofile-card" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:32px">
       <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(0,191,176,.08)">Change Password</div>
 
       <form method="POST" action="{{ route('website.account.change-password') }}">
         @csrf
         @method('PATCH')
 
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px">
+        <div class="sg-form-grid-3" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px">
           <div>
             <label class="sg-label">Current Password</label>
             <input type="password" name="current_password" class="sg-input" placeholder="Current password">
@@ -110,8 +110,20 @@
 @push('head_styles')
 <style>
 .sg-label{display:block;font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-dim);margin-bottom:8px}
-.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(0,191,176,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border .3s;display:block}
+.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(0,191,176,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border .3s;display:block;min-height:44px}
 .sg-input:focus{border-color:var(--teal-400)}
+@media(max-width:1024px){
+  .sg-editprofile-wrap{padding:40px 24px !important}
+}
+@media(max-width:768px){
+  .sg-editprofile-title{font-size:28px !important}
+  .sg-form-grid-2,.sg-form-grid-3{grid-template-columns:1fr !important}
+  .sg-editprofile-card{padding:24px !important}
+}
+@media(max-width:480px){
+  .sg-editprofile-wrap{padding:28px 16px !important}
+  .sg-editprofile-card{padding:20px !important}
+}
 </style>
 @endpush
 @endsection

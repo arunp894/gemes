@@ -38,6 +38,39 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
 .sg-icon-btn{background:none;border:none;cursor:pointer;color:var(--white-dim);font-size:18px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all .3s;position:relative;text-decoration:none}
 .sg-icon-btn:hover{color:var(--teal-300);background:var(--white-ghost)}
 
+/* Mobile menu toggle (hamburger) */
+.sg-menu-toggle{display:none;background:none;border:none;cursor:pointer;color:var(--white);width:38px;height:38px;align-items:center;justify-content:center;border-radius:50%;transition:all .3s;position:relative;flex-direction:column;gap:5px}
+.sg-menu-toggle:hover{background:var(--white-ghost)}
+.sg-menu-toggle span{display:block;width:20px;height:1.5px;background:var(--white);transition:all .3s cubic-bezier(.4,0,.2,1)}
+.sg-menu-toggle.open span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+.sg-menu-toggle.open span:nth-child(2){opacity:0}
+.sg-menu-toggle.open span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+
+/* Mobile off-canvas menu — mirrors the cart drawer's slide-in language */
+.sg-mobile-menu{position:fixed;top:0;right:0;bottom:0;width:320px;max-width:86vw;background:var(--dark-800);border-left:1px solid rgba(0,191,176,.15);z-index:2000;transform:translateX(100%);transition:transform .4s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow-y:auto}
+.sg-mobile-menu.open{transform:translateX(0)}
+.sg-mobile-menu-header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid rgba(0,191,176,.1);flex-shrink:0}
+.sg-mobile-menu-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;letter-spacing:1px;text-transform:uppercase}
+.sg-mobile-menu-title em{color:var(--teal-300);font-style:italic}
+.sg-mobile-menu-links{list-style:none;padding:12px 8px;flex:1}
+.sg-mobile-menu-links li{border-bottom:1px solid rgba(0,191,176,.06)}
+.sg-mobile-menu-links a{display:block;padding:16px 16px;text-decoration:none;color:var(--white-dim);font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;letter-spacing:.5px;transition:all .3s;opacity:0;transform:translateX(16px)}
+.sg-mobile-menu.open .sg-mobile-menu-links a{opacity:1;transform:translateX(0)}
+.sg-mobile-menu-links a:hover,.sg-mobile-menu-links a.active{color:var(--teal-300);padding-left:22px}
+.sg-mobile-menu-links a.active::before{content:'✦ ';color:var(--teal-400);font-size:13px}
+.sg-mobile-menu-foot{padding:20px 24px;border-top:1px solid rgba(0,191,176,.1);display:flex;gap:10px;flex-shrink:0}
+.sg-mobile-menu-foot a{flex:1;display:flex;align-items:center;justify-content:center;gap:8px}
+
+/* Mobile bottom nav bar — thumb-reach quick access, mobile only */
+.sg-bottom-nav{display:none;position:fixed;left:0;right:0;bottom:0;z-index:1500;background:rgba(7,20,16,.97);backdrop-filter:blur(20px);border-top:1px solid rgba(0,191,176,.15);padding:6px 4px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,.3)}
+.sg-bottom-nav-inner{display:flex;align-items:center;justify-content:space-around}
+.sg-bottom-nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;flex:1;background:none;border:none;cursor:pointer;color:var(--white-faint);text-decoration:none;font-family:'Jost',sans-serif;font-size:10px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;padding:7px 4px;position:relative;transition:color .25s}
+.sg-bottom-nav-item .sg-bnav-icon{font-size:19px;line-height:1;transition:transform .25s}
+.sg-bottom-nav-item:hover,.sg-bottom-nav-item.active{color:var(--teal-300)}
+.sg-bottom-nav-item.active .sg-bnav-icon{transform:translateY(-2px)}
+.sg-bottom-nav-item.active::after{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:18px;height:2px;border-radius:2px;background:var(--teal-400)}
+.sg-bottom-nav-item .sg-cart-badge{top:2px;right:calc(50% - 20px)}
+
 /* Cart badge */
 .sg-cart-badge{position:absolute;top:3px;right:3px;width:16px;height:16px;border-radius:50%;background:var(--teal-500);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center;line-height:1}
 
@@ -127,6 +160,15 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
 /* DIVIDER */
 .sg-divider{height:1px;background:linear-gradient(90deg,transparent,rgba(0,191,176,.18),transparent);margin:0 60px}
 
+/* Stagger the mobile menu link reveal for a bit of polish */
+.sg-mobile-menu-links li:nth-child(1) a{transition-delay:.05s}
+.sg-mobile-menu-links li:nth-child(2) a{transition-delay:.1s}
+.sg-mobile-menu-links li:nth-child(3) a{transition-delay:.15s}
+.sg-mobile-menu-links li:nth-child(4) a{transition-delay:.2s}
+.sg-mobile-menu-links li:nth-child(5) a{transition-delay:.25s}
+.sg-mobile-menu-links li:nth-child(6) a{transition-delay:.3s}
+.sg-mobile-menu-links li:nth-child(7) a{transition-delay:.35s}
+
 @media(max-width:1024px){
   .sg-product-grid{grid-template-columns:repeat(3,1fr)}
   .sg-nav{padding:0 24px}
@@ -137,6 +179,22 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
 @media(max-width:768px){
   .sg-product-grid{grid-template-columns:repeat(2,1fr)}
   .sg-nav-links{display:none}
+  .sg-menu-toggle{display:flex}
+  .sg-bottom-nav{display:block}
+  .sg-main{padding-bottom:64px}
+  .sg-footer{padding-bottom:64px}
+  .sg-footer-grid{grid-template-columns:1fr;gap:36px;text-align:left}
+  .sg-footer-bottom{flex-direction:column;gap:8px;text-align:center}
+  .sg-section{padding:56px 0}
+  .sg-section-title{font-size:32px}
+}
+@media(max-width:480px){
+  .sg-nav{padding:0 16px}
+  .sg-container{padding:0 16px}
+  .sg-divider{margin:0 16px}
+  .sg-product-grid{grid-template-columns:repeat(2,1fr);gap:1px}
+  .sg-logo-text{font-size:16px;letter-spacing:1px}
+  .sg-mobile-menu{width:100%;max-width:100%}
 }
 </style>
 @stack('head_styles')
@@ -152,8 +210,6 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
   <div class="sg-nav-links">
     <a href="{{ route('website.home') }}"        class="{{ request()->routeIs('website.home')        ? 'active' : '' }}">Home</a>
     <a href="{{ route('website.collections') }}" class="{{ request()->routeIs('website.collections') ? 'active' : '' }}">Collections</a>
-    <a href="{{ route('website.collections', ['category' => 'paraiba']) }}">Paraiba</a>
-    <a href="{{ route('website.collections', ['category' => 'tanzanite']) }}">Tanzanite</a>
     <a href="{{ route('website.blog.index') }}" class="{{ request()->routeIs('website.blog.*') ? 'active' : '' }}">Journal</a>
     <a href="{{ route('website.pages.show', \App\Models\Page::SLUG_ABOUT_US) }}">About</a>
     <a href="#">Contact</a>
@@ -175,8 +231,35 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
       <span class="sg-cart-badge" id="sgCartBadge" style="{{ count($cart) > 0 ? '' : 'display:none' }}">{{ count($cart) }}</span>
     </button>
     @endif
+
+    <button class="sg-menu-toggle" id="sgMenuToggle" title="Menu" aria-label="Open menu" onclick="toggleMobileMenu()">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
+
+{{-- MOBILE MENU (off-canvas) --}}
+<div class="sg-drawer-overlay" id="sgMenuOverlay" onclick="closeMobileMenu()"></div>
+<div class="sg-mobile-menu" id="sgMobileMenu">
+  <div class="sg-mobile-menu-header">
+    <span class="sg-mobile-menu-title">✦ <em>Menu</em></span>
+    <button class="sg-drawer-close" onclick="closeMobileMenu()" aria-label="Close menu">✕</button>
+  </div>
+  <ul class="sg-mobile-menu-links">
+    <li><a href="{{ route('website.home') }}" class="{{ request()->routeIs('website.home') ? 'active' : '' }}">Home</a></li>
+    <li><a href="{{ route('website.collections') }}" class="{{ request()->routeIs('website.collections') ? 'active' : '' }}">Collections</a></li>
+    <li><a href="{{ route('website.blog.index') }}" class="{{ request()->routeIs('website.blog.*') ? 'active' : '' }}">Journal</a></li>
+    <li><a href="{{ route('website.pages.show', \App\Models\Page::SLUG_ABOUT_US) }}">About</a></li>
+    <li><a href="#">Contact</a></li>
+  </ul>
+  <div class="sg-mobile-menu-foot">
+    @if(auth('customer')->check())
+      <a href="{{ route('website.account.profile') }}" class="sg-btn-outline">👤 My Account</a>
+    @else
+      <a href="{{ route('website.auth.login') }}" class="sg-btn-outline">👤 Sign In</a>
+    @endif
+  </div>
+</div>
 
 {{-- CART DRAWER --}}
 @if($settings->bool('cart_enabled', true))
@@ -226,6 +309,39 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
   </div>
 </div>
 @endif
+
+{{-- MOBILE BOTTOM NAV — thumb-reach quick access, hidden on desktop --}}
+<nav class="sg-bottom-nav" aria-label="Mobile quick navigation">
+  <div class="sg-bottom-nav-inner">
+    <a href="{{ route('website.home') }}" class="sg-bottom-nav-item {{ request()->routeIs('website.home') ? 'active' : '' }}">
+      <span class="sg-bnav-icon">⌂</span><span>Home</span>
+    </a>
+    <a href="{{ route('website.collections') }}" class="sg-bottom-nav-item {{ request()->routeIs('website.collections') ? 'active' : '' }}">
+      <span class="sg-bnav-icon">◈</span><span>Shop</span>
+    </a>
+    @if($settings->bool('cart_enabled', true))
+    <button class="sg-bottom-nav-item" onclick="openCartDrawer()" type="button">
+      <span class="sg-bnav-icon" style="position:relative;display:inline-block">
+        🛒
+        <span class="sg-cart-badge" id="sgCartBadgeBottom" style="{{ count($cart) > 0 ? '' : 'display:none' }}">{{ count($cart) }}</span>
+      </span>
+      <span>Cart</span>
+    </button>
+    @endif
+    @if(auth('customer')->check())
+      <a href="{{ route('website.account.profile') }}" class="sg-bottom-nav-item {{ request()->routeIs('website.account.*') ? 'active' : '' }}">
+        <span class="sg-bnav-icon">👤</span><span>Account</span>
+      </a>
+    @else
+      <a href="{{ route('website.auth.login') }}" class="sg-bottom-nav-item">
+        <span class="sg-bnav-icon">👤</span><span>Sign In</span>
+      </a>
+    @endif
+    <button class="sg-bottom-nav-item" onclick="toggleMobileMenu()" type="button">
+      <span class="sg-bnav-icon">☰</span><span>Menu</span>
+    </button>
+  </div>
+</nav>
 
 <main class="sg-main">
   @yield('content')
@@ -309,11 +425,39 @@ function closeCartDrawer() {
   document.body.style.overflow = '';
 }
 
+// ── Mobile off-canvas menu ──────────────────────────────────────────
+function toggleMobileMenu() {
+  var isOpen = document.getElementById('sgMobileMenu').classList.contains('open');
+  if (isOpen) { closeMobileMenu(); } else { openMobileMenu(); }
+}
+function openMobileMenu() {
+  document.getElementById('sgMobileMenu').classList.add('open');
+  document.getElementById('sgMenuOverlay').classList.add('open');
+  document.getElementById('sgMenuToggle').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeMobileMenu() {
+  document.getElementById('sgMobileMenu').classList.remove('open');
+  document.getElementById('sgMenuOverlay').classList.remove('open');
+  document.getElementById('sgMenuToggle').classList.remove('open');
+  document.body.style.overflow = '';
+}
+// Close the menu automatically when a link is tapped, and if the
+// viewport is resized back up to desktop while it's open.
+document.querySelectorAll('.sg-mobile-menu-links a').forEach(function (a) {
+  a.addEventListener('click', closeMobileMenu);
+});
+window.addEventListener('resize', function () {
+  if (window.innerWidth > 768) closeMobileMenu();
+});
+
 function updateCartBadge(count) {
-  var badge = document.getElementById('sgCartBadge');
-  var dcnt  = document.getElementById('drawerCount');
-  if (badge) { badge.textContent = count; badge.style.display = count > 0 ? '' : 'none'; }
-  if (dcnt)  { dcnt.textContent = '(' + count + ')'; }
+  var badge  = document.getElementById('sgCartBadge');
+  var badge2 = document.getElementById('sgCartBadgeBottom');
+  var dcnt   = document.getElementById('drawerCount');
+  if (badge)  { badge.textContent = count; badge.style.display = count > 0 ? '' : 'none'; }
+  if (badge2) { badge2.textContent = count; badge2.style.display = count > 0 ? '' : 'none'; }
+  if (dcnt)   { dcnt.textContent = '(' + count + ')'; }
 }
 
 /**
