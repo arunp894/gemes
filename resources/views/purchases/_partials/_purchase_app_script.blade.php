@@ -53,10 +53,10 @@
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
     // ── Helpers ─────────────────────────────────────────────────────
-    function emptyRow(caratDefault, websitePriceDefault, barcodeDefault, priceDefault, websiteEnabledDefault) {
+    function emptyRow(caratDefault, websitePriceDefault, barcodeDefault, priceDefault, websiteEnabledDefault, qtyDefault) {
         return {
             id:               null,
-            qty:              1,
+            qty:              (qtyDefault !== undefined && qtyDefault !== null) ? qtyDefault : 1,
             carat_weight:     (caratDefault !== undefined && caratDefault !== null) ? caratDefault : null,
             barcode:          (barcodeDefault !== undefined && barcodeDefault !== null && barcodeDefault !== '') ? barcodeDefault : '',
             rack_id:          null,
@@ -77,7 +77,7 @@
 
     // A brand-new line added straight into the Purchase Items table —
     // Stone/Type/Country/etc. all start blank and are filled in inline
-    // (see addBlankLine()). Defaults to Box/Pcs 1, the more common case;
+    // (see addBlankLine()). Defaults to Piece, the more common case;
     // gemstone grading fields are never collected here (see file header).
     function emptyLine() {
         return {
@@ -99,8 +99,8 @@
             stone_description:  null,
             _highlight:         true,
             _expanded:          false,
-            type:               'box',
-            package_name:       'Box',
+            type:               'piece',
+            package_name:       'Piece',
             package_qty:        1,
             remarks:            null,
             rows:               [emptyRow()],
@@ -155,6 +155,60 @@
             })),
         }));
     }
+
+    // ── Searchable-select directive ─────────────────────────────────
+    // Wraps a plain <select v-model="..."> with Select2 for search-as-you-type.
+    // Deliberately does NOT write to the Vue model itself — it just makes
+    // Select2 dispatch a genuine native 'change' event on the underlying
+    // <select> when the user picks/clears a value, which is exactly what a
+    // native dropdown interaction does, so the element's own existing
+    // v-model / @change bindings keep working completely unchanged. This
+    // also means it's safe to reuse on any <select v-model> in this form
+    // (supplier, and the per-row Stone / Country of Origin pickers, which
+    // are created and destroyed dynamically as lines are added/removed).
+    Vue.directive('select2', {
+        inserted(el) {
+            const $el = $(el);
+            $el.select2({
+                width: '100%',
+                placeholder: el.dataset.placeholder || 'Search…',
+                allowClear: true,
+            }).on('select2:select select2:clear', function () {
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+            el.dataset.select2LastValue = $el.val() || '';
+        },
+        componentUpdated(el) {
+            // v-for rows are keyed by index ('l-' + li), so removing a line
+            // from the middle of the list (removeLine() -> splice) shifts
+            // every later line down a position — Vue then reuses that DOM
+            // node in place for the shifted line's data instead of
+            // recreating it, which changes the underlying <select>'s value
+            // without the user ever touching this particular widget.
+            // Select2 caches its own displayed label, so it needs to be
+            // told to re-read the value — but only when it actually
+            // changed underneath it; this hook fires on every reactive
+            // update anywhere in the form, so an unconditional refresh
+            // here would be needlessly expensive.
+            const $el = $(el);
+            const current = $el.val() || '';
+            if (current !== el.dataset.select2LastValue) {
+                el.dataset.select2LastValue = current;
+                // Namespaced trigger: reaches only Select2's own internal
+                // listener (bound as 'change.select2'), not the element's
+                // native v-model/@change listener — Vue's model is already
+                // correct here (it drove this very value change), only
+                // Select2's cached display needs to catch up.
+                $el.trigger('change.select2');
+            }
+        },
+        unbind(el) {
+            const $el = $(el);
+            if ($el.hasClass('select2-hidden-accessible')) {
+                $el.select2('destroy');
+            }
+        },
+    });
 
     // ── Vue instance ────────────────────────────────────────────────
     new Vue({
@@ -266,6 +320,37 @@
         },
 
         methods: {
+
+            /* ─── Toasts ────────────────────────────────────────── */
+
+            showToast(type, message) {
+                const container = document.getElementById('purchaseToastContainer');
+                if (!container) return;
+                const isSuccess = type === 'success';
+                const el = document.createElement('div');
+                el.className = 'toast align-items-center border-0 text-bg-' + (isSuccess ? 'success' : 'danger');
+                el.setAttribute('role', 'alert');
+                el.setAttribute('aria-live', 'assertive');
+                el.setAttribute('aria-atomic', 'true');
+                el.innerHTML = '<div class="d-flex">'
+                    + '<div class="toast-body d-flex align-items-center gap-2">'
+                    + '<i class="ti ' + (isSuccess ? 'ti-circle-check' : 'ti-alert-circle') + ' fs-lg"></i>'
+                    + $('<div/>').text(message).html()
+                    + '</div>'
+                    + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>'
+                    + '</div>';
+                container.appendChild(el);
+                const toast = new bootstrap.Toast(el, { delay: 2500 });
+                el.addEventListener('hidden.bs.toast', () => el.remove());
+                toast.show();
+            },
+
+            /* ─── Row actions ───────────────────────────────────── */
+
+            toggleRowWebsite(row) {
+                row.website_enabled = !row.website_enabled;
+                this.showToast('success', row.website_enabled ? 'Listed on website.' : 'Removed from website.');
+            },
 
             /* ─── Money / row math ──────────────────────────────── */
 
@@ -425,6 +510,27 @@
 
             /* ─── Row management ─────────────────────────────────── */
 
+            selectLineType(li, type) {
+                const line = this.form.lines[li];
+                if (line.type === type) return;
+                line.type = type;
+
+                // Switching TO Box: whatever Pcs/Carat/Price/Selling Price
+                // were entered for a single Piece don't carry meaning once
+                // this line fans out into one row per box, so start clean
+                // rather than silently carrying stale values forward.
+                if (type === 'box') {
+                    line.rows.forEach(row => {
+                        this.$set(row, 'qty', 0);
+                        this.$set(row, 'carat_weight', 0);
+                        this.$set(row, 'price', 0);
+                        this.$set(row, 'website_price', 0);
+                    });
+                }
+
+                this.rebuildRows(li);
+            },
+
             rebuildRows(lineIdx) {
                 const line = this.form.lines[lineIdx];
                 line.package_name = line.type === 'piece' ? 'Piece' : 'Box';
@@ -445,17 +551,28 @@
                 if (line.rows.length < expected) {
                     while (line.rows.length < expected) {
                         const t = line.rows[line.rows.length - 1];
-                        const row = emptyRow(
-                            t ? t.carat_weight : line.carat_weight,
-                            t ? t.website_price : line.website_price,
-                            undefined,
-                            undefined,
-                            t ? t.website_enabled : line.website_enabled
-                        );
+
+                        // Box lines: every fanned-out row is its own distinct
+                        // physical unit, not a duplicate of the last one, so
+                        // it always starts at 0 — never copied from whatever
+                        // the previous row currently holds (that previous
+                        // row's own value may itself be stale/mid-edit).
+                        const row = (line.type === 'box')
+                            ? emptyRow(0, 0, undefined, 0, t ? t.website_enabled : line.website_enabled, 0)
+                            : emptyRow(
+                                t ? t.carat_weight : line.carat_weight,
+                                t ? t.website_price : line.website_price,
+                                undefined,
+                                undefined,
+                                t ? t.website_enabled : line.website_enabled
+                              );
+
                         if (t) {
                             row.rack_id     = t.rack_id;
-                            row.price       = t.price;
                             row.expiry_date = t.expiry_date;
+                            if (line.type !== 'box') {
+                                row.price = t.price;
+                            }
                         }
                         line.rows.push(row);
                     }

@@ -16,12 +16,23 @@ class ChannelController extends Controller
 
     public function index(): View
     {
-        return view('channels.index');
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = Channel::selectRaw('COUNT(*) as total, SUM(status = 1) as active, SUM(status = 0) as inactive')
+            ->first();
+
+        $stats = [
+            'channels_total'    => (int) $counts->total,
+            'channels_active'   => (int) $counts->active,
+            'channels_inactive' => (int) $counts->inactive,
+        ];
+
+        return view('channels.index', compact('stats'));
     }
 
     public function data(Request $request): JsonResponse
     {
-        $q = Channel::query();
+        $q = Channel::query()
+            ->withCount(['sales as sales_count' => fn ($query) => $query->withTrashed()]);
 
         if ($request->filled('status') && $request->query('status') !== '') {
             $q->where('status', (bool) $request->query('status'));
@@ -30,43 +41,46 @@ class ChannelController extends Controller
         return DataTables::eloquent($q)
             ->addIndexColumn()
             ->addColumn('icon_preview', fn(Channel $c) =>
-                $c->icon ? '<i class="' . e($c->icon) . ' fs-lg me-1"></i>' : ''
+                $c->icon
+                    ? '<span class="channel-icon-badge"><i class="' . e($c->icon) . '"></i></span>'
+                    : '<span class="channel-icon-badge channel-icon-empty"><i class="ti ti-broadcast"></i></span>'
+            )
+            ->editColumn('name', fn(Channel $c) =>
+                '<span class="channel-name">' . e($c->name) . '</span>'
             )
             ->editColumn('status', fn(Channel $c) =>
-                '<span class="badge ' . ($c->isActive() ? 'badge-soft-success' : 'badge-soft-secondary') . ' fs-xxs">'
-                . e($c->statusLabel()) . '</span>'
+                '<span class="status-pill ' . ($c->isActive() ? 'status-active' : 'status-inactive') . '">'
+                . '<span class="status-dot"></span>' . e($c->statusLabel()) . '</span>'
             )
-            ->addColumn('sales_count', fn(Channel $c) =>
-                $c->sales()->withTrashed()->count()
-            )
+            ->addColumn('sales_count', fn(Channel $c) => $c->sales_count)
             ->addColumn('actions', function (Channel $c) {
                 $canEdit   = auth()->user()?->hasPermission('channels.edit')   ?? false;
                 $canDelete = auth()->user()?->hasPermission('channels.delete') ?? false;
 
                 $html  = '<div class="d-flex gap-1 justify-content-center">';
-                $html .= '<a href="' . route('channels.show', $c) . '" class="btn btn-default btn-icon btn-sm" title="View"><i class="ti ti-eye fs-lg"></i></a>';
+                $html .= '<a href="' . route('channels.show', $c) . '" class="action-btn action-view" title="View"><i class="ti ti-eye"></i></a>';
                 if ($canEdit) {
-                    $html .= '<a href="' . route('channels.edit', $c) . '" class="btn btn-default btn-icon btn-sm" title="Edit"><i class="ti ti-edit fs-lg"></i></a>';
+                    $html .= '<a href="' . route('channels.edit', $c) . '" class="action-btn action-edit" title="Edit"><i class="ti ti-edit"></i></a>';
                 }
                 if ($canEdit) {
                     $toggle = $c->isActive() ? 'Deactivate' : 'Activate';
-                    $html .= '<button type="button" class="btn btn-default btn-icon btn-sm js-toggle-channel text-' . ($c->isActive() ? 'warning' : 'success') . '"'
+                    $html .= '<button type="button" class="action-btn action-toggle js-toggle-channel"'
                         . ' data-url="' . route('channels.toggle-status', $c) . '"'
                         . ' title="' . $toggle . '">'
-                        . '<i class="ti ti-' . ($c->isActive() ? 'eye-off' : 'eye') . ' fs-lg"></i>'
+                        . '<i class="ti ti-' . ($c->isActive() ? 'eye-off' : 'eye') . '"></i>'
                         . '</button>';
                 }
                 if ($canDelete) {
-                    $html .= '<button type="button" class="btn btn-default btn-icon btn-sm js-delete-channel text-danger"'
+                    $html .= '<button type="button" class="action-btn action-delete js-delete-channel"'
                         . ' data-url="' . route('channels.destroy', $c) . '"'
                         . ' data-name="' . e($c->name) . '"'
                         . ($c->hasSales() ? ' data-has-sales="1"' : '')
-                        . ' title="Delete"><i class="ti ti-trash fs-lg"></i></button>';
+                        . ' title="Delete"><i class="ti ti-trash"></i></button>';
                 }
                 $html .= '</div>';
                 return $html;
             })
-            ->rawColumns(['icon_preview', 'status', 'actions'])
+            ->rawColumns(['icon_preview', 'name', 'status', 'actions'])
             ->toJson();
     }
 

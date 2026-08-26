@@ -147,7 +147,7 @@ class PurchaseProduct extends Model
 
     /**
      * Generate this row's lot/tracking code. Format: SS-CCC-UUU
-     *   SS  = first two letters of the supplier's display name
+     *   SS  = last two letters of the supplier's display name
      *   CCC = this category's sequence number for that supplier —
      *         assigned once per (supplier, category) pair and reused on
      *         every later purchase in the same category from the same
@@ -165,9 +165,9 @@ class PurchaseProduct extends Model
      * segment ("the Nth distinct thing we've bought from this
      * supplier").
      *
-     * NOTE: two suppliers sharing their first two letters (e.g. "Amber
-     * Gems" and "Amber Traders") can produce identical codes — the format
-     * only carries 2 letters of supplier identity, so this is a known
+     * NOTE: two suppliers sharing their last two letters (e.g. "Blue Gems"
+     * and "Red Gems") can produce identical codes — the format only
+     * carries 2 letters of supplier identity, so this is a known
      * limitation of the requested scheme, not a bug.
      *
      * Must be called inside the same DB transaction as the row's save()
@@ -226,7 +226,7 @@ class PurchaseProduct extends Model
     {
         $name    = $supplier->company_name ?: $supplier->name ?: '';
         $letters = strtoupper(preg_replace('/[^A-Za-z]/', '', $name));
-        $prefix  = str_pad(substr($letters, 0, 2), 2, 'X') . '-';
+        $prefix  = str_pad(substr($letters, -2), 2, 'X') . '-';
 
         // Has this exact (supplier, category) pair already been assigned
         // a sequence number under this prefix? Reuse it if so — including

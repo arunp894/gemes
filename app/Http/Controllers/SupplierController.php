@@ -32,7 +32,17 @@ class SupplierController extends Controller
      */
     public function index(): View
     {
-        return view('suppliers.index');
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = Supplier::selectRaw('COUNT(*) as total, SUM(status = 1) as active, SUM(status = 0) as inactive')
+            ->first();
+
+        $stats = [
+            'suppliers_total'    => (int) $counts->total,
+            'suppliers_active'   => (int) $counts->active,
+            'suppliers_inactive' => (int) $counts->inactive,
+        ];
+
+        return view('suppliers.index', compact('stats'));
     }
 
     /**
@@ -52,26 +62,16 @@ class SupplierController extends Controller
                 return '<code class="text-muted">' . e($supplier->supplier_code) . '</code>';
             })
             ->editColumn('name', function (Supplier $supplier) {
-                $initial = strtoupper(mb_substr($supplier->display_name, 0, 1) ?: '?');
-                $sub     = $supplier->company_name && $supplier->name !== $supplier->company_name
+                $sub = $supplier->company_name && $supplier->name !== $supplier->company_name
                     ? e($supplier->name)
                     : ($supplier->email ? e($supplier->email) : e($supplier->phone));
 
                 return '
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-sm me-2">
-                            <span class="avatar-title bg-primary-subtle text-primary rounded-circle fw-bold">'
-                    . e($initial) .
-                    '</span>
-                        </div>
-                        <div>
-                            <h5 class="mb-0 fs-base">
-                                <a href="' . route('suppliers.show', $supplier) . '" class="link-reset">'
+                    <div class="supplier-name-cell">
+                        <a href="' . route('suppliers.show', $supplier) . '" class="supplier-name-link">'
                     . e($supplier->display_name) .
                     '</a>
-                            </h5>
-                            <small class="text-muted">' . $sub . '</small>
-                        </div>
+                        <small class="d-block text-muted">' . $sub . '</small>
                     </div>
                 ';
             })
@@ -91,9 +91,9 @@ class SupplierController extends Controller
                 return '<span class="fw-medium">' . $this->settings->formatMoney($supplier->credit_limit) . '</span>';
             })
             ->addColumn('status_badge', function (Supplier $supplier) {
-                $class = $supplier->statusBadgeClass();
+                $class = $supplier->isActive() ? 'status-pill status-active' : 'status-pill status-inactive';
                 $label = $supplier->statusLabel();
-                return '<span class="badge ' . $class . ' fs-xxs">' . $label . '</span>';
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . $label . '</span>';
             })
             ->editColumn('created_at', function (Supplier $supplier) {
                 return optional($supplier->created_at)->format('d M, Y') ?? '—';
@@ -108,19 +108,19 @@ class SupplierController extends Controller
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
-                        <a href="' . $show . '" class="btn btn-default btn-icon btn-sm" title="View">
-                            <i class="ti ti-eye fs-lg"></i>
+                        <a href="' . $show . '" class="action-btn action-view" title="View">
+                            <i class="ti ti-eye"></i>
                         </a>
-                        <a href="' . $edit . '" class="btn btn-default btn-icon btn-sm" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
+                        <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
+                            <i class="ti ti-edit"></i>
                         </a>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-toggle-status"
+                        <button type="button" class="action-btn action-toggle js-toggle-status"
                             data-url="' . $toggle . '" title="Toggle Status">
-                            <i class="ti ' . $toggleIcon . ' fs-lg"></i>
+                            <i class="ti ' . $toggleIcon . '"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-delete text-danger"
+                        <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($supplier->display_name) . '" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
                 ';
@@ -208,11 +208,15 @@ class SupplierController extends Controller
     {
         $supplier->load(['creator', 'updater']);
 
+        $row = $supplier->purchases()
+            ->selectRaw("COUNT(*) as count, SUM(status = 'posted') as posted, COALESCE(SUM(grand_total),0) as total, COALESCE(SUM(due_amount),0) as due")
+            ->first();
+
         $purchaseStats = [
-            'count'  => $supplier->purchases()->count(),
-            'posted' => $supplier->purchases()->posted()->count(),
-            'total'  => (float) $supplier->purchases()->sum('grand_total'),
-            'due'    => (float) $supplier->purchases()->sum('due_amount'),
+            'count'  => (int) $row->count,
+            'posted' => (int) $row->posted,
+            'total'  => (float) $row->total,
+            'due'    => (float) $row->due,
         ];
 
         return view('suppliers.show', compact('supplier', 'purchaseStats'));
@@ -231,6 +235,12 @@ class SupplierController extends Controller
         if ($status = $request->query('status')) {
             $query->where('status', $status);
         }
+        if ($dateFrom = $request->query('date_from')) {
+            $query->whereDate('purchase_date', '>=', $dateFrom);
+        }
+        if ($dateTo = $request->query('date_to')) {
+            $query->whereDate('purchase_date', '<=', $dateTo);
+        }
 
         return DataTables::eloquent($query)
             ->addIndexColumn()
@@ -248,11 +258,16 @@ class SupplierController extends Controller
             ->editColumn('paid_amount', fn (Purchase $p) => $this->settings->formatMoney($p->paid_amount))
             ->editColumn('due_amount', fn (Purchase $p) => $this->settings->formatMoney($p->due_amount))
             ->addColumn('status_badge', function (Purchase $p) {
-                return '<span class="badge ' . $p->statusBadgeClass() . '">' . $p->statusLabel() . '</span>';
+                $class = match ($p->status) {
+                    'posted'    => 'status-pill status-posted',
+                    'cancelled' => 'status-pill status-cancelled',
+                    default     => 'status-pill status-draft',
+                };
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . $p->statusLabel() . '</span>';
             })
             ->addColumn('actions', function (Purchase $p) {
                 return '<div class="d-flex justify-content-center">'
-                    . '<a href="' . route('purchases.show', $p) . '" class="btn btn-sm btn-soft-secondary" title="View"><i class="ti ti-eye"></i></a>'
+                    . '<a href="' . route('purchases.show', $p) . '" class="action-btn action-view" title="View"><i class="ti ti-eye"></i></a>'
                     . '</div>';
             })
             ->rawColumns(['invoice_link', 'location_label', 'status_badge', 'actions'])

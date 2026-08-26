@@ -34,7 +34,18 @@ class ProductController extends Controller
     public function index(): View
     {
         $categories = Category::active()->ordered()->get(['id', 'name']);
-        return view('products.index', compact('categories'));
+
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = Product::selectRaw('COUNT(*) as total, SUM(status = 1) as active, SUM(status = 0) as draft')
+            ->first();
+
+        $stats = [
+            'products_total'  => (int) $counts->total,
+            'products_active' => (int) $counts->active,
+            'products_draft'  => (int) $counts->draft,
+        ];
+
+        return view('products.index', compact('categories', 'stats'));
     }
 
     /**
@@ -45,7 +56,7 @@ class ProductController extends Controller
     public function data(Request $request): JsonResponse
     {
         $query = Product::query()
-            ->with(['category', 'primaryBarcode']);
+            ->with(['category', 'primaryBarcode', 'media']);
 
         // Filter: category (direct match).
         if ($request->filled('category_id')) {
@@ -76,22 +87,20 @@ class ProductController extends Controller
             ->editColumn('title', function (Product $product) {
                 $thumb = $product->primary_thumb_url;
                 $imgHtml = $thumb
-                    ? '<img src="' . e($thumb) . '" alt="' . e($product->title) . '" class="img-fluid rounded" />'
-                    : '<span class="d-inline-flex align-items-center justify-content-center bg-light text-muted rounded w-100 h-100"><i class="ti ti-photo"></i></span>';
+                    ? '<img src="' . e($thumb) . '" alt="' . e($product->title) . '" class="product-thumb-img" />'
+                    : '<span class="product-thumb-placeholder"><i class="ti ti-photo"></i></span>';
 
                 $subcategoryName = $product->category?->name ?? '—';
 
                 return '
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-md me-3">' . $imgHtml . '</div>
+                    <div class="product-name-cell">
+                        <div class="product-thumb">' . $imgHtml . '</div>
                         <div>
-                            <h5 class="mb-1">
-                                <a href="' . route('products.show', $product) . '" class="link-reset">'
+                            <a href="' . route('products.show', $product) . '" class="product-name-link">'
                     . e($product->title) .
                     '</a>
-                        <span class="badge badge-soft-info">' . e($product->carat_weight) . 'Ct</span>
-                            </h5>
-                            <span class="text-muted fs-xs">' . e($subcategoryName) . '</span>
+                            <span class="badge badge-soft-info fs-xxs">' . e($product->carat_weight) . 'Ct</span>
+                            <div class="text-muted fs-xxs">' . e($subcategoryName) . '</div>
                         </div>
                     </div>
                 ';
@@ -138,23 +147,23 @@ class ProductController extends Controller
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
-                        <a href="' . $show . '" class="btn btn-default btn-icon btn-sm" title="View">
-                            <i class="ti ti-eye fs-lg"></i>
+                        <a href="' . $show . '" class="action-btn action-view" title="View">
+                            <i class="ti ti-eye"></i>
                         </a>
-                        <a href="' . $edit . '" class="btn btn-default btn-icon btn-sm" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
+                        <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
+                            <i class="ti ti-edit"></i>
                         </a>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-toggle-status"
+                        <button type="button" class="action-btn action-toggle js-toggle-status"
                             data-url="' . $toggleStatus . '" title="Toggle Status">
-                            <i class="ti ' . $statusIcon . ' fs-lg"></i>
+                            <i class="ti ' . $statusIcon . '"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-toggle-website"
+                        <button type="button" class="action-btn action-website js-toggle-website"
                             data-url="' . $toggleWebsite . '" title="Toggle Website">
-                            <i class="ti ' . $websiteIcon . ' fs-lg"></i>
+                            <i class="ti ' . $websiteIcon . '"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-delete text-danger"
+                        <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($product->title) . '" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
                 ';

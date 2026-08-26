@@ -20,7 +20,19 @@ class PageController extends Controller
     public function index(): View
     {
         $pages = Page::ordered()->get();
-        return view('pages.index', compact('pages'));
+
+        // Derived from the already-loaded collection (list is short/admin-curated,
+        // so a second query isn't worth it). No status field on this model, so
+        // these are genuinely-computed metrics rather than an Active/Inactive split.
+        $stats = [
+            'pages_total'    => $pages->count(),
+            'pages_recent'   => $pages->filter(
+                fn (Page $page) => $page->updated_at && $page->updated_at->gte(now()->subDays(7))
+            )->count(),
+            'pages_with_seo' => $pages->filter(fn (Page $page) => filled($page->meta_title))->count(),
+        ];
+
+        return view('pages.index', compact('pages', 'stats'));
     }
 
     public function create(): View

@@ -12,10 +12,12 @@ class StockTransferRepository
 {
     public function query(): Builder
     {
-        return StockTransfer::query()->with([
-            'fromLocation:id,location_code,name',
-            'toLocation:id,location_code,name',
-        ]);
+        return StockTransfer::query()
+            ->with([
+                'fromLocation:id,location_code,name',
+                'toLocation:id,location_code,name',
+            ])
+            ->withCount('lines');
     }
 
     public function find(int $id): ?StockTransfer

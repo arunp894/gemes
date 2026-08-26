@@ -3,7 +3,7 @@
 @section('title', 'Sales Terminal')
 
 @section('content')
-<div class="container-fluid" id="salesTerminalApp">
+<div class="container-fluid sales-terminal-page" id="salesTerminalApp">
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
@@ -476,7 +476,7 @@
                     </button>
                     <div class="row g-2">
                         <div class="col-6">
-                            <button type="button" class="btn btn-light w-100" :disabled="submitting"
+                            <button type="button" class="btn btn-outline-success w-100" :disabled="submitting"
                                 @click="submit('draft')">
                                 <i class="ti ti-device-floppy me-1"></i> Save Draft
                             </button>
@@ -498,6 +498,45 @@
     </form>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    /* Sales Terminal — compact spacing + title-bar polish, matching the rest
+       of the app. CSS-only: the cart/scan/payment Vue logic below is
+       completely untouched. */
+    .sales-terminal-page { padding-top: 10px; padding-bottom: 20px; }
+    .sales-terminal-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .sales-terminal-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .sales-terminal-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #1e3a8a, #1d4ed8);
+    }
+    .sales-terminal-page .page-main-title i { position: relative; }
+    .sales-terminal-page .breadcrumb { font-size: 0.75rem; }
+    .sales-terminal-page .card { border-radius: 10px; box-shadow: none; border: 1px solid #e2e8f0; }
+    .sales-terminal-page .card-body { padding: 16px; }
+    .sales-terminal-page .card-title { font-size: 0.9375rem; font-weight: 700; }
+    .sales-terminal-page .form-label { margin-bottom: 4px; font-size: 0.8125rem; font-weight: 600; }
+    .sales-terminal-page .mb-3 { margin-bottom: 12px !important; }
+</style>
+@endpush
 
 @push('scripts')
 <script>

@@ -21,14 +21,19 @@ class DashboardController extends Controller
         $lastMonthEnd = Carbon::now()->subMonth()->endOfMonth();
 
         /* ── KPI Counts ────────────────────────────────────────────── */
-        $totalProducts  = Product::count();
-        $activeProducts = Product::active()->count();
+        // Single aggregate query per model instead of two separate
+        // COUNT() round-trips (total + active).
+        $productCounts = Product::selectRaw('COUNT(*) as total, SUM(status = 1) as active')->first();
+        $totalProducts  = (int) $productCounts->total;
+        $activeProducts = (int) $productCounts->active;
 
-        $totalSuppliers  = Supplier::count();
-        $activeSuppliers = Supplier::active()->count();
+        $supplierCounts = Supplier::selectRaw('COUNT(*) as total, SUM(status = 1) as active')->first();
+        $totalSuppliers  = (int) $supplierCounts->total;
+        $activeSuppliers = (int) $supplierCounts->active;
 
-        $totalCustomers  = Customer::count();
-        $activeCustomers = Customer::active()->count();
+        $customerCounts = Customer::selectRaw('COUNT(*) as total, SUM(status = 1) as active')->first();
+        $totalCustomers  = (int) $customerCounts->total;
+        $activeCustomers = (int) $customerCounts->active;
 
         /* ── Sales KPIs ────────────────────────────────────────────── */
         $salesThisMonth = Sale::whereIn('status', [Sale::STATUS_POSTED, Sale::STATUS_COMPLETED])

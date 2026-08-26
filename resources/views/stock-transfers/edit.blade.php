@@ -3,7 +3,7 @@
 @section('title', 'Edit Transfer ' . $transfer->transfer_number)
 
 @section('content')
-<div class="container-fluid" id="transferApp">
+<div class="container-fluid stock-transfers-form-page" id="transferApp">
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
@@ -214,13 +214,54 @@
                         <span v-if="submitting" class="spinner-border spinner-border-sm me-1"></span>
                         <i v-else class="ti ti-device-floppy me-1"></i> Save Changes
                     </button>
-                    <a href="{{ route('stock-transfers.show', $transfer) }}" class="btn btn-link text-muted">Cancel</a>
+                    <a href="{{ route('stock-transfers.show', $transfer) }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </div>
         </div>
     </form>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    /* Compact spacing for the New/Edit Transfer form — scoped to this page only.
+       The Search Stock / Pieces line-item table is left untouched by design. */
+    .stock-transfers-form-page { padding-top: 20px; padding-bottom: 20px; }
+    .stock-transfers-form-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .stock-transfers-form-page .page-title-head > * { display: flex; align-items: center; }
+    .stock-transfers-form-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .stock-transfers-form-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #1e3a8a, #1d4ed8);
+    }
+    .stock-transfers-form-page .breadcrumb { font-size: 0.75rem; }
+    .stock-transfers-form-page .card { border-radius: 10px; box-shadow: none; border: 1px solid #e2e8f0; }
+    .stock-transfers-form-page .card-body { padding: 16px; }
+    .stock-transfers-form-page .header-title { font-size: 1rem; font-weight: 700; }
+    .stock-transfers-form-page .mb-3, .stock-transfers-form-page .mb-4 { margin-bottom: 12px !important; }
+    .stock-transfers-form-page .form-label { margin-bottom: 4px; font-size: 0.8125rem; font-weight: 600; }
+    .stock-transfers-form-page .form-control, .stock-transfers-form-page .form-select { padding: 0.4rem 0.65rem; font-size: 0.8125rem; }
+    .stock-transfers-form-page small.text-muted { display: inline-block; margin-top: 3px; font-size: 0.75rem; }
+    .stock-transfers-form-page .d-flex.justify-content-end.gap-2 { margin-top: 16px !important; }
+</style>
+@endpush
 
 @push('scripts')
 <script>

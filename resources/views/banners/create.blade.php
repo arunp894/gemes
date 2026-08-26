@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="container-fluid banners-page banners-form-page">
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
@@ -184,9 +184,10 @@
             <div v-if="serverError" class="alert alert-danger">@{{ serverError }}</div>
 
             <div class="d-flex gap-2 justify-content-end mb-4">
-                <a href="{{ route('banners.index') }}" class="btn btn-light">Cancel</a>
-                <button type="button" class="btn btn-primary" :disabled="submitting" @click="submitForm">
+                <a href="{{ route('banners.index') }}" class="btn btn-secondary">Cancel</a>
+                <button type="button" class="btn btn-success" :disabled="submitting" @click="submitForm">
                     <span v-if="submitting" class="spinner-border spinner-border-sm me-1"></span>
+                    <span v-if="!submitting"><i class="ti ti-device-floppy me-1"></i></span>
                     Create Banner
                 </button>
             </div>
@@ -196,6 +197,51 @@
 </div>
 
 @endsection
+
+@push('styles')
+<style>
+    /* Compact spacing for the Add/Edit Banner form — scoped to this page only */
+    .banners-form-page { padding-top: 20px; padding-bottom: 20px; }
+    .banners-form-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .banners-form-page .page-title-head > * { display: flex; align-items: center; }
+    .banners-form-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .banners-form-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #1e3a8a, #1d4ed8);
+    }
+    .banners-form-page .breadcrumb { font-size: 0.75rem; }
+    .banners-form-page .card { border-radius: 10px; box-shadow: none; border: 1px solid #e2e8f0; }
+    .banners-form-page .card-body { padding: 16px; }
+    .banners-form-page .header-title,
+    .banners-form-page .card-title { font-size: 1rem; font-weight: 700; }
+    .banners-form-page .mb-3,
+    .banners-form-page .mb-4 { margin-bottom: 12px !important; }
+    .banners-form-page .form-label { margin-bottom: 4px; font-size: 0.8125rem; font-weight: 600; }
+    .banners-form-page .form-control,
+    .banners-form-page .form-select { padding: 0.4rem 0.65rem; font-size: 0.8125rem; }
+    .banners-form-page textarea.form-control { padding: 0.5rem 0.65rem; }
+    .banners-form-page small.text-muted { display: inline-block; margin-top: 3px; font-size: 0.75rem; }
+    .banners-form-page .d-flex.justify-content-end.gap-2,
+    .banners-form-page .d-flex.gap-2.justify-content-end { margin-top: 16px !important; }
+</style>
+@endpush
 
 @push('scripts')
 <script>

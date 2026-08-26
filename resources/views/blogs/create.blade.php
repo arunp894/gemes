@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="container-fluid blogs-page blogs-form-page">
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
@@ -110,11 +110,12 @@
                     <div v-if="serverError" class="alert alert-danger">@{{ serverError }}</div>
 
                     <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-primary" :disabled="submitting" @click="submitForm">
+                        <button type="button" class="btn btn-success" :disabled="submitting" @click="submitForm">
                             <span v-if="submitting" class="spinner-border spinner-border-sm me-1"></span>
+                            <span v-if="!submitting"><i class="ti ti-device-floppy me-1"></i></span>
                             Create Post
                         </button>
-                        <a href="{{ route('blogs.index') }}" class="btn btn-light">Cancel</a>
+                        <a href="{{ route('blogs.index') }}" class="btn btn-secondary">Cancel</a>
                     </div>
                 </div>
             </div>
@@ -143,6 +144,49 @@
 </div>
 
 @endsection
+
+@push('styles')
+<style>
+    /* Compact spacing for the Add/Edit Blog Post form — scoped to this page only */
+    .blogs-form-page { padding-top: 20px; padding-bottom: 20px; }
+    .blogs-form-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .blogs-form-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .blogs-form-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #1e3a8a, #14b8a6);
+    }
+    .blogs-form-page .breadcrumb { font-size: 0.75rem; }
+    .blogs-form-page .card { border-radius: 10px; box-shadow: none; border: 1px solid #e2e8f0; }
+    .blogs-form-page .card-header { padding: 10px 16px; }
+    .blogs-form-page .card-title { font-size: 0.9375rem; font-weight: 700; }
+    .blogs-form-page .card-body { padding: 16px; }
+    .blogs-form-page .header-title { font-size: 1rem; font-weight: 700; }
+    .blogs-form-page .mb-3, .blogs-form-page .mb-4 { margin-bottom: 12px !important; }
+    .blogs-form-page .form-label { margin-bottom: 4px; font-size: 0.8125rem; font-weight: 600; }
+    .blogs-form-page .form-control,
+    .blogs-form-page .form-select { padding: 0.4rem 0.65rem; font-size: 0.8125rem; }
+    .blogs-form-page small.text-muted { display: inline-block; margin-top: 3px; font-size: 0.75rem; }
+    .blogs-form-page .d-flex.justify-content-end.gap-2 { margin-top: 16px !important; }
+    .blogs-form-page .form-check { margin-bottom: 2px; }
+</style>
+@endpush
 
 @push('scripts')
 <script>

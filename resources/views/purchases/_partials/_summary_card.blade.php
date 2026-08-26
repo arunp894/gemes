@@ -105,14 +105,14 @@
                     @{{ submitting ? 'Saving…' : 'Save Changes' }}
                 </button>
             @else
-                <button type="button" class="btn btn-outline-primary" @click="submit(false)"
+                <button type="button" class="btn btn-outline-success" @click="submit(false)"
                         :disabled="submitting || form.lines.length === 0">
                     <i class="ti ti-device-floppy me-1"></i>
                     @{{ submitting ? 'Saving…' : 'Save Draft' }}
                 </button>
 
                 @permission('purchases.post')
-                <button type="button" class="btn btn-primary" @click="submit(true)"
+                <button type="button" class="btn btn-success" @click="submit(true)"
                         :disabled="submitting || form.lines.length === 0">
                     <i class="ti ti-check me-1"></i>
                     @{{ submitting ? 'Saving…' : 'Save & Post' }}
@@ -120,7 +120,7 @@
                 @endpermission
             @endif
 
-            <a href="{{ route('purchases.index') }}" class="btn btn-light">Cancel</a>
+            <a href="{{ route('purchases.index') }}" class="btn btn-secondary">Cancel</a>
         </div>
 
     </div>

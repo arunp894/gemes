@@ -3,7 +3,7 @@
 @section('title', 'New Stock Audit')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid stock-audits-page stock-audits-form-page">
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
@@ -67,8 +67,8 @@
                         </div>
                     </div>
                     <div class="card-footer border-0 d-flex justify-content-end gap-2">
-                        <a href="{{ route('stock-audits.index') }}" class="btn btn-light">Cancel</a>
-                        <button type="submit" id="submitBtn" class="btn btn-primary">
+                        <a href="{{ route('stock-audits.index') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" id="submitBtn" class="btn btn-success">
                             <i class="ti ti-scan me-1"></i> Start Audit &amp; Begin Scanning
                         </button>
                     </div>
@@ -80,6 +80,48 @@
 
 </div>
 @endsection
+
+@push('styles')
+<style>
+    /* Compact spacing for the New Stock Audit form — scoped to this page only */
+    .stock-audits-form-page { padding-top: 20px; padding-bottom: 20px; }
+    .stock-audits-form-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .stock-audits-form-page .page-title-head > * { display: flex; align-items: center; }
+    .stock-audits-form-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .stock-audits-form-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #1e3a8a, #1d4ed8);
+    }
+    .stock-audits-form-page .breadcrumb { font-size: 0.75rem; }
+    .stock-audits-form-page .card { border-radius: 10px; box-shadow: none; border: 1px solid #e2e8f0; }
+    .stock-audits-form-page .card-body { padding: 16px; }
+    .stock-audits-form-page .header-title { font-size: 1rem; font-weight: 700; }
+    .stock-audits-form-page .mb-3, .stock-audits-form-page .mb-4 { margin-bottom: 12px !important; }
+    .stock-audits-form-page .form-label { margin-bottom: 4px; font-size: 0.8125rem; font-weight: 600; }
+    .stock-audits-form-page .form-control,
+    .stock-audits-form-page .form-select { padding: 0.4rem 0.65rem; font-size: 0.8125rem; }
+    .stock-audits-form-page small.text-muted { display: inline-block; margin-top: 3px; font-size: 0.75rem; }
+    .stock-audits-form-page .d-flex.justify-content-end.gap-2 { margin-top: 16px !important; }
+    .stock-audits-form-page .card-footer.d-flex.justify-content-end.gap-2 { margin-top: 0 !important; }
+</style>
+@endpush
 
 @push('scripts')
 <script>

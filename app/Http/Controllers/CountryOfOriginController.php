@@ -20,7 +20,17 @@ class CountryOfOriginController extends Controller
 
     public function index(): View
     {
-        return view('country-origins.index');
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = CountryOfOrigin::selectRaw('COUNT(*) as total, SUM(status = 1) as active, SUM(status = 0) as inactive')
+            ->first();
+
+        $stats = [
+            'origins_total'    => (int) $counts->total,
+            'origins_active'   => (int) $counts->active,
+            'origins_inactive' => (int) $counts->inactive,
+        ];
+
+        return view('country-origins.index', compact('stats'));
     }
 
     public function data(Request $request): JsonResponse
@@ -34,11 +44,12 @@ class CountryOfOriginController extends Controller
         return DataTables::of($q)
             ->addIndexColumn()
             ->editColumn('name', fn (CountryOfOrigin $o) =>
-                '<a href="' . route('country-origins.show', $o) . '" class="link-reset fw-medium">' . e($o->name) . '</a>'
+                '<a href="' . route('country-origins.show', $o) . '" class="origin-name-link">' . e($o->name) . '</a>'
             )
-            ->editColumn('status', fn (CountryOfOrigin $o) =>
-                '<span class="badge ' . $o->statusBadgeClass() . ' fs-xxs">' . e($o->statusLabel()) . '</span>'
-            )
+            ->editColumn('status', function (CountryOfOrigin $o) {
+                $class = $o->isActive() ? 'status-pill status-active' : 'status-pill status-inactive';
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . e($o->statusLabel()) . '</span>';
+            })
             ->editColumn('display_order', fn (CountryOfOrigin $o) =>
                 '<span class="badge bg-light text-dark">' . $o->display_order . '</span>'
             )
@@ -51,19 +62,19 @@ class CountryOfOriginController extends Controller
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
-                        <a href="' . $show . '" class="btn btn-default btn-icon btn-sm" title="View">
-                            <i class="ti ti-eye fs-lg"></i>
+                        <a href="' . $show . '" class="action-btn action-view" title="View">
+                            <i class="ti ti-eye"></i>
                         </a>
-                        <a href="' . $edit . '" class="btn btn-default btn-icon btn-sm" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
+                        <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
+                            <i class="ti ti-edit"></i>
                         </a>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-toggle-status"
+                        <button type="button" class="action-btn action-toggle js-toggle-status"
                             data-url="' . $toggle . '" title="Toggle Status">
-                            <i class="ti ' . $toggleIcon . ' fs-lg"></i>
+                            <i class="ti ' . $toggleIcon . '"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-delete text-danger"
+                        <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($o->name) . '" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
                 ';

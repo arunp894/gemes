@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePermissionRequest;
 use App\Http\Requests\UpdatePermissionRequest;
 use App\Models\Permission;
+use App\Models\Role;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -35,7 +36,16 @@ class PermissionController extends Controller
             ->orderBy('module')
             ->pluck('module');
 
-        return view('permissions.index', compact('modules'));
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = Permission::selectRaw('COUNT(*) as total, COUNT(DISTINCT module) as modules')->first();
+
+        $stats = [
+            'permissions_total' => (int) $counts->total,
+            'modules_total'     => (int) $counts->modules,
+            'roles_total'       => (int) Role::count(),
+        ];
+
+        return view('permissions.index', compact('modules', 'stats'));
     }
 
     /**
@@ -50,7 +60,7 @@ class PermissionController extends Controller
             ->editColumn('name', function (Permission $permission) {
                 return '
                     <h5 class="mb-0 fs-base">
-                        <a href="' . route('permissions.show', $permission) . '" class="link-reset">'
+                        <a href="' . route('permissions.show', $permission) . '" class="permission-name-link">'
                             . e($permission->name) .
                         '</a>
                     </h5>
@@ -81,15 +91,15 @@ class PermissionController extends Controller
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
-                        <a href="' . $show . '" class="btn btn-default btn-icon btn-sm" title="View">
-                            <i class="ti ti-eye fs-lg"></i>
+                        <a href="' . $show . '" class="action-btn action-view" title="View">
+                            <i class="ti ti-eye"></i>
                         </a>
-                        <a href="' . $edit . '" class="btn btn-default btn-icon btn-sm" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
+                        <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
+                            <i class="ti ti-edit"></i>
                         </a>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-delete text-danger"
+                        <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($permission->name) . '" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
                 ';

@@ -4,7 +4,7 @@
 
 @section('content')
 
-<div class="container-fluid">
+<div class="container-fluid stones-page stones-form-page">
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
@@ -157,7 +157,7 @@
 
                         {{-- Actions --}}
                         <div class="d-flex justify-content-end gap-2 mt-4">
-                            <a href="{{ route('categories.index') }}" class="btn btn-light">Cancel</a>
+                            <a href="{{ route('categories.index') }}" class="btn btn-secondary">Cancel</a>
                             <button type="submit" class="btn btn-primary" :disabled="submitting">
                                 <span v-if="submitting" class="spinner-border spinner-border-sm me-1" role="status"></span>
                                 <span v-if="!submitting"><i class="ti ti-device-floppy me-1"></i></span>
@@ -187,6 +187,50 @@
 </div>
 
 @endsection
+
+@push('styles')
+<style>
+    /* Compact spacing for the Add/Edit Stone form — scoped to this page only */
+    .stones-form-page { padding-top: 20px; padding-bottom: 20px; }
+    .stones-form-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .stones-form-page .page-title-head > * { display: flex; align-items: center; }
+    .stones-form-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .stones-form-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #1e3a8a, #1d4ed8);
+    }
+    .stones-form-page .breadcrumb { font-size: 0.75rem; }
+    .stones-form-page .card { border-radius: 10px; box-shadow: none; border: 1px solid #e2e8f0; }
+    .stones-form-page .card-body { padding: 16px; }
+    .stones-form-page .header-title { font-size: 1rem; font-weight: 700; }
+    .stones-form-page .mb-3 { margin-bottom: 12px !important; }
+    .stones-form-page .mb-4 { margin-bottom: 12px !important; }
+    .stones-form-page .form-label { margin-bottom: 4px; font-size: 0.8125rem; font-weight: 600; }
+    .stones-form-page .form-control,
+    .stones-form-page .form-select { padding: 0.4rem 0.65rem; font-size: 0.8125rem; }
+    .stones-form-page textarea.form-control { padding: 0.5rem 0.65rem; }
+    .stones-form-page small.text-muted { display: inline-block; margin-top: 3px; font-size: 0.75rem; }
+    .stones-form-page .d-flex.justify-content-end.gap-2 { margin-top: 16px !important; }
+    .stones-form-page .form-check { margin-bottom: 2px; }
+</style>
+@endpush
 
 @push('scripts')
 <script>

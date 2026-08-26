@@ -48,7 +48,23 @@ class SaleController extends Controller
 
     public function index(): View
     {
-        return view('sales.index');
+        // Single aggregate query for the summary cards instead of separate
+        // COUNT() round-trips per card — mirrors the Category module pattern.
+        $counts = Sale::selectRaw(
+            "COUNT(*) as total,
+             SUM(status = 'completed') as completed,
+             SUM(status IN ('draft', 'posted')) as pending,
+             SUM(status = 'cancelled') as cancelled"
+        )->first();
+
+        $stats = [
+            'sales_total'     => (int) $counts->total,
+            'sales_completed' => (int) $counts->completed,
+            'sales_pending'   => (int) $counts->pending,
+            'sales_cancelled' => (int) $counts->cancelled,
+        ];
+
+        return view('sales.index', compact('stats'));
     }
 
     public function data(Request $request): JsonResponse
@@ -129,15 +145,15 @@ class SaleController extends Controller
                 $canPost   = auth()->user()?->hasPermission('sales.post')   ?? false;
 
                 $html  = '<div class="d-flex gap-1 justify-content-center">';
-                $html .= '<a href="' . route('sales.show', $s) . '" class="btn btn-default btn-icon btn-sm" title="View"><i class="ti ti-eye fs-lg"></i></a>';
+                $html .= '<a href="' . route('sales.show', $s) . '" class="action-btn action-view" title="View"><i class="ti ti-eye"></i></a>';
                 if ($canEdit && $s->editBlockReason($editDays) === null) {
-                    $html .= '<a href="' . route('sales.edit', $s) . '" class="btn btn-default btn-icon btn-sm" title="Edit"><i class="ti ti-edit fs-lg"></i></a>';
+                    $html .= '<a href="' . route('sales.edit', $s) . '" class="action-btn action-edit" title="Edit"><i class="ti ti-edit"></i></a>';
                 }
                 if ($canPost && $s->isDraft()) {
-                    $html .= '<button type="button" class="btn btn-default btn-icon btn-sm js-post-sale text-success" data-url="' . route('sales.post', $s) . '" title="Post"><i class="ti ti-check fs-lg"></i></button>';
+                    $html .= '<button type="button" class="action-btn action-post js-post-sale" data-url="' . route('sales.post', $s) . '" title="Post"><i class="ti ti-check"></i></button>';
                 }
                 if ($canDelete) {
-                    $html .= '<button type="button" class="btn btn-default btn-icon btn-sm js-delete-sale text-danger" data-url="' . route('sales.destroy', $s) . '" data-number="' . e($s->sale_number) . '" title="Delete"><i class="ti ti-trash fs-lg"></i></button>';
+                    $html .= '<button type="button" class="action-btn action-delete js-delete-sale" data-url="' . route('sales.destroy', $s) . '" data-number="' . e($s->sale_number) . '" title="Delete"><i class="ti ti-trash"></i></button>';
                 }
                 $html .= '</div>';
                 return $html;

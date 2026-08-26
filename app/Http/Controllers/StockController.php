@@ -132,7 +132,7 @@ class StockController extends Controller
             ->addColumn('action', function ($row) {
                 $url = route('stock.product', ['product' => $row->product_id]);
                 $urlLoc = $url . '?location_id=' . (int) $row->location_id;
-                return '<a href="' . $urlLoc . '" class="btn btn-soft-primary btn-sm d-inline-flex align-items-center gap-1" title="View Ledger">'
+                return '<a href="' . $urlLoc . '" class="action-link action-link-view" title="View Ledger">'
                     . '<i class="ti ti-history fs-sm"></i> Ledger</a>';
             })
             ->filterColumn('product_label', function ($q, $keyword) {
@@ -315,7 +315,7 @@ class StockController extends Controller
             ->addColumn('action', function ($row) {
                 $url = route('stock.product', ['product' => $row->product_id]);
                 $urlLoc = $url . '?location_id=' . (int) $row->location_id;
-                return '<a href="' . $urlLoc . '" class="btn btn-soft-danger btn-sm d-inline-flex align-items-center gap-1" title="View Sales in Ledger">'
+                return '<a href="' . $urlLoc . '" class="action-link action-link-danger" title="View Sales in Ledger">'
                     . '<i class="ti ti-receipt fs-sm"></i> Ledger</a>';
             })
             ->filterColumn('product_label', function ($q, $keyword) {

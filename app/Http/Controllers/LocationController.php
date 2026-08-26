@@ -29,7 +29,17 @@ class LocationController extends Controller
      */
     public function index(): View
     {
-        return view('locations.index');
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = Location::selectRaw('COUNT(*) as total, SUM(status = 1) as active, SUM(status = 0) as inactive')
+            ->first();
+
+        $stats = [
+            'locations_total'    => (int) $counts->total,
+            'locations_active'   => (int) $counts->active,
+            'locations_inactive' => (int) $counts->inactive,
+        ];
+
+        return view('locations.index', compact('stats'));
     }
 
     /**
@@ -47,29 +57,20 @@ class LocationController extends Controller
             })
             ->editColumn('location_code', function (Location $location) {
                 $defaultBadge = $location->is_default
-                    ? ' <span class="badge badge-soft-warning fs-xxs ms-1" title="Default location">DEFAULT</span>'
+                    ? ' <span class="default-badge" title="Default location"><i class="ti ti-star-filled"></i>Default</span>'
                     : '';
                 return '<code class="text-muted">' . e($location->location_code) . '</code>' . $defaultBadge;
             })
             ->editColumn('name', function (Location $location) {
-                $initial = strtoupper(mb_substr($location->name, 0, 1) ?: '?');
                 $sub = $location->short_address ?: ($location->phone ?: '');
+                $subHtml = $sub ? '<small class="text-muted d-block">' . e($sub) . '</small>' : '';
 
                 return '
-                    <div class="d-flex align-items-center">
-                        <div class="avatar-sm me-2">
-                            <span class="avatar-title bg-primary-subtle text-primary rounded-circle fw-bold">'
-                    . e($initial) .
-                    '</span>
-                        </div>
-                        <div>
-                            <h5 class="mb-0 fs-base">
-                                <a href="' . route('locations.show', $location) . '" class="link-reset">'
+                    <div class="location-name-cell">
+                        <a href="' . route('locations.show', $location) . '" class="location-name-link">'
                     . e($location->name) .
                     '</a>
-                            </h5>
-                            <small class="text-muted">' . e($sub) . '</small>
-                        </div>
+                        ' . $subHtml . '
                     </div>
                 ';
             })
@@ -93,9 +94,8 @@ class LocationController extends Controller
                 return '<div><span>' . $phone . '</span>' . $email . '</div>';
             })
             ->addColumn('status_badge', function (Location $location) {
-                return '<span class="badge ' . $location->statusBadgeClass() . ' fs-xxs">'
-                    . e($location->statusLabel())
-                    . '</span>';
+                $class = $location->isActive() ? 'status-pill status-active' : 'status-pill status-inactive';
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . e($location->statusLabel()) . '</span>';
             })
             ->editColumn('created_at', function (Location $location) {
                 return optional($location->created_at)->format('d M, Y') ?? '—';
@@ -113,30 +113,30 @@ class LocationController extends Controller
                 // already the default. Defaults can be transferred but not
                 // unset directly from the list (must pick a new default).
                 $defaultBtn = $location->is_default
-                    ? '<button type="button" class="btn btn-default btn-icon btn-sm" disabled title="Already default">
-                        <i class="ti ti-star-filled fs-lg text-warning"></i>
+                    ? '<button type="button" class="action-btn action-default" disabled title="Already default">
+                        <i class="ti ti-star-filled"></i>
                        </button>'
-                    : '<button type="button" class="btn btn-default btn-icon btn-sm js-set-default"
+                    : '<button type="button" class="action-btn action-default js-set-default"
                         data-url="' . $setDefault . '" data-name="' . e($location->name) . '" title="Set as default">
-                        <i class="ti ti-star fs-lg"></i>
+                        <i class="ti ti-star"></i>
                        </button>';
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
-                        <a href="' . $show . '" class="btn btn-default btn-icon btn-sm" title="View">
-                            <i class="ti ti-eye fs-lg"></i>
+                        <a href="' . $show . '" class="action-btn action-view" title="View">
+                            <i class="ti ti-eye"></i>
                         </a>
-                        <a href="' . $edit . '" class="btn btn-default btn-icon btn-sm" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
+                        <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
+                            <i class="ti ti-edit"></i>
                         </a>
                         ' . $defaultBtn . '
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-toggle-status"
+                        <button type="button" class="action-btn action-toggle js-toggle-status"
                             data-url="' . $toggle . '" title="Toggle Status">
-                            <i class="ti ' . $toggleIcon . ' fs-lg"></i>
+                            <i class="ti ' . $toggleIcon . '"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-delete text-danger"
+                        <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($location->name) . '" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
                 ';

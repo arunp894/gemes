@@ -32,7 +32,15 @@ class RoleController extends Controller
      */
     public function index(): View
     {
-        return view('roles.index');
+        $roleCounts = Role::selectRaw('COUNT(*) as total, SUM(is_super = 1) as super_count')->first();
+
+        $stats = [
+            'roles_total'       => (int) $roleCounts->total,
+            'roles_super'       => (int) $roleCounts->super_count,
+            'permissions_total' => (int) Permission::count(),
+        ];
+
+        return view('roles.index', compact('stats'));
     }
 
     /**
@@ -51,7 +59,7 @@ class RoleController extends Controller
                     : '';
                 return '
                     <h5 class="mb-0 fs-base">
-                        <a href="' . route('roles.show', $role) . '" class="link-reset">'
+                        <a href="' . route('roles.show', $role) . '" class="role-name-link">'
                             . e($role->name) .
                         '</a>' . $superBadge . '
                     </h5>
@@ -82,15 +90,15 @@ class RoleController extends Controller
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
-                        <a href="' . $show . '" class="btn btn-default btn-icon btn-sm" title="View">
-                            <i class="ti ti-eye fs-lg"></i>
+                        <a href="' . $show . '" class="action-btn action-view" title="View">
+                            <i class="ti ti-eye"></i>
                         </a>
-                        <a href="' . $edit . '" class="btn btn-default btn-icon btn-sm" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
+                        <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
+                            <i class="ti ti-edit"></i>
                         </a>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-delete text-danger"
+                        <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($role->name) . '" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
                 ';

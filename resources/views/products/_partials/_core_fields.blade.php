@@ -52,6 +52,25 @@
                         <option value="{{ $origin->id }}">{{ $origin->name }}</option>
                     @endforeach
                 </select>
+                {{-- Selected-value confirmation line — plain JS, independent of the
+                     Vue instance's own data/methods, so it can't affect form.country_of_origin_id
+                     or validation either way. --}}
+                <small id="countryOfOriginPreview" class="text-muted d-block mt-1"></small>
+                <script>
+                    (function () {
+                        var sel = document.getElementById('country_of_origin_id');
+                        var preview = document.getElementById('countryOfOriginPreview');
+                        function updateCountryOfOriginPreview() {
+                            var opt = sel.options[sel.selectedIndex];
+                            preview.textContent = (opt && opt.value) ? opt.text : '';
+                        }
+                        sel.addEventListener('change', updateCountryOfOriginPreview);
+                        // Deferred to DOMContentLoaded so it reads the value AFTER
+                        // Vue has applied its own initial v-model binding (edit mode
+                        // pre-fills this field; Vue mounts later in page order).
+                        document.addEventListener('DOMContentLoaded', updateCountryOfOriginPreview);
+                    })();
+                </script>
             </div>
 
             {{-- Status --}}

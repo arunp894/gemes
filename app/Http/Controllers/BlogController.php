@@ -29,34 +29,43 @@ class BlogController extends Controller
      */
     public function index(): View
     {
-        return view('blogs.index');
+        // Single aggregate query instead of separate COUNT() round-trips per card.
+        $counts = Blog::selectRaw('COUNT(*) as total, SUM(status = 1) as published, SUM(status = 0) as draft')
+            ->first();
+
+        $stats = [
+            'blogs_total'     => (int) $counts->total,
+            'blogs_published' => (int) $counts->published,
+            'blogs_draft'     => (int) $counts->draft,
+        ];
+
+        return view('blogs.index', compact('stats'));
     }
 
     public function data(Request $request): JsonResponse
     {
-        $query = Blog::query();
+        $query = Blog::query()->with('media');
 
         return DataTables::of($query)
             ->addIndexColumn()
             ->editColumn('title', function (Blog $blog) {
                 $thumb = $blog->image_thumb_url
-                    ? '<img src="' . e($blog->image_thumb_url) . '" alt="" class="rounded me-2" width="48" height="32" style="object-fit:cover;">'
-                    : '<span class="avatar-sm me-2"><span class="avatar-title bg-light text-muted rounded fs-xl"><i class="ti ti-article"></i></span></span>';
+                    ? '<img src="' . e($blog->image_thumb_url) . '" alt="' . e($blog->title) . '" class="blog-thumb-img" />'
+                    : '<span class="blog-thumb-placeholder"><i class="ti ti-article"></i></span>';
 
                 return '
-                    <div class="d-flex align-items-center">
-                        ' . $thumb . '
+                    <div class="blog-title-cell">
+                        <div class="blog-thumb">' . $thumb . '</div>
                         <div>
-                            <h5 class="mb-0 fs-base">
-                                <a href="' . route('blogs.show', $blog) . '" class="link-reset">' . e($blog->title) . '</a>
-                            </h5>
-                            <small class="text-muted">/blog/' . e($blog->slug) . '</small>
+                            <a href="' . route('blogs.show', $blog) . '" class="blog-title-link">' . e($blog->title) . '</a>
+                            <div class="blog-slug-text">/blog/' . e($blog->slug) . '</div>
                         </div>
                     </div>
                 ';
             })
             ->addColumn('status_badge', function (Blog $blog) {
-                return '<span class="badge ' . $blog->statusBadgeClass() . ' fs-xxs">' . e($blog->statusLabel()) . '</span>';
+                $class = $blog->isActive() ? 'status-pill status-active' : 'status-pill status-inactive';
+                return '<span class="' . $class . '"><span class="status-dot"></span>' . $blog->statusLabel() . '</span>';
             })
             ->editColumn('published_at', function (Blog $blog) {
                 return $blog->published_at ? $blog->published_at->format('d M, Y') : '<span class="text-muted">—</span>';
@@ -74,19 +83,19 @@ class BlogController extends Controller
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
-                        <a href="' . $show . '" class="btn btn-default btn-icon btn-sm" title="View">
-                            <i class="ti ti-eye fs-lg"></i>
+                        <a href="' . $show . '" class="action-btn action-view" title="View">
+                            <i class="ti ti-eye"></i>
                         </a>
-                        <a href="' . $edit . '" class="btn btn-default btn-icon btn-sm" title="Edit">
-                            <i class="ti ti-edit fs-lg"></i>
+                        <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
+                            <i class="ti ti-edit"></i>
                         </a>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-toggle-status"
+                        <button type="button" class="action-btn action-toggle js-toggle-status"
                             data-url="' . $toggle . '" title="Toggle Status">
-                            <i class="ti ' . $toggleIcon . ' fs-lg"></i>
+                            <i class="ti ' . $toggleIcon . '"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-icon btn-sm js-delete text-danger"
+                        <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($blog->title) . '" title="Delete">
-                            <i class="ti ti-trash fs-lg"></i>
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
                 ';

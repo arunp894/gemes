@@ -3,10 +3,13 @@
 @section('title', 'Add Rack')
 
 @section('content')
-<div class="container-fluid" id="rackFormApp">
+
+<div class="container-fluid racks-page racks-form-page">
 
     <div class="page-title-head d-flex align-items-center">
-        <div class="flex-grow-1"><h4 class="page-main-title m-0">Add Rack</h4></div>
+        <div class="flex-grow-1">
+            <h4 class="page-main-title m-0">Add Rack</h4>
+        </div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
@@ -16,59 +19,143 @@
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Code</label>
-                    <input type="text" class="form-control text-uppercase" v-model="form.code"
-                           placeholder="{{ $suggestedCode }}" maxlength="50"
-                           :class="{ 'is-invalid': errors.code, 'is-valid': wasValidated && !errors.code }">
-                    <div class="invalid-feedback" v-if="errors.code">@{{ errors.code }}</div>
-                    <small class="text-muted">Leave blank to auto-generate: <code>{{ $suggestedCode }}</code></small>
-                </div>
-                <div class="col-md-8">
-                    <label class="form-label">Name <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" v-model="form.name" maxlength="100"
-                           :class="{ 'is-invalid': errors.name, 'is-valid': wasValidated && !errors.name && form.name }">
-                    <div class="invalid-feedback" v-if="errors.name">@{{ errors.name }}</div>
-                </div>
-                <div class="col-md-12">
-                    <label class="form-label">Location</label>
-                    <input type="text" class="form-control" v-model="form.location" maxlength="200"
-                           placeholder="e.g. Warehouse A · Aisle 3 · Bin 5">
-                </div>
-                <div class="col-md-12">
-                    <label class="form-label">Description</label>
-                    <textarea class="form-control" rows="3" v-model="form.description"></textarea>
-                </div>
-                <div class="col-md-12">
-                    <label class="form-label d-block">Status</label>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" role="switch" v-model="form.status" id="statusSwitch">
-                        <label class="form-check-label" for="statusSwitch">@{{ form.status ? 'Active' : 'Inactive' }}</label>
+    <div id="rackFormApp" class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <h4 class="header-title mb-2">Rack Details</h4>
+                    <p class="text-muted mb-3">Fields marked with <span class="text-danger">*</span> are required.</p>
+
+                    {{-- Code --}}
+                    <div class="mb-3">
+                        <label for="code" class="form-label">Code</label>
+                        <input type="text" class="form-control text-uppercase" id="code"
+                            v-model="form.code" placeholder="{{ $suggestedCode }}" maxlength="50"
+                            :class="{ 'is-invalid': errors.code, 'is-valid': wasValidated && !errors.code }">
+                        <div class="invalid-feedback" v-if="errors.code">@{{ errors.code }}</div>
+                        <small class="text-muted">Leave blank to auto-generate: <code>{{ $suggestedCode }}</code></small>
+                    </div>
+
+                    {{-- Name --}}
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="name"
+                            v-model="form.name" maxlength="100"
+                            :class="{ 'is-invalid': errors.name, 'is-valid': wasValidated && !errors.name && form.name }">
+                        <div class="invalid-feedback" v-if="errors.name">@{{ errors.name }}</div>
+                    </div>
+
+                    {{-- Location --}}
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="location"
+                            v-model="form.location" maxlength="200"
+                            placeholder="e.g. Warehouse A · Aisle 3 · Bin 5">
+                        <small class="text-muted">Optional physical location hint.</small>
+                    </div>
+
+                    {{-- Description --}}
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" v-model="form.description"
+                            rows="3" placeholder="Brief description..."></textarea>
+                        <small class="text-muted">Optional.</small>
+                    </div>
+
+                    {{-- Status --}}
+                    <div class="mb-3">
+                        <label class="form-label d-block">Status <span class="text-danger">*</span></label>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="statusSwitch"
+                                v-model="form.status">
+                            <label class="form-check-label" for="statusSwitch">
+                                @{{ form.status ? 'Active' : 'Inactive' }}
+                            </label>
+                        </div>
+                        <small class="text-muted">Inactive racks are hidden from stock assignment pickers.</small>
+                    </div>
+
+                    {{-- Server error banner --}}
+                    <div v-if="serverError" class="alert alert-danger" role="alert">@{{ serverError }}</div>
+
+                    {{-- Actions --}}
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a href="{{ route('racks.index') }}" class="btn btn-secondary">Cancel</a>
+                        <button type="button" class="btn btn-success" :disabled="submitting" @click="submit">
+                            <span v-if="submitting" class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            <span v-if="!submitting"><i class="ti ti-device-floppy me-1"></i></span>
+                            Save Rack
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="card-footer text-end">
-            <a href="{{ route('racks.index') }}" class="btn btn-light me-1">Cancel</a>
-            <button type="button" class="btn btn-primary" :disabled="submitting" @click="submit">
-                <span v-if="submitting"><span class="spinner-border spinner-border-sm me-1"></span>Saving…</span>
-                <span v-else>Save Rack</span>
-            </button>
-        </div>
-    </div>
 
-    <div v-if="toast.show" class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
-        <div class="toast show align-items-center" :class="'text-bg-' + toast.type" role="alert">
-            <div class="d-flex">
-                <div class="toast-body">@{{ toast.message }}</div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" @click="toast.show=false"></button>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="header-title">Tips</h5>
+                    <ul class="text-muted small mb-0 ps-3">
+                        <li>Codes auto-generate as <code>RACK-0001</code> if left blank.</li>
+                        <li>Codes cannot be changed after creation.</li>
+                        <li>Location is a free-text hint (aisle, bin, shelf) shown to warehouse staff.</li>
+                        <li>Inactive racks stay linked to existing stock but drop out of new assignment pickers.</li>
+                    </ul>
+                </div>
             </div>
         </div>
     </div>
+
 </div>
+
+@endsection
+
+@push('styles')
+<style>
+    /* Compact spacing for the Add/Edit Rack form — scoped to this page only */
+    .racks-form-page { padding-top: 20px; padding-bottom: 20px; }
+    .racks-form-page .page-title-head {
+        display: flex !important;
+        align-items: center !important;
+        min-height: 35px !important;
+        margin-top: 0 !important;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .racks-form-page .page-title-head > * { display: flex; align-items: center; }
+    .racks-form-page .page-main-title {
+        font-size: 1.375rem;
+        font-weight: 700;
+        position: relative;
+        padding-left: 12px;
+    }
+    .racks-form-page .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #1e3a8a, #1d4ed8);
+    }
+    .racks-form-page .breadcrumb { font-size: 0.75rem; }
+    .racks-form-page .card { border-radius: 10px; box-shadow: none; border: 1px solid #e2e8f0; }
+    .racks-form-page .card-body { padding: 16px; }
+    .racks-form-page .header-title { font-size: 1rem; font-weight: 700; }
+    .racks-form-page .mb-3 { margin-bottom: 12px !important; }
+    .racks-form-page .mb-4 { margin-bottom: 12px !important; }
+    .racks-form-page .form-label { margin-bottom: 4px; font-size: 0.8125rem; font-weight: 600; }
+    .racks-form-page .form-control,
+    .racks-form-page .form-select { padding: 0.4rem 0.65rem; font-size: 0.8125rem; }
+    .racks-form-page textarea.form-control { padding: 0.5rem 0.65rem; }
+    .racks-form-page small.text-muted { display: inline-block; margin-top: 3px; font-size: 0.75rem; }
+    .racks-form-page .d-flex.justify-content-end.gap-2 { margin-top: 16px !important; }
+    .racks-form-page .form-check { margin-bottom: 2px; }
+    .racks-form-page ul.ps-3 { padding-left: 1.1rem !important; }
+    .racks-form-page ul.ps-3 li { margin-bottom: 6px; }
+    .racks-form-page ul.ps-3 li:last-child { margin-bottom: 0; }
+</style>
+@endpush
 
 @push('scripts')
 <script>
@@ -79,11 +166,12 @@ new Vue({
         errors: {},
         wasValidated: false,
         submitting: false,
-        toast: { show: false, message: '', type: 'danger' },
+        serverError: null,
     },
     methods: {
         submit() {
             this.wasValidated = true;
+            this.serverError = null;
             if (!this.form.name.trim()) {
                 this.$set(this.errors, 'name', 'Name is required.');
                 return;
@@ -102,20 +190,15 @@ new Vue({
                     const errs = {};
                     if (j.errors) Object.keys(j.errors).forEach(k => { errs[k] = j.errors[k][0]; });
                     this.errors = errs;
-                    this.showToast(j.message || 'Please fix the errors below.', 'danger');
+                    this.serverError = j.message || 'Please fix the errors below.';
                     return;
                 }
                 window.location.href = j.redirect;
             })
-            .catch(() => this.showToast('A network error occurred. Please try again.', 'danger'))
+            .catch(() => { this.serverError = 'A network error occurred. Please try again.'; })
             .finally(() => { this.submitting = false; });
-        },
-        showToast(message, type) {
-            this.toast = { show: true, message, type };
-            setTimeout(() => { this.toast.show = false; }, 4000);
         },
     },
 });
 </script>
 @endpush
-@endsection

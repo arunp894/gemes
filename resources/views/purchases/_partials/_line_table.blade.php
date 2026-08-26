@@ -35,7 +35,7 @@
         <i class="ti ti-list-details fs-18 text-primary"></i>
         <h5 class="card-title mb-0">Purchase Items</h5>
         <span class="badge bg-soft-primary text-primary ms-2">@{{ form.lines.length }} lines</span>
-        <button type="button" class="btn btn-sm btn-primary ms-auto" @click="addBlankLine"
+        <button type="button" class="btn btn-sm btn-success ms-auto" @click="addBlankLine"
                 :disabled="!form.supplier_id" :title="!form.supplier_id ? 'Pick a supplier first' : ''">
             <i class="ti ti-plus me-1"></i> Add Row
         </button>
@@ -46,18 +46,18 @@
             <thead class="bg-light bg-opacity-25 text-uppercase fs-xxs">
                 <tr>
                     <th style="width: 32px;">#</th>
-                    <th>Item</th>
-                    <th style="width: 140px;">Country of Origin</th>
-                    <th style="width: 90px;">Type</th>
-                    <th style="width: 90px;">Pcs</th>
-                    <th style="width: 100px;">Carat</th>
-                    <th style="width: 170px;">Barcode</th>
-                    <th style="width: 130px;">Lot Code</th>
+                    <th style="min-width: 240px;"><i class="ti ti-diamond me-1"></i>Item</th>
+                    <th style="width: 140px;"><i class="ti ti-map-pin me-1"></i>Origin</th>
+                    <th style="width: 130px;"><i class="ti ti-box me-1"></i>Type</th>
+                    <th style="width: 90px;"><i class="ti ti-stack-2 me-1"></i>Pcs</th>
+                    <th style="width: 100px;"><i class="ti ti-scale me-1"></i>Carat</th>
+                    <th style="width: 100px;"><i class="ti ti-barcode me-1"></i>Barcode</th>
+                    <th style="width: 130px;" title="Lot Code"><i class="ti ti-tag me-1"></i>Lot</th>
                     {{-- Rack column hidden --}}
-                    <th style="width: 110px;">Price</th>
-                    <th style="width: 110px;">Selling Price</th>
+                    <th style="width: 110px;"><i class="ti ti-cash me-1"></i>Price</th>
+                    <th style="width: 100px;" title="Selling Price"><i class="ti ti-world me-1"></i>S.Price</th>
                     {{-- Tax % and Disc % hidden --}}
-                    <th style="width: 110px;" class="text-end">Line Total</th>
+                    <th style="width: 70px;" class="text-end" title="Line Total"><i class="ti ti-calculator me-1"></i>Total</th>
                     <th style="width: 40px;"></th>
                 </tr>
             </thead>
@@ -66,7 +66,7 @@
                 <template v-for="(line, li) in form.lines">
 
                     {{-- ═══════ PARENT ROW (always rendered) ═══════ --}}
-                    <tr :key="'l-' + li" class="line-parent" :class="{ 'table-warning': line._highlight }">
+                    <tr :key="'l-' + li" class="line-parent" :class="{ 'line-highlight': line._highlight }">
 
                         <td class="text-muted small">
     <div class="d-flex align-items-center gap-1">
@@ -87,15 +87,17 @@
                                      row — persisted lines stay read-only here (changing an
                                      already-purchased line's category wouldn't reach the
                                      product it already created, so it's not offered). --}}
-                                <select v-if="!line.id" class="form-select form-select-sm" style="min-width: 140px;"
+                                <select v-if="!line.id" v-select2 data-placeholder="— Select Stone —"
+                                        class="form-select form-select-sm" style="min-width: 140px;"
                                         v-model.number="line.category_id"
                                         @change="onLineCategoryChange(li)" required>
                                     <option :value="null">— Select Stone —</option>
                                     <option v-for="c in categoryOptions" :key="c.id" :value="c.id">@{{ c.name }}</option>
                                 </select>
-                                <div v-else>
-                                    <div class="fw-semibold">@{{ line.title }}</div>
-                                    <small class="text-muted">@{{ categoryName(line.category_id) }}</small>
+                                <div v-else class="text-truncate" style="min-width: 0;"
+                                     :title="line.title + (categoryName(line.category_id) ? ' — ' + categoryName(line.category_id) : '')">
+                                    <div class="fw-semibold text-truncate">@{{ line.title }}</div>
+                                    <small class="text-muted text-truncate d-block">@{{ categoryName(line.category_id) }}</small>
                                 </div>
                                 {{-- Single-row lines: the toggle edits row[0] directly
                                      (same "hoist row 0 into the parent row" pattern the
@@ -105,7 +107,7 @@
                                 <button v-if="line.rows.length === 1" type="button"
                                         class="btn btn-icon btn-sm flex-shrink-0"
                                         :class="line.rows[0].website_enabled ? 'btn-soft-info' : 'btn-default'"
-                                        @click="line.rows[0].website_enabled = !line.rows[0].website_enabled"
+                                        @click="toggleRowWebsite(line.rows[0])"
                                         :title="line.rows[0].website_enabled ? 'Listed on website — click to unlist' : 'Not listed — click to list on website'">
                                     <i class="ti fs-16" :class="line.rows[0].website_enabled ? 'ti-world' : 'ti-world-off'"></i>
                                 </button>
@@ -113,23 +115,37 @@
                         </td>
 
                         <td class="small">
-                            <select v-if="!line.id" class="form-select form-select-sm" v-model.number="line.country_of_origin_id">
+                            <select v-if="!line.id" v-select2 data-placeholder="— Select —"
+                                    class="form-select form-select-sm" v-model.number="line.country_of_origin_id">
                                 <option :value="null">— Select —</option>
                                 <option v-for="o in countriesOfOrigin" :key="o.id" :value="o.id">@{{ o.name }}</option>
                             </select>
-                            <span v-else>@{{ countryOfOriginName(line.country_of_origin_id) }}</span>
+                            <span v-else class="text-truncate d-inline-block" style="max-width: 120px;"
+                                  :title="countryOfOriginName(line.country_of_origin_id)">@{{ countryOfOriginName(line.country_of_origin_id) }}</span>
                         </td>
 
                         <td>
-                            <select class="form-select form-select-sm" v-model="line.type" @change="rebuildRows(li)">
-                                <option value="box">Box</option>
-                                <option value="piece">Piece</option>
-                            </select>
-                            <input v-if="line.type === 'box'" type="number" min="1"
-                                   class="form-control form-control-sm mt-1"
-                                   v-model.number="line.package_qty"
-                                   @change="rebuildRows(li)"
-                                   title="Pack Qty — number of inventory rows/products this line creates">
+                            <div class="d-flex align-items-center gap-1">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn"
+                                            :class="line.type === 'piece' ? 'btn-primary' : 'btn-outline-secondary'"
+                                            @click="selectLineType(li, 'piece')"
+                                            title="Piece">
+                                        <i class="ti ti-cube"></i>
+                                    </button>
+                                    <button type="button" class="btn"
+                                            :class="line.type === 'box' ? 'btn-primary' : 'btn-outline-secondary'"
+                                            @click="selectLineType(li, 'box')"
+                                            title="Box">
+                                        <i class="ti ti-package"></i>
+                                    </button>
+                                </div>
+                                <input v-if="line.type === 'box'" type="number" min="1"
+                                       class="form-control form-control-sm" style="width: 55px;"
+                                       v-model.number="line.package_qty"
+                                       @change="rebuildRows(li)"
+                                       title="Pack Qty — number of inventory rows/products this line creates">
+                            </div>
                         </td>
 
                         {{-- Single-row lines (Pack Qty = 1): hoist row[0]'s
@@ -137,7 +153,9 @@
                         <template v-if="line.rows.length === 1">
                             <td>
                                 <input type="number" min="0" class="form-control form-control-sm"
-                                       v-model.number="line.rows[0].qty">
+                                       v-model.number="line.rows[0].qty" placeholder="qty"
+                                       :disabled="line.type === 'box'"
+                                       :title="line.type === 'box' ? 'Not used for Box lines' : ''">
                             </td>
                             <td>
                                 <input type="number" step="0.001" min="0" class="form-control form-control-sm"
@@ -151,12 +169,13 @@
                             </td>
                             <td>
                                 <input type="text" class="form-control form-control-sm bg-light" readonly
-                                       :placeholder="!form.supplier_id ? 'pick supplier first' : (line.rows[0]._lotCode || '—')">
+                                       :placeholder="!form.supplier_id ? 'pick supplier first' : (line.rows[0]._lotCode || '—')"
+                                       :title="line.rows[0]._lotCode || ''">
                             </td>
                             {{-- Rack column hidden --}}
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
-                                       v-model.number="line.rows[0].price">
+                                       v-model.number="line.rows[0].price" placeholder="0.00">
                             </td>
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
@@ -165,7 +184,7 @@
                             {{-- Tax % and Disc % inputs hidden --}}
                             <td class="text-end fw-semibold">@{{ formatMoney(rowNet(line.rows[0])) }}</td>
                             <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-soft-danger" @click="removeLine(li)">
+                                <button type="button" class="btn btn-sm btn-soft-danger" @click="removeLine(li)" title="Remove line">
                                     <i class="ti ti-x"></i>
                                 </button>
                             </td>
@@ -187,7 +206,7 @@
                                 </div>
                             </td>
                             <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-soft-danger" @click="removeLine(li)">
+                                <button type="button" class="btn btn-sm btn-soft-danger" @click="removeLine(li)" title="Remove line">
                                     <i class="ti ti-x"></i>
                                 </button>
                             </td>
@@ -214,7 +233,7 @@
                                 <button type="button"
                                         class="btn btn-icon btn-sm p-0 ms-1 lh-1"
                                         :class="row.website_enabled ? 'text-info' : 'text-muted'"
-                                        @click="row.website_enabled = !row.website_enabled"
+                                        @click="toggleRowWebsite(row)"
                                         :title="row.website_enabled ? 'Listed on website — click to unlist' : 'Not listed — click to list on website'">
                                     <i class="ti fs-14" :class="row.website_enabled ? 'ti-world' : 'ti-world-off'"></i>
                                 </button>
@@ -225,7 +244,9 @@
 
                             <td>
                                 <input type="number" min="0" class="form-control form-control-sm"
-                                       v-model.number="row.qty">
+                                       v-model.number="row.qty" placeholder="qty"
+                                       :disabled="line.type === 'box'"
+                                       :title="line.type === 'box' ? 'Not used for Box lines' : ''">
                             </td>
                             <td>
                                 <input type="number" step="0.001" min="0" class="form-control form-control-sm"
@@ -241,12 +262,13 @@
                             </td>
                             <td>
                                 <input type="text" class="form-control form-control-sm bg-light" readonly
-                                       :placeholder="!form.supplier_id ? 'pick supplier first' : (row._lotCode || '—')">
+                                       :placeholder="!form.supplier_id ? 'pick supplier first' : (row._lotCode || '—')"
+                                       :title="row._lotCode || ''">
                             </td>
                             {{-- Rack column hidden --}}
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
-                                       v-model.number="row.price">
+                                       v-model.number="row.price" placeholder="0.00">
                             </td>
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
@@ -266,7 +288,7 @@
                         <span v-if="!form.supplier_id">Pick a supplier above, then add a row to begin.</span>
                         <template v-else>
                             No items yet.
-                            <button type="button" class="btn btn-sm btn-soft-primary ms-1" @click="addBlankLine">
+                            <button type="button" class="btn btn-sm btn-soft-success ms-1" @click="addBlankLine">
                                 <i class="ti ti-plus me-1"></i> Add Row
                             </button>
                         </template>
@@ -276,3 +298,50 @@
         </table>
     </div>
 </div>
+
+@push('styles')
+<style>
+    /* Newly-added-row highlight — a light theme-blue tint instead of
+       Bootstrap's default yellow table-warning, so it reads as "new" rather
+       than "needs attention". Fades on its own via the existing _highlight
+       timeout in the script partial. */
+    .purchases-form-page .purchase-line-table tr.line-highlight > td {
+        background-color: #eff6ff !important;
+        transition: background-color 1.5s ease;
+    }
+
+    /* Compact Select2 sizing for the Stone / Country of Origin pickers inside
+       the purchase line table — matches the surrounding .form-select-sm cells.
+       Pushed from this partial (rather than create/edit.blade.php) so it's
+       defined once regardless of which page includes the table. */
+    .purchases-form-page .purchase-line-table .select2-container--default .select2-selection--single {
+        height: calc(1.5em + 0.5rem + 2px);
+        min-height: 31px;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8125rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        display: flex;
+        align-items: center;
+    }
+    .purchases-form-page .purchase-line-table .select2-container--default .select2-selection--single .select2-selection__rendered {
+        padding: 0;
+        line-height: normal;
+    }
+    .purchases-form-page .purchase-line-table .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 100%;
+        top: 0;
+        right: 4px;
+    }
+    .purchases-form-page .purchase-line-table .select2-container--default .select2-selection--single .select2-selection__clear {
+        margin-right: 4px;
+    }
+    /* Select2 portals its open dropdown panel to <body>, so it can't be scoped
+       under .purchases-form-page — defined once here (rather than per-page)
+       since it applies globally to every Select2 instance in this module,
+       and is currently the only place in the app using Select2. */
+    .select2-dropdown {
+        font-size: 0.8125rem;
+    }
+</style>
+@endpush
