@@ -91,15 +91,6 @@
                                     <i class="ti ti-tag app-search-icon text-muted"></i>
                                 </div>
 
-                                <div>
-                                    <select id="stockPerPage" class="form-select form-control my-1 my-md-0">
-                                        <option value="10">10</option>
-                                        <option value="25" selected>25</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                    </select>
-                                </div>
-
                                 @permission('stock-transfers.create')
                                 <a href="{{ route('stock-transfers.create') }}" class="add-btn ms-1">
                                     <i class="ti ti-transfer fs-sm me-2"></i> New Transfer
@@ -126,7 +117,15 @@
                         <div class="card-footer border-0">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                 <div id="stockInfoSlot" class="text-muted small"></div>
-                                <div id="stockPaginationSlot"></div>
+                                <div class="d-flex align-items-center gap-2 footer-pagination-group">
+                                    <select id="stockPerPage" class="form-select form-select-sm" style="width: auto;">
+                                        <option value="10">10</option>
+                                        <option value="25" selected>25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                    <div id="stockPaginationSlot"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -195,14 +194,6 @@
                                     <i class="ti ti-tag app-search-icon text-muted"></i>
                                 </div>
 
-                                <div>
-                                    <select id="salesPerPage" class="form-select form-control my-1 my-md-0">
-                                        <option value="10">10</option>
-                                        <option value="25" selected>25</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                    </select>
-                                </div>
                             </div>
                         </div>
 
@@ -225,7 +216,15 @@
                         <div class="card-footer border-0">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                                 <div id="salesInfoSlot" class="text-muted small"></div>
-                                <div id="salesPaginationSlot"></div>
+                                <div class="d-flex align-items-center gap-2 footer-pagination-group">
+                                    <select id="salesPerPage" class="form-select form-select-sm" style="width: auto;">
+                                        <option value="10">10</option>
+                                        <option value="25" selected>25</option>
+                                        <option value="50">50</option>
+                                        <option value="100">100</option>
+                                    </select>
+                                    <div id="salesPaginationSlot"></div>
+                                </div>
                             </div>
                         </div>
                     </div>

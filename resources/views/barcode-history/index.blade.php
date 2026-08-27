@@ -4,20 +4,18 @@
 <div class="container-fluid" id="barcodeHistoryApp">
 
     {{-- ── Page Title ───────────────────────────────────────────────────── --}}
-    <div class="row">
-        <div class="col-12">
-            <div class="page-title-box">
-                <div class="page-title-right">
-                    <ol class="breadcrumb m-0">
-                        <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                        <li class="breadcrumb-item"><a href="{{ route('stock.index') }}">Inventory</a></li>
-                        <li class="breadcrumb-item active">Barcode History</li>
-                    </ol>
-                </div>
-                <h4 class="page-title">
-                    <i class="ti ti-barcode me-2 text-primary"></i>Barcode Product History
-                </h4>
-            </div>
+    <div class="page-title-head d-flex align-items-center barcode-history-title-head">
+        <div class="flex-grow-1">
+            <h4 class="page-main-title m-0">
+                <i class="ti ti-barcode me-2"></i>Barcode Product History
+            </h4>
+        </div>
+        <div class="text-end">
+            <ol class="breadcrumb m-0 py-0">
+                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('stock.index') }}">Inventory</a></li>
+                <li class="breadcrumb-item active">Barcode History</li>
+            </ol>
         </div>
     </div>
 
@@ -660,6 +658,30 @@
 
 </div>{{-- /#barcodeHistoryApp --}}
 @endsection
+
+@push('styles')
+<style>
+    /* Page header accent — scoped narrowly so it doesn't leak into other pages */
+    .barcode-history-title-head {
+        border-bottom: 2px solid #e2e8f0;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+    }
+    .barcode-history-title-head .page-main-title {
+        position: relative;
+        padding-left: 12px;
+    }
+    .barcode-history-title-head .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #1e3a8a, #1d4ed8);
+    }
+    .barcode-history-title-head .breadcrumb { font-size: 0.75rem; }
+</style>
+@endpush
 
 @push('scripts')
 <script>

@@ -80,14 +80,6 @@
                     </div>
 
                     <div class="d-flex align-items-center flex-wrap gap-1">
-                        <div>
-                            <select id="purchasePerPage" class="form-select form-control my-1 my-md-0">
-                                <option value="10" selected>10</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                            </select>
-                        </div>
                         <div style="min-width: 170px;">
                             <select id="purchaseSupplierFilter" class="form-select form-control">
                                 <option value="">All Suppliers</option>
@@ -162,7 +154,15 @@
                 <div class="card-footer border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div id="purchasesInfoSlot" class="text-muted small"></div>
-                        <div id="purchasesPaginationSlot"></div>
+                        <div class="d-flex align-items-center gap-2 footer-pagination-group">
+                            <select id="purchasePerPage" class="form-select form-select-sm" style="width: auto;">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <div id="purchasesPaginationSlot"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -193,6 +193,30 @@
         </div>
     </div>
     {{-- ==================== /Delete Confirmation Modal ==================== --}}
+
+    {{-- ==================== Post Confirmation Modal ==================== --}}
+    <div class="modal fade" id="postPurchaseModal" tabindex="-1" aria-labelledby="postPurchaseModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4 px-4">
+                    <div class="post-modal-icon mx-auto mb-3">
+                        <i class="ti ti-check"></i>
+                    </div>
+                    <h5 class="modal-title mb-2" id="postPurchaseModalLabel">Post this purchase?</h5>
+                    <p class="text-muted mb-0">
+                        Posted purchases cannot be edited.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirmPostPurchaseBtn">
+                        <i class="ti ti-check me-1"></i>Post Purchase
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{-- ==================== /Post Confirmation Modal ==================== --}}
 
 </div>
 
@@ -456,6 +480,11 @@
         background: #fef2f2;
         border: 1px solid #fecaca;
     }
+    .purchases-page .action-invoice {
+        color: #7c3aed;
+        background: #f5f3ff;
+        border: 1px solid #ddd6fe;
+    }
 
     /* DataTables "processing" loading indicator */
     .purchases-page .dataTables_processing {
@@ -484,18 +513,19 @@
         border-width: 0.15em;
     }
 
-    /* Delete confirmation modal */
-    .purchases-page .delete-modal-icon {
+    /* Delete / Post confirmation modals */
+    .purchases-page .delete-modal-icon,
+    .purchases-page .post-modal-icon {
         width: 56px;
         height: 56px;
         border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        background: #fef2f2;
-        color: var(--purchases-danger);
         font-size: 1.5rem;
     }
+    .purchases-page .delete-modal-icon { background: #fef2f2; color: var(--purchases-danger); }
+    .purchases-page .post-modal-icon { background: #ecfdf5; color: var(--purchases-success); }
 
     /* Hide DataTables built-in length+filter+info+paginate (we render our own slots) */
     #purchasesTable_wrapper .dataTables_length,
@@ -509,7 +539,7 @@
     /* "Showing x to y..." info on the left, pagination on the right — overrides the
        app-wide pagination-left/info-right order, scoped to this page only. */
     .purchases-page .card-footer #purchasesInfoSlot { order: 1; }
-    .purchases-page .card-footer #purchasesPaginationSlot { order: 2; }
+    .purchases-page .card-footer .footer-pagination-group { order: 2; }
 </style>
 @endpush
 
@@ -631,14 +661,39 @@
         table.page.len(parseInt(this.value, 10)).draw();
     });
 
-    // ============= Post (kept as native confirm — not in scope for the modal treatment) =============
+    // ============= Post (styled confirmation modal + toasts) =============
+    const postModalEl = document.getElementById('postPurchaseModal');
+    const postModal = new bootstrap.Modal(postModalEl);
+    let pendingPostId = null;
+
     $(document).on('click', '.js-post-purchase', function () {
-        const id = this.dataset.id;
-        if (!confirm('Post this purchase? Posted purchases cannot be edited.')) return;
-        fetch(`/purchases/${id}/post`, {
+        pendingPostId = this.dataset.id;
+        postModal.show();
+    });
+
+    $('#confirmPostPurchaseBtn').on('click', function () {
+        if (!pendingPostId) return;
+        const $btn = $(this).prop('disabled', true);
+
+        fetch(`/purchases/${pendingPostId}/post`, {
             method: 'PATCH',
             headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
-        }).then(r => r.json()).then(() => table.ajax.reload(null, false));
+        })
+            .then(async (r) => {
+                const data = await r.json().catch(() => ({}));
+                if (r.ok) {
+                    table.ajax.reload(null, false);
+                    showToast('success', data.message || 'Purchase posted.');
+                } else {
+                    showToast('error', data.message || 'Could not post purchase.');
+                }
+            })
+            .catch(() => showToast('error', 'Failed to post purchase.'))
+            .finally(() => {
+                $btn.prop('disabled', false);
+                pendingPostId = null;
+                postModal.hide();
+            });
     });
 
     // ============= Delete (styled confirmation modal + toasts) =============

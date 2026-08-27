@@ -20,6 +20,9 @@
         </div>
     </div>
 
+    {{-- Toast notifications for inline validation feedback (file type/size, barcode generation) --}}
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="productFormToastContainer" style="z-index: 1080;"></div>
+
     <form id="productForm" @submit.prevent="submitForm" novalidate>
         <div class="row">
             <div class="col-lg-8">
@@ -47,6 +50,30 @@
             </div>
         </div>
     </form>
+
+    {{-- ==================== Switch to Single Barcode Mode Confirmation Modal ==================== --}}
+    <div class="modal fade" id="switchBarcodeModeModal" tabindex="-1" aria-labelledby="switchBarcodeModeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4 px-4">
+                    <div class="confirm-modal-icon mx-auto mb-3">
+                        <i class="ti ti-barcode"></i>
+                    </div>
+                    <h5 class="modal-title mb-2" id="switchBarcodeModeModalLabel">Switch to Single mode?</h5>
+                    <p class="text-muted mb-0">
+                        Switching to Single mode will remove all but the primary barcode. Continue?
+                    </p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmSwitchBarcodeModeBtn">
+                        <i class="ti ti-check me-1"></i>Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{-- ==================== /Switch to Single Barcode Mode Confirmation Modal ==================== --}}
 
 </div>
 
@@ -96,6 +123,17 @@
     .products-form-page .d-flex.justify-content-end.gap-2,
     .products-form-page .d-grid.gap-2 { margin-top: 4px; }
     .products-form-page .form-check { margin-bottom: 2px; }
+    .products-form-page .confirm-modal-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 1.5rem;
+    }
 </style>
 @endpush
 

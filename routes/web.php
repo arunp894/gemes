@@ -9,6 +9,7 @@ use App\Http\Controllers\CustomerAuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\TodayPerformanceController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChannelController;
 use App\Http\Controllers\CountryOfOriginController;
@@ -120,6 +121,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/', fn() => redirect()->route('dashboard'));
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/reports/today-performance', [TodayPerformanceController::class, 'index'])->name('reports.today-performance');
 
     Route::middleware('role:admin')->prefix('settings')->name('settings.')->group(function () {
         Route::get('/',             [SettingController::class, 'index'])->name('index');
@@ -135,14 +137,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('pages', PageController::class)
         ->except(['show'])
         ->whereNumber('page')
-        ->middleware([
-            'index'   => 'permission:pages.view',
-            'create'  => 'permission:pages.create',
-            'store'   => 'permission:pages.create',
-            'edit'    => 'permission:pages.edit',
-            'update'  => 'permission:pages.edit',
-            'destroy' => 'permission:pages.delete',
-        ]);
+        ->middlewareFor('index', 'permission:pages.view')
+        ->middlewareFor(['create', 'store'], 'permission:pages.create')
+        ->middlewareFor(['edit', 'update'], 'permission:pages.edit')
+        ->middlewareFor('destroy', 'permission:pages.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -156,15 +154,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('channel')->middleware('permission:channels.edit')->name('toggle-status');
     });
     Route::resource('channels', ChannelController::class)->whereNumber('channel')
-        ->middleware([
-            'index'   => 'permission:channels.view',
-            'show'    => 'permission:channels.view',
-            'create'  => 'permission:channels.create',
-            'store'   => 'permission:channels.create',
-            'edit'    => 'permission:channels.edit',
-            'update'  => 'permission:channels.edit',
-            'destroy' => 'permission:channels.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:channels.view')
+        ->middlewareFor(['create', 'store'], 'permission:channels.create')
+        ->middlewareFor(['edit', 'update'], 'permission:channels.edit')
+        ->middlewareFor('destroy', 'permission:channels.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -178,15 +171,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('category')->middleware('permission:categories.edit')->name('toggle-status');
     });
     Route::resource('categories', CategoryController::class)->whereNumber('category')
-        ->middleware([
-            'index'   => 'permission:categories.view',
-            'show'    => 'permission:categories.view',
-            'create'  => 'permission:categories.create',
-            'store'   => 'permission:categories.create',
-            'edit'    => 'permission:categories.edit',
-            'update'  => 'permission:categories.edit',
-            'destroy' => 'permission:categories.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:categories.view')
+        ->middlewareFor(['create', 'store'], 'permission:categories.create')
+        ->middlewareFor(['edit', 'update'], 'permission:categories.edit')
+        ->middlewareFor('destroy', 'permission:categories.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -202,15 +190,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('country-origins', CountryOfOriginController::class)
         ->whereNumber('countryOrigin')
         ->parameters(['country-origins' => 'countryOrigin'])
-        ->middleware([
-            'index'   => 'permission:country-origins.view',
-            'show'    => 'permission:country-origins.view',
-            'create'  => 'permission:country-origins.create',
-            'store'   => 'permission:country-origins.create',
-            'edit'    => 'permission:country-origins.edit',
-            'update'  => 'permission:country-origins.edit',
-            'destroy' => 'permission:country-origins.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:country-origins.view')
+        ->middlewareFor(['create', 'store'], 'permission:country-origins.create')
+        ->middlewareFor(['edit', 'update'], 'permission:country-origins.edit')
+        ->middlewareFor('destroy', 'permission:country-origins.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -232,15 +215,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('product')->middleware('permission:products.toggle-website')->name('toggle-website');
     });
     Route::resource('products', ProductController::class)->whereNumber('product')
-        ->middleware([
-            'index'   => 'permission:products.view',
-            'show'    => 'permission:products.view',
-            'create'  => 'permission:products.create',
-            'store'   => 'permission:products.create',
-            'edit'    => 'permission:products.edit',
-            'update'  => 'permission:products.edit',
-            'destroy' => 'permission:products.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:products.view')
+        ->middlewareFor(['create', 'store'], 'permission:products.create')
+        ->middlewareFor(['edit', 'update'], 'permission:products.edit')
+        ->middlewareFor('destroy', 'permission:products.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -258,15 +236,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('supplier')->middleware('permission:suppliers.edit')->name('toggle-status');
     });
     Route::resource('suppliers', SupplierController::class)->whereNumber('supplier')
-        ->middleware([
-            'index'   => 'permission:suppliers.view',
-            'show'    => 'permission:suppliers.view',
-            'create'  => 'permission:suppliers.create',
-            'store'   => 'permission:suppliers.create',
-            'edit'    => 'permission:suppliers.edit',
-            'update'  => 'permission:suppliers.edit',
-            'destroy' => 'permission:suppliers.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:suppliers.view')
+        ->middlewareFor(['create', 'store'], 'permission:suppliers.create')
+        ->middlewareFor(['edit', 'update'], 'permission:suppliers.edit')
+        ->middlewareFor('destroy', 'permission:suppliers.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -280,15 +253,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('rack')->middleware('permission:racks.edit')->name('toggle-status');
     });
     Route::resource('racks', RackController::class)->whereNumber('rack')
-        ->middleware([
-            'index'   => 'permission:racks.view',
-            'show'    => 'permission:racks.view',
-            'create'  => 'permission:racks.create',
-            'store'   => 'permission:racks.create',
-            'edit'    => 'permission:racks.edit',
-            'update'  => 'permission:racks.edit',
-            'destroy' => 'permission:racks.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:racks.view')
+        ->middlewareFor(['create', 'store'], 'permission:racks.create')
+        ->middlewareFor(['edit', 'update'], 'permission:racks.edit')
+        ->middlewareFor('destroy', 'permission:racks.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -304,15 +272,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('location')->middleware('permission:locations.edit')->name('set-default');
     });
     Route::resource('locations', LocationController::class)->whereNumber('location')
-        ->middleware([
-            'index'   => 'permission:locations.view',
-            'show'    => 'permission:locations.view',
-            'create'  => 'permission:locations.create',
-            'store'   => 'permission:locations.create',
-            'edit'    => 'permission:locations.edit',
-            'update'  => 'permission:locations.edit',
-            'destroy' => 'permission:locations.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:locations.view')
+        ->middlewareFor(['create', 'store'], 'permission:locations.create')
+        ->middlewareFor(['edit', 'update'], 'permission:locations.edit')
+        ->middlewareFor('destroy', 'permission:locations.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -336,6 +299,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('purchase')->middleware('permission:purchases.edit')->name('cancel');
         Route::get('/{purchase}/print-labels', [PurchaseController::class, 'printLabels'])
             ->whereNumber('purchase')->middleware('permission:purchases.view')->name('print-labels');
+        Route::get('/{purchase}/invoice', [PurchaseController::class, 'invoice'])
+            ->whereNumber('purchase')->middleware('permission:purchases.view')->name('invoice');
+        Route::get('/{purchase}/invoice/pdf', [PurchaseController::class, 'invoicePdf'])
+            ->whereNumber('purchase')->middleware('permission:purchases.view')->name('invoice.pdf');
 
         // ── Payments ──
         Route::post('/{purchase}/payments', [PurchaseController::class, 'addPayment'])
@@ -345,15 +312,10 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:purchases.edit')->name('payments.destroy');
     });
     Route::resource('purchases', PurchaseController::class)->whereNumber('purchase')
-        ->middleware([
-            'index'   => 'permission:purchases.view',
-            'show'    => 'permission:purchases.view',
-            'create'  => 'permission:purchases.create',
-            'store'   => 'permission:purchases.create',
-            'edit'    => 'permission:purchases.edit',
-            'update'  => 'permission:purchases.edit',
-            'destroy' => 'permission:purchases.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:purchases.view')
+        ->middlewareFor(['create', 'store'], 'permission:purchases.create')
+        ->middlewareFor(['edit', 'update'], 'permission:purchases.edit')
+        ->middlewareFor('destroy', 'permission:purchases.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -369,15 +331,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('customer')->middleware('permission:customers.edit')->name('toggle-status');
     });
     Route::resource('customers', CustomerController::class)->whereNumber('customer')
-        ->middleware([
-            'index'   => 'permission:customers.view',
-            'show'    => 'permission:customers.view',
-            'create'  => 'permission:customers.create',
-            'store'   => 'permission:customers.create',
-            'edit'    => 'permission:customers.edit',
-            'update'  => 'permission:customers.edit',
-            'destroy' => 'permission:customers.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:customers.view')
+        ->middlewareFor(['create', 'store'], 'permission:customers.create')
+        ->middlewareFor(['edit', 'update'], 'permission:customers.edit')
+        ->middlewareFor('destroy', 'permission:customers.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -430,15 +387,10 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::resource('sales', SaleController::class)->whereNumber('sale')
-        ->middleware([
-            'index'   => 'permission:sales.view',
-            'show'    => 'permission:sales.view',
-            'create'  => 'permission:sales.create',
-            'store'   => 'permission:sales.create',
-            'edit'    => 'permission:sales.edit',
-            'update'  => 'permission:sales.edit',
-            'destroy' => 'permission:sales.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:sales.view')
+        ->middlewareFor(['create', 'store'], 'permission:sales.create')
+        ->middlewareFor(['edit', 'update'], 'permission:sales.edit')
+        ->middlewareFor('destroy', 'permission:sales.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -484,15 +436,10 @@ Route::middleware('auth')->group(function () {
     Route::resource('stock-transfers', StockTransferController::class)
         ->whereNumber('stockTransfer')
         ->parameters(['stock-transfers' => 'stockTransfer'])
-        ->middleware([
-            'index'   => 'permission:stock-transfers.view',
-            'show'    => 'permission:stock-transfers.view',
-            'create'  => 'permission:stock-transfers.create',
-            'store'   => 'permission:stock-transfers.create',
-            'edit'    => 'permission:stock-transfers.edit',
-            'update'  => 'permission:stock-transfers.edit',
-            'destroy' => 'permission:stock-transfers.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:stock-transfers.view')
+        ->middlewareFor(['create', 'store'], 'permission:stock-transfers.create')
+        ->middlewareFor(['edit', 'update'], 'permission:stock-transfers.edit')
+        ->middlewareFor('destroy', 'permission:stock-transfers.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -525,12 +472,8 @@ Route::middleware('auth')->group(function () {
         ->only(['index', 'create', 'store', 'show'])
         ->whereNumber('stockAudit')
         ->parameters(['stock-audits' => 'stockAudit'])
-        ->middleware([
-            'index'  => 'permission:stock-audits.view',
-            'show'   => 'permission:stock-audits.view',
-            'create' => 'permission:stock-audits.create',
-            'store'  => 'permission:stock-audits.create',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:stock-audits.view')
+        ->middlewareFor(['create', 'store'], 'permission:stock-audits.create');
 
     /*
     |--------------------------------------------------------------------------
@@ -554,15 +497,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('banner')->middleware('permission:banners.edit')->name('toggle-status');
     });
     Route::resource('banners', BannerController::class)->whereNumber('banner')
-        ->middleware([
-            'index'   => 'permission:banners.view',
-            'show'    => 'permission:banners.view',
-            'create'  => 'permission:banners.create',
-            'store'   => 'permission:banners.create',
-            'edit'    => 'permission:banners.edit',
-            'update'  => 'permission:banners.edit',
-            'destroy' => 'permission:banners.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:banners.view')
+        ->middlewareFor(['create', 'store'], 'permission:banners.create')
+        ->middlewareFor(['edit', 'update'], 'permission:banners.edit')
+        ->middlewareFor('destroy', 'permission:banners.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -576,15 +514,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('blog')->middleware('permission:blogs.edit')->name('toggle-status');
     });
     Route::resource('blogs', BlogController::class)->whereNumber('blog')
-        ->middleware([
-            'index'   => 'permission:blogs.view',
-            'show'    => 'permission:blogs.view',
-            'create'  => 'permission:blogs.create',
-            'store'   => 'permission:blogs.create',
-            'edit'    => 'permission:blogs.edit',
-            'update'  => 'permission:blogs.edit',
-            'destroy' => 'permission:blogs.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:blogs.view')
+        ->middlewareFor(['create', 'store'], 'permission:blogs.create')
+        ->middlewareFor(['edit', 'update'], 'permission:blogs.edit')
+        ->middlewareFor('destroy', 'permission:blogs.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -598,15 +531,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('user')->middleware('permission:users.edit')->name('toggle-status');
     });
     Route::resource('users', UserController::class)->whereNumber('user')
-        ->middleware([
-            'index'   => 'permission:users.view',
-            'show'    => 'permission:users.view',
-            'create'  => 'permission:users.create',
-            'store'   => 'permission:users.create',
-            'edit'    => 'permission:users.edit',
-            'update'  => 'permission:users.edit',
-            'destroy' => 'permission:users.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:users.view')
+        ->middlewareFor(['create', 'store'], 'permission:users.create')
+        ->middlewareFor(['edit', 'update'], 'permission:users.edit')
+        ->middlewareFor('destroy', 'permission:users.delete');
 
     /*
     |--------------------------------------------------------------------------
@@ -618,15 +546,10 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:roles.view')->name('data');
     });
     Route::resource('roles', RoleController::class)->whereNumber('role')
-        ->middleware([
-            'index'   => 'permission:roles.view',
-            'show'    => 'permission:roles.view',
-            'create'  => 'permission:roles.create',
-            'store'   => 'permission:roles.create',
-            'edit'    => 'permission:roles.edit',
-            'update'  => 'permission:roles.edit',
-            'destroy' => 'permission:roles.delete',
-        ]);
+        ->middlewareFor(['index', 'show'], 'permission:roles.view')
+        ->middlewareFor(['create', 'store'], 'permission:roles.create')
+        ->middlewareFor(['edit', 'update'], 'permission:roles.edit')
+        ->middlewareFor('destroy', 'permission:roles.delete');
 
     /*
     |--------------------------------------------------------------------------

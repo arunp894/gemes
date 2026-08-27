@@ -76,15 +76,6 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-1">
-                        <div>
-                            <select id="blogPerPage" class="form-select form-control my-1 my-md-0">
-                                <option value="5">5</option>
-                                <option value="10" selected>10</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                            </select>
-                        </div>
-
                         <div class="app-search">
                             <select id="blogStatusFilter" class="form-select form-control my-1 my-md-0">
                                 <option value="">All Status</option>
@@ -122,7 +113,15 @@
                 <div class="card-footer border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div id="blogsInfoSlot" class="text-muted small"></div>
-                        <div id="blogsPaginationSlot"></div>
+                        <div class="d-flex align-items-center gap-2 footer-pagination-group">
+                            <select id="blogPerPage" class="form-select form-select-sm" style="width: auto;">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                            </select>
+                            <div id="blogsPaginationSlot"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -480,7 +479,7 @@
     /* "Showing x to y..." info on the left, pagination on the right — overrides the
        app-wide pagination-left/info-right order, scoped to this page only. */
     .blogs-page .card-footer #blogsInfoSlot { order: 1; }
-    .blogs-page .card-footer #blogsPaginationSlot { order: 2; }
+    .blogs-page .card-footer .footer-pagination-group { order: 2; }
 </style>
 @endpush
 

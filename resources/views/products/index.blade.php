@@ -75,15 +75,6 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-1 flex-wrap">
-                        <div>
-                            <select id="productPerPage" class="form-select form-control my-1 my-md-0">
-                                <option value="10" selected>10</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                                <option value="100">100</option>
-                            </select>
-                        </div>
-
                         <div class="app-search">
                             <select id="productCategoryFilter" class="form-select form-control my-1 my-md-0">
                                 <option value="">All Stones</option>
@@ -166,7 +157,15 @@
                 <div class="card-footer border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div id="productsInfoSlot" class="text-muted small"></div>
-                        <div id="productsPaginationSlot"></div>
+                        <div class="d-flex align-items-center gap-2 footer-pagination-group">
+                            <select id="productPerPage" class="form-select form-select-sm" style="width: auto;">
+                                <option value="10" selected>10</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                            <div id="productsPaginationSlot"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -197,6 +196,28 @@
         </div>
     </div>
     {{-- ==================== /Delete Confirmation Modal ==================== --}}
+
+    {{-- ==================== Bulk Website Visibility Confirmation Modal ==================== --}}
+    <div class="modal fade" id="bulkWebsiteModal" tabindex="-1" aria-labelledby="bulkWebsiteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4 px-4">
+                    <div class="confirm-modal-icon mx-auto mb-3">
+                        <i class="ti ti-world"></i>
+                    </div>
+                    <h5 class="modal-title mb-2" id="bulkWebsiteModalLabel">Update website visibility?</h5>
+                    <p class="text-muted mb-0" id="bulkWebsiteModalMessage"></p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmBulkWebsiteBtn">
+                        <i class="ti ti-check me-1"></i>Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{-- ==================== /Bulk Website Visibility Confirmation Modal ==================== --}}
 
 </div>
 
@@ -540,6 +561,19 @@
         font-size: 1.5rem;
     }
 
+    /* Bulk website-visibility confirmation modal (non-destructive, so blue not red) */
+    .products-page .confirm-modal-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #eff6ff;
+        color: var(--products-primary);
+        font-size: 1.5rem;
+    }
+
     /* Hide DataTables built-in length+filter+info+paginate (we render our own slots) */
     #productsTable_wrapper .dataTables_length,
     #productsTable_wrapper .dataTables_filter { display: none !important; }
@@ -552,7 +586,7 @@
     /* "Showing x to y..." info on the left, pagination on the right — overrides the
        app-wide pagination-left/info-right order, scoped to this page only. */
     .products-page .card-footer #productsInfoSlot { order: 1; }
-    .products-page .card-footer #productsPaginationSlot { order: 2; }
+    .products-page .card-footer .footer-pagination-group { order: 2; }
 </style>
 @endpush
 
@@ -662,6 +696,12 @@
 
         $('#productsTable tbody').on('change', '.product-item-check', refreshBulkCount);
 
+        // ============= Bulk Website Toggle (styled confirmation modal) =============
+        const bulkWebsiteModalEl = document.getElementById('bulkWebsiteModal');
+        const bulkWebsiteModal = new bootstrap.Modal(bulkWebsiteModalEl);
+        let pendingBulkAction = null;
+        let pendingBulkIds = null;
+
         $('.js-bulk-action').on('click', function () {
             const action = $(this).data('action');
             const ids = $('#productsTable tbody .product-item-check:checked')
@@ -674,17 +714,28 @@
                 return;
             }
             const verb = action === 'enable' ? 'enable' : 'disable';
-            if (!confirm(verb.charAt(0).toUpperCase() + verb.slice(1) + ' ' + ids.length + ' product(s) for the website?')) return;
+
+            pendingBulkAction = action;
+            pendingBulkIds = ids;
+            $('#bulkWebsiteModalMessage').text(verb.charAt(0).toUpperCase() + verb.slice(1) + ' ' + ids.length + ' product(s) for the website?');
+            bulkWebsiteModal.show();
+        });
+
+        $('#confirmBulkWebsiteBtn').on('click', function () {
+            if (!pendingBulkIds) return;
+            const $btn = $(this).prop('disabled', true);
 
             $.ajax({
                 url: '{{ route('products.bulk-website-toggle') }}',
                 type: 'POST',
                 headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-                data: { ids: ids, action: action },
+                data: { ids: pendingBulkIds, action: pendingBulkAction },
                 success: function (res) {
                     if (res.success) {
                         showToast('success', res.message);
                         dt.ajax.reload(null, false);
+                    } else {
+                        showToast('error', res.message || 'Bulk action failed.');
                     }
                 },
                 error: function (xhr) {
@@ -692,6 +743,12 @@
                         ? xhr.responseJSON.message
                         : 'Bulk action failed.';
                     showToast('error', msg);
+                },
+                complete: function () {
+                    $btn.prop('disabled', false);
+                    pendingBulkAction = null;
+                    pendingBulkIds = null;
+                    bulkWebsiteModal.hide();
                 },
             });
         });

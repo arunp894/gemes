@@ -9,7 +9,7 @@
         <div class="flex-grow-1">
             <h4 class="page-main-title m-0">
                 Edit Purchase
-                <span class="badge bg-soft-secondary text-secondary ms-2">{{ $purchase->invoice_number }}</span>
+                <span class="badge badge-soft-secondary ms-2">{{ $purchase->invoice_number }}</span>
             </h4>
         </div>
         <div class="text-end">

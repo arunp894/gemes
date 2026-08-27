@@ -18,6 +18,7 @@ use App\Models\Supplier;
 use App\Repositories\PurchaseRepository;
 use App\Services\PurchaseService;
 use App\Services\SettingService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -168,6 +169,7 @@ class PurchaseController extends Controller
 
                 $html = '<div class="d-flex gap-1 justify-content-center">';
                 $html .= '<a href="' . route('purchases.show', $p) . '" class="action-btn action-view" title="View"><i class="ti ti-eye"></i></a>';
+                $html .= '<a href="' . route('purchases.invoice', $p) . '" class="action-btn action-invoice" title="Invoice" target="_blank"><i class="ti ti-file-invoice"></i></a>';
                 if ($canEdit && ! $p->editBlockReason($this->purchaseEditDays())) {
                     $html .= '<a href="' . route('purchases.edit', $p) . '" class="action-btn action-edit" title="Edit"><i class="ti ti-edit"></i></a>';
                 }
@@ -223,6 +225,28 @@ class PurchaseController extends Controller
             'editBlockReason' => $purchase->editBlockReason($this->purchaseEditDays()),
             'paymentMethods'  => PurchasePayment::METHODS,
         ]);
+    }
+
+    /* ─── Invoice ──────────────────────────────────────────── */
+
+    public function invoice(Purchase $purchase): View
+    {
+        return view('purchases.invoice', [
+            'purchase' => $this->repo->find($purchase->id),
+            'settings' => $this->settings,
+        ]);
+    }
+
+    public function invoicePdf(Purchase $purchase)
+    {
+        $purchase = $this->repo->find($purchase->id);
+
+        $pdf = Pdf::loadView('purchases.invoice-pdf', [
+            'purchase' => $purchase,
+            'settings' => $this->settings,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download("{$purchase->invoice_number}-invoice.pdf");
     }
 
     public function edit(Purchase $purchase): View|RedirectResponse

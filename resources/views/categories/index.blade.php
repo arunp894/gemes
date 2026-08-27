@@ -75,16 +75,6 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-1">
-                        <div>
-                            <select id="categoryPerPage" class="form-select form-control my-1 my-md-0">
-                                <option value="5">5</option>
-                                <option value="10" selected>10</option>
-                                <option value="15">15</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                            </select>
-                        </div>
-
                         <div class="app-search">
                             <select id="categoryStatusFilter" class="form-select form-control my-1 my-md-0">
                                 <option value="">All</option>
@@ -94,10 +84,12 @@
                             <i class="ti ti-circle app-search-icon text-muted"></i>
                         </div>
 
+                        @permission('categories.create')
                         <a href="#!" class="add-btn ms-1" data-bs-toggle="modal"
                             data-bs-target="#addCategoryModal">
                             <i class="ti ti-plus fs-sm me-2"></i> Add Stone
                         </a>
+                        @endpermission
                     </div>
                 </div>
 
@@ -125,7 +117,16 @@
                 <div class="card-footer border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div id="categoriesInfoSlot" class="text-muted small"></div>
-                        <div id="categoriesPaginationSlot"></div>
+                        <div class="d-flex align-items-center gap-2 footer-pagination-group">
+                            <select id="categoryPerPage" class="form-select form-select-sm" style="width: auto;">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+                            <div id="categoriesPaginationSlot"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -561,7 +562,7 @@
     /* "Showing x to y..." info on the left, pagination on the right — overrides the
        app-wide pagination-left/info-right order, scoped to this page only. */
     .stones-page .card-footer #categoriesInfoSlot { order: 1; }
-    .stones-page .card-footer #categoriesPaginationSlot { order: 2; }
+    .stones-page .card-footer .footer-pagination-group { order: 2; }
 </style>
 @endpush
 

@@ -34,7 +34,7 @@
     <div class="card-header border-light d-flex align-items-center gap-2">
         <i class="ti ti-list-details fs-18 text-primary"></i>
         <h5 class="card-title mb-0">Purchase Items</h5>
-        <span class="badge bg-soft-primary text-primary ms-2">@{{ form.lines.length }} lines</span>
+        <span class="badge badge-soft-primary ms-2">@{{ form.lines.length }} lines</span>
         <button type="button" class="btn btn-sm btn-success ms-auto" @click="addBlankLine"
                 :disabled="!form.supplier_id" :title="!form.supplier_id ? 'Pick a supplier first' : ''">
             <i class="ti ti-plus me-1"></i> Add Row

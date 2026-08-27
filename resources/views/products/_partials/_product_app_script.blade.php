@@ -5,6 +5,29 @@
     (function () {
         const csrfToken = $('meta[name="csrf-token"]').attr('content');
 
+        // ============= Toast helper =============
+        function showToast(type, message) {
+            const container = document.getElementById('productFormToastContainer');
+            if (!container) return;
+            const isSuccess = type === 'success';
+            const el = document.createElement('div');
+            el.className = 'toast align-items-center border-0 text-bg-' + (isSuccess ? 'success' : 'danger');
+            el.setAttribute('role', 'alert');
+            el.setAttribute('aria-live', 'assertive');
+            el.setAttribute('aria-atomic', 'true');
+            el.innerHTML = '<div class="d-flex">'
+                + '<div class="toast-body d-flex align-items-center gap-2">'
+                + '<i class="ti ' + (isSuccess ? 'ti-circle-check' : 'ti-alert-circle') + ' fs-lg"></i>'
+                + $('<div/>').text(message).html()
+                + '</div>'
+                + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>'
+                + '</div>';
+            container.appendChild(el);
+            const toast = new bootstrap.Toast(el, { delay: 4000 });
+            el.addEventListener('hidden.bs.toast', () => el.remove());
+            toast.show();
+        }
+
         function makeBlankBarcode(isPrimary) {
             return {
                 _uid: 'b_' + Math.random().toString(36).slice(2, 9),
@@ -20,7 +43,7 @@
             };
         }
 
-        new Vue({
+        const app = new Vue({
             el: '#productApp',
             data: {
                 mode: 'create',
@@ -67,6 +90,7 @@
                 barcodeMode: 'single',
                 barcodes: [],
                 barcodesError: null,
+                pendingBarcodeModeSwitch: null,
 
                 errors: {},
                 submitting: false,
@@ -114,7 +138,7 @@
                     const files = Array.from(e.target.files);
                     const totalAfter = this.existingGallery.length + files.length;
                     if (totalAfter > 10) {
-                        alert('You may upload at most 10 gallery images. Currently ' +
+                        showToast('error', 'You may upload at most 10 gallery images. Currently ' +
                             this.existingGallery.length + ' uploaded + ' + files.length +
                             ' new = too many.');
                         e.target.value = '';
@@ -140,11 +164,11 @@
                     const file = e.target.files[0];
                     if (!file) { this.certificateFile = null; this.certificatePreview = null; return; }
                     if (!['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
-                        alert('Certificate must be JPG, PNG, or PDF.');
+                        showToast('error', 'Certificate must be JPG, PNG, or PDF.');
                         return;
                     }
                     if (file.size > 10 * 1024 * 1024) {
-                        alert('Certificate must not exceed 10 MB.');
+                        showToast('error', 'Certificate must not exceed 10 MB.');
                         return;
                     }
                     this.certificateFile = file;
@@ -155,15 +179,26 @@
                 /* -------------------- Barcode methods -------------------- */
                 setBarcodeMode(mode) {
                     if (mode === this.barcodeMode) return;
-                    if (mode === 'single') {
-                        if (this.barcodes.length > 1) {
-                            if (!confirm('Switching to Single mode will remove all but the primary barcode. Continue?')) return;
-                            const primary = this.barcodes.find((b) => b.is_primary) || this.barcodes[0];
-                            this.barcodes = [primary];
-                            this.barcodes[0].is_primary = true;
-                        }
+                    if (mode === 'single' && this.barcodes.length > 1) {
+                        // Multiple barcodes would be lost — confirm via the styled
+                        // modal (see #switchBarcodeModeModal) instead of a native
+                        // confirm(). The modal's Continue button calls
+                        // applyPendingBarcodeModeSwitch() below.
+                        this.pendingBarcodeModeSwitch = mode;
+                        const modalEl = document.getElementById('switchBarcodeModeModal');
+                        if (modalEl) new bootstrap.Modal(modalEl).show();
+                        return;
                     }
                     this.barcodeMode = mode;
+                },
+
+                applyPendingBarcodeModeSwitch() {
+                    if (!this.pendingBarcodeModeSwitch) return;
+                    const primary = this.barcodes.find((b) => b.is_primary) || this.barcodes[0];
+                    this.barcodes = [primary];
+                    this.barcodes[0].is_primary = true;
+                    this.barcodeMode = this.pendingBarcodeModeSwitch;
+                    this.pendingBarcodeModeSwitch = null;
                 },
 
                 addBarcode() {
@@ -253,10 +288,10 @@
                             b.error = null;
                             b.validated = true;
                         } else {
-                            alert(res.message || 'Could not generate barcode.');
+                            showToast('error', res.message || 'Could not generate barcode.');
                         }
                     })
-                    .catch(() => alert('Network error generating barcode.'));
+                    .catch(() => showToast('error', 'Network error generating barcode.'));
                 },
 
                 /* -------------------- Bootstrap existing product (edit) -------------------- */
@@ -461,5 +496,17 @@
                 },
             },
         });
+
+        // Wire the "Switch to Single mode" confirmation modal's Continue
+        // button to the Vue instance (see setBarcodeMode / applyPendingBarcodeModeSwitch above).
+        const switchBarcodeModeConfirmBtn = document.getElementById('confirmSwitchBarcodeModeBtn');
+        if (switchBarcodeModeConfirmBtn) {
+            switchBarcodeModeConfirmBtn.addEventListener('click', function () {
+                app.applyPendingBarcodeModeSwitch();
+                const modalEl = document.getElementById('switchBarcodeModeModal');
+                const modal = modalEl && bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            });
+        }
     })();
 </script>

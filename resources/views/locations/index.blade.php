@@ -76,16 +76,6 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-1">
-                        <div>
-                            <select id="locationPerPage" class="form-select form-control my-1 my-md-0">
-                                <option value="5">5</option>
-                                <option value="10" selected>10</option>
-                                <option value="15">15</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                            </select>
-                        </div>
-
                         <div class="app-search">
                             <select id="locationTypeFilter" class="form-select form-control my-1 my-md-0">
                                 <option value="">All Types</option>
@@ -140,7 +130,16 @@
                 <div class="card-footer border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div id="locationsInfoSlot" class="text-muted small"></div>
-                        <div id="locationsPaginationSlot"></div>
+                        <div class="d-flex align-items-center gap-2 footer-pagination-group">
+                            <select id="locationPerPage" class="form-select form-select-sm" style="width: auto;">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+                            <div id="locationsPaginationSlot"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -537,7 +536,7 @@
     /* "Showing x to y..." info on the left, pagination on the right — overrides the
        app-wide pagination-left/info-right order, scoped to this page only. */
     .locations-page .card-footer #locationsInfoSlot { order: 1; }
-    .locations-page .card-footer #locationsPaginationSlot { order: 2; }
+    .locations-page .card-footer .footer-pagination-group { order: 2; }
 </style>
 @endpush
 
