@@ -79,15 +79,6 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-1 flex-wrap">
-                        <div>
-                            <select id="salePerPage" class="form-select form-control my-1 my-md-0">
-                                <option value="10" selected>10</option>
-                                <option value="15">15</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                            </select>
-                        </div>
-
                         <div class="app-search">
                             <select id="saleStatusFilter" class="form-select form-control my-1 my-md-0">
                                 <option value="">All Status</option>
@@ -142,7 +133,15 @@
                 <div class="card-footer border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div id="salesInfoSlot" class="text-muted small"></div>
-                        <div id="salesPaginationSlot"></div>
+                        <div class="d-flex align-items-center gap-2 footer-pagination-group">
+                            <select id="salePerPage" class="form-select form-select-sm" style="width: auto;">
+                                <option value="10" selected>10</option>
+                                <option value="15">15</option>
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                            </select>
+                            <div id="salesPaginationSlot"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -173,6 +172,30 @@
         </div>
     </div>
     {{-- ==================== /Delete Confirmation Modal ==================== --}}
+
+    {{-- ==================== Post Confirmation Modal ==================== --}}
+    <div class="modal fade" id="postSaleModal" tabindex="-1" aria-labelledby="postSaleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4 px-4">
+                    <div class="post-modal-icon mx-auto mb-3">
+                        <i class="ti ti-check"></i>
+                    </div>
+                    <h5 class="modal-title mb-2" id="postSaleModalLabel">Post this sale?</h5>
+                    <p class="text-muted mb-0">
+                        Inventory will be deducted.
+                    </p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" id="confirmPostSaleBtn">
+                        <i class="ti ti-check me-1"></i>Post Sale
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{-- ==================== /Post Confirmation Modal ==================== --}}
 
 </div>
 
@@ -416,14 +439,19 @@
         border-width: 0.15em;
     }
 
-    /* Delete confirmation modal */
-    .sales-page .delete-modal-icon {
+    /* Delete / Post confirmation modals */
+    .sales-page .delete-modal-icon,
+    .sales-page .post-modal-icon {
         width: 56px;
         height: 56px;
         border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        font-size: 1.5rem;
+    }
+    .sales-page .post-modal-icon { background: #ecfdf5; color: var(--sales-success); }
+    .sales-page .delete-modal-icon {
         background: #fef2f2;
         color: var(--sales-danger);
         font-size: 1.5rem;
@@ -441,7 +469,7 @@
     /* "Showing x to y..." info on the left, pagination on the right — overrides the
        app-wide pagination-left/info-right order, scoped to this page only. */
     .sales-page .card-footer #salesInfoSlot { order: 1; }
-    .sales-page .card-footer #salesPaginationSlot { order: 2; }
+    .sales-page .card-footer .footer-pagination-group { order: 2; }
 </style>
 @endpush
 
@@ -525,12 +553,22 @@
         $('#salePerPage').on('change', function () { dt.page.len(parseInt(this.value, 10)).draw(); });
         $('#saleStatusFilter, #salePaymentFilter').on('change', function () { dt.draw(); });
 
-        // ============= Post sale =============
+        // ============= Post sale (styled confirmation modal) =============
+        const postModalEl = document.getElementById('postSaleModal');
+        const postModal = new bootstrap.Modal(postModalEl);
+        let pendingPostUrl = null;
+
         $('#salesTable tbody').on('click', '.js-post-sale', function () {
-            const url = $(this).data('url');
-            if (!confirm('Post this sale? Inventory will be deducted.')) return;
+            pendingPostUrl = $(this).data('url');
+            postModal.show();
+        });
+
+        $('#confirmPostSaleBtn').on('click', function () {
+            if (!pendingPostUrl) return;
+            const $btn = $(this).prop('disabled', true);
+
             $.ajax({
-                url, type: 'POST',
+                url: pendingPostUrl, type: 'POST',
                 headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
                 success: function (res) {
                     if (res.ok) {
@@ -542,6 +580,11 @@
                 },
                 error: function (xhr) {
                     showToast('error', (xhr.responseJSON && xhr.responseJSON.message) || 'Failed to post sale.');
+                },
+                complete: function () {
+                    $btn.prop('disabled', false);
+                    pendingPostUrl = null;
+                    postModal.hide();
                 },
             });
         });

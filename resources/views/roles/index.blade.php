@@ -76,16 +76,6 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-1">
-                        <div>
-                            <select id="rolePerPage" class="form-select form-control my-1 my-md-0">
-                                <option value="5">5</option>
-                                <option value="10" selected>10</option>
-                                <option value="15">15</option>
-                                <option value="20">20</option>
-                                <option value="50">50</option>
-                            </select>
-                        </div>
-
                         @permission('roles.create')
                         <a href="{{ route('roles.create') }}" class="add-btn ms-1">
                             <i class="ti ti-plus fs-sm me-2"></i> Add Role
@@ -115,7 +105,16 @@
                 <div class="card-footer border-0">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
                         <div id="rolesInfoSlot" class="text-muted small"></div>
-                        <div id="rolesPaginationSlot"></div>
+                        <div class="d-flex align-items-center gap-2 footer-pagination-group">
+                            <select id="rolePerPage" class="form-select form-select-sm" style="width: auto;">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                            </select>
+                            <div id="rolesPaginationSlot"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -417,7 +416,7 @@
     /* "Showing x to y..." info on the left, pagination on the right — overrides the
        app-wide pagination-left/info-right order, scoped to this page only. */
     .roles-page .card-footer #rolesInfoSlot { order: 1; }
-    .roles-page .card-footer #rolesPaginationSlot { order: 2; }
+    .roles-page .card-footer .footer-pagination-group { order: 2; }
 </style>
 @endpush
 

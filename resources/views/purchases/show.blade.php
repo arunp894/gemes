@@ -90,7 +90,7 @@
         <div class="flex-grow-1">
             <h4 class="page-main-title m-0">
                 Purchase
-                <span class="badge bg-soft-primary text-primary ms-2">{{ $purchase->invoice_number }}</span>
+                <span class="badge badge-soft-primary ms-2">{{ $purchase->invoice_number }}</span>
                 @php
                     $statusPillClass = match ($purchase->status) {
                         'posted'    => 'status-pill status-posted',
@@ -108,6 +108,10 @@
             </h4>
         </div>
         <div class="text-end d-flex gap-1 align-items-center">
+            <a href="{{ route('purchases.invoice', $purchase) }}" class="btn btn-soft-primary btn-sm" target="_blank">
+                <i class="ti ti-file-invoice me-1"></i> Invoice
+            </a>
+
             @permission('purchases.edit')
                 @if (! $editBlockReason)
                     <a href="{{ route('purchases.edit', $purchase) }}" class="btn btn-primary btn-sm">

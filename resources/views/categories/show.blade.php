@@ -41,9 +41,11 @@
                             </p>
                         </div>
                         <div class="d-flex gap-2">
+                            @permission('categories.edit')
                             <a href="{{ route('categories.edit', $category) }}" class="btn btn-primary">
                                 <i class="ti ti-pencil me-1"></i>Edit
                             </a>
+                            @endpermission
                             <a href="{{ route('categories.index') }}" class="btn btn-light">Back</a>
                         </div>
                     </div>

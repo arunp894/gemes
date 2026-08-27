@@ -5,20 +5,21 @@
 @section('content')
 <div class="container-fluid">
 
-  {{-- Page Header --}}
-  <div class="row">
-    <div class="col-12">
-      <div class="page-title-box">
-        <div class="page-title-right">
-          <ol class="breadcrumb m-0">
-            <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-            <li class="breadcrumb-item active">Settings</li>
-          </ol>
-        </div>
-        <h4 class="page-title"><i class="ti ti-settings me-2"></i>Application Settings</h4>
+  {{-- Page title --}}
+  <div class="page-title-head d-flex align-items-center settings-title-head">
+      <div class="flex-grow-1">
+          <h4 class="page-main-title m-0"><i class="ti ti-settings me-2"></i>Application Settings</h4>
       </div>
-    </div>
+      <div class="text-end">
+          <ol class="breadcrumb m-0 py-0">
+              <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+              <li class="breadcrumb-item active">Settings</li>
+          </ol>
+      </div>
   </div>
+
+  {{-- Toast notifications for AJAX actions (save, PayPal test) --}}
+  <div class="toast-container position-fixed top-0 end-0 p-3" id="settingsToastContainer" style="z-index: 1080;"></div>
 
   @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -385,9 +386,54 @@
 </div>
 @endsection
 
+@push('styles')
+<style>
+    /* Page header accent — scoped narrowly so it doesn't leak into other pages */
+    .settings-title-head {
+        border-bottom: 2px solid #e2e8f0;
+        padding: 10px 0 !important;
+        margin-bottom: 16px !important;
+    }
+    .settings-title-head .page-main-title {
+        position: relative;
+        padding-left: 12px;
+    }
+    .settings-title-head .page-main-title::before {
+        content: '';
+        position: absolute;
+        left: 0; top: 2px; bottom: 2px;
+        width: 4px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, #1e3a8a, #1d4ed8);
+    }
+    .settings-title-head .breadcrumb { font-size: 0.75rem; }
+</style>
+@endpush
+
 @push('scripts')
 <script>
 $(function () {
+
+  // ── Toast helper ────────────────────────────────────────────────
+  function showToast(type, message) {
+    var isSuccess = type === 'success';
+    var el = document.createElement('div');
+    el.className = 'toast align-items-center border-0 text-bg-' + (isSuccess ? 'success' : 'danger');
+    el.setAttribute('role', 'alert');
+    el.setAttribute('aria-live', 'assertive');
+    el.setAttribute('aria-atomic', 'true');
+    el.innerHTML = '<div class="d-flex">'
+      + '<div class="toast-body d-flex align-items-center gap-2">'
+      + '<i class="ti ' + (isSuccess ? 'ti-circle-check' : 'ti-alert-circle') + ' fs-lg"></i>'
+      + $('<div/>').text(message).html()
+      + '</div>'
+      + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>'
+      + '</div>';
+    document.getElementById('settingsToastContainer').appendChild(el);
+    var toast = new bootstrap.Toast(el, { delay: 3000 });
+    el.addEventListener('hidden.bs.toast', function () { el.remove(); });
+    toast.show();
+  }
 
   // ── Branding image previews ───────────────────────────────────
   function wireImagePreview(inputId, previewId) {
@@ -444,21 +490,13 @@ $(function () {
     .then(r => r.json())
     .then(function (d) {
       if (d.success) {
-        if (typeof Swal !== 'undefined') {
-          Swal.fire({ icon: 'success', title: 'Saved!', text: d.message, timer: 1800, showConfirmButton: false });
-        } else {
-          alert(d.message);
-        }
+        showToast('success', d.message || 'Settings saved successfully.');
       } else {
-        if (typeof Swal !== 'undefined') {
-          Swal.fire({ icon: 'error', title: 'Error', text: d.message || 'Could not save.' });
-        } else {
-          alert(d.message || 'Could not save.');
-        }
+        showToast('error', d.message || 'Could not save settings.');
       }
     })
     .catch(function () {
-      alert('An unexpected error occurred.');
+      showToast('error', 'An unexpected error occurred.');
     })
     .finally(function () {
       $btn.prop('disabled', false).html('<i class="ti ti-device-floppy me-1"></i> Save Settings');

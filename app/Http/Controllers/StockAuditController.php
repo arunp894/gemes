@@ -13,6 +13,7 @@ use App\Services\SettingService;
 use App\Services\StockAuditService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -151,9 +152,13 @@ class StockAuditController extends Controller
 
     /* ─── Scan screen ──────────────────────────────────────── */
 
-    public function scanScreen(StockAudit $stockAudit): View
+    public function scanScreen(StockAudit $stockAudit): View|RedirectResponse
     {
-        abort_unless($stockAudit->isInProgress(), 403, 'This audit is no longer in progress.');
+        if (! $stockAudit->isInProgress()) {
+            return redirect()
+                ->route('stock-audits.show', $stockAudit)
+                ->with('info', 'This audit is already '.strtolower($stockAudit->statusLabel())." \u{2014} scanning is closed.");
+        }
 
         $recentScans = StockAuditScan::where('stock_audit_id', $stockAudit->id)
             ->with(['item:id,lot_code,barcode,product_id', 'item.product:id,title,sku', 'scanner:id,name'])
@@ -165,6 +170,7 @@ class StockAuditController extends Controller
         return view('stock-audits.scan', [
             'audit'       => $this->repo->find($stockAudit->id),
             'recentScans' => $recentScans,
+            'scanCounts'  => $this->service->scanResultCounts($stockAudit),
         ]);
     }
 
@@ -204,6 +210,7 @@ class StockAuditController extends Controller
                     'missing_total'  => $stockAudit->missingTotal(),
                     'percent'        => $stockAudit->progressPercent(),
                 ],
+                'scan_counts' => $this->service->scanResultCounts($stockAudit),
             ]);
         } catch (Throwable $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
@@ -226,6 +233,7 @@ class StockAuditController extends Controller
                     'missing_total'  => $stockAudit->missingTotal(),
                     'percent'        => $stockAudit->progressPercent(),
                 ],
+                'scan_counts' => $this->service->scanResultCounts($stockAudit),
             ]);
         } catch (Throwable $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
@@ -238,6 +246,7 @@ class StockAuditController extends Controller
     {
         try {
             $audit = $this->service->complete($stockAudit);
+            session()->flash('success', 'Audit completed successfully.');
             return response()->json([
                 'ok'       => true,
                 'message'  => 'Audit completed.',
@@ -252,6 +261,7 @@ class StockAuditController extends Controller
     {
         try {
             $audit = $this->service->cancel($stockAudit);
+            session()->flash('info', 'Audit cancelled — no stock was adjusted.');
             return response()->json([
                 'ok'       => true,
                 'message'  => 'Audit cancelled.',
@@ -266,11 +276,13 @@ class StockAuditController extends Controller
     {
         try {
             $count = $this->service->writeOffMissing($stockAudit, (int) auth()->id());
+            $message = $count > 0
+                ? "{$count} missing piece(s) written off to the stock ledger."
+                : 'Nothing left to write off.';
+            session()->flash($count > 0 ? 'success' : 'info', $message);
             return response()->json([
                 'ok'      => true,
-                'message' => $count > 0
-                    ? "{$count} missing piece(s) written off to the stock ledger."
-                    : 'Nothing left to write off.',
+                'message' => $message,
             ]);
         } catch (Throwable $e) {
             return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);

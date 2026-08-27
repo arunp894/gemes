@@ -4,8 +4,14 @@
         <li class="side-nav-item">
             <a href="{{ route('dashboard') }}" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-dashboard"></i></span>
-                <span class="menu-text" data-lang="dashboards">Dashboards</span>               
-            </a>            
+                <span class="menu-text" data-lang="dashboards">Dashboards</span>
+            </a>
+        </li>
+        <li class="side-nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}">
+            <a href="{{ route('reports.today-performance') }}" class="side-nav-link">
+                <span class="menu-icon"><i class="ti ti-chart-infographic"></i></span>
+                <span class="menu-text">Today's Performance</span>
+            </a>
         </li>
         <li class="side-nav-item {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') || request()->routeIs('country-origins.*') ? 'menuitem-active' : '' }}">
 

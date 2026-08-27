@@ -237,6 +237,10 @@
             </div>
         </div>
 
+        <div v-if="confirmError" class="alert alert-danger small">
+            <i class="ti ti-alert-circle me-1"></i> @{{ confirmError }}
+        </div>
+
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-secondary" @click="reset">
                 <i class="ti ti-arrow-left me-1"></i> Back
@@ -252,6 +256,30 @@
                 @{{ confirming ? 'Importing…' : 'Confirm Import (' + preview.summary.clean_groups + ' orders)' }}
             </button>
         </div>
+
+        {{-- ==================== Confirm Import Modal (Vue-controlled) ==================== --}}
+        <div class="modal fade" :class="{ show: showConfirmModal }" :style="{ display: showConfirmModal ? 'block' : 'none' }" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-body text-center py-4 px-4">
+                        <div class="confirm-modal-icon confirm-modal-icon-success mx-auto mb-3">
+                            <i class="ti ti-check"></i>
+                        </div>
+                        <h5 class="modal-title mb-2">Confirm import?</h5>
+                        <p class="text-muted mb-0">
+                            This will create @{{ preview.summary.clean_groups }} sale(s) and deduct stock. This cannot be undone.
+                        </p>
+                    </div>
+                    <div class="modal-footer border-0 justify-content-center pb-4">
+                        <button type="button" class="btn btn-secondary" @click="showConfirmModal = false">Cancel</button>
+                        <button type="button" class="btn btn-success" @click="proceedImport">
+                            <i class="ti ti-check me-1"></i>Confirm Import
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-backdrop fade show" v-if="showConfirmModal"></div>
     </div>
 
     {{-- ════════════════════════════════════════════════════════════════
@@ -365,6 +393,13 @@
     border-color: var(--bs-success);
     background: rgba(var(--bs-success-rgb), .04);
 }
+
+/* Confirm import modal icon badge, shared visual language with other module show/index pages */
+.confirm-modal-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem;
+}
+.confirm-modal-icon-success { background: #ecfdf5; color: #059669; }
 </style>
 @endpush
 
@@ -381,6 +416,8 @@ new Vue({
         uploading:    false,
         confirming:   false,
         uploadError:  null,
+        confirmError: null,
+        showConfirmModal: false,
         preview:      { groups: {}, errors: {}, summary: {} },
         importResult: {},
     },
@@ -459,10 +496,15 @@ new Vue({
             }
         },
 
-        async confirmImport() {
-            if (!confirm('Confirm import? This will create ' + this.preview.summary.clean_groups + ' sale(s) and deduct stock. This cannot be undone.')) return;
+        confirmImport() {
+            this.confirmError     = null;
+            this.showConfirmModal = true;
+        },
 
-            this.confirming = true;
+        async proceedImport() {
+            this.showConfirmModal = false;
+            this.confirming       = true;
+            this.confirmError     = null;
 
             try {
                 const res = await fetch('{{ route("sales.import.confirm") }}', {
@@ -477,14 +519,14 @@ new Vue({
                 const data = await res.json();
 
                 if (!data.ok) {
-                    alert(data.message || 'Import failed.');
+                    this.confirmError = data.message || 'Import failed.';
                     return;
                 }
 
                 this.importResult = data.result;
                 this.step         = 3;
             } catch (err) {
-                alert('Network error — please try again.');
+                this.confirmError = 'Network error — please try again.';
             } finally {
                 this.confirming = false;
             }

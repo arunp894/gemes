@@ -5,6 +5,8 @@
 @section('content')
 <div class="container-fluid" id="saleShowApp">
 
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="saleShowToastContainer" style="z-index: 1080;"></div>
+
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
             <h4 class="page-main-title m-0">
@@ -464,6 +466,48 @@
             </div>
         </div>
     @endif
+
+    {{-- ==================== Status Action Confirmation Modal ==================== --}}
+    <div class="modal fade" id="actionConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4 px-4">
+                    <div class="confirm-modal-icon confirm-modal-icon-primary mx-auto mb-3">
+                        <i class="ti ti-help"></i>
+                    </div>
+                    <h5 class="modal-title mb-2">Please confirm</h5>
+                    <p class="text-muted mb-0" id="actionConfirmText"></p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="confirmActionBtn">
+                        <i class="ti ti-check me-1"></i>Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ==================== Remove Payment Confirmation Modal ==================== --}}
+    <div class="modal fade" id="removePaymentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4 px-4">
+                    <div class="confirm-modal-icon confirm-modal-icon-danger mx-auto mb-3">
+                        <i class="ti ti-trash"></i>
+                    </div>
+                    <h5 class="modal-title mb-2">Remove this payment?</h5>
+                    <p class="text-muted mb-0">This can't be undone.</p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmRemovePaymentBtn">
+                        <i class="ti ti-trash me-1"></i>Remove Payment
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -472,24 +516,67 @@
 $(function () {
     const csrfToken = $('meta[name="csrf-token"]').attr('content');
 
-    // Status action buttons (post / complete / refund / cancel)
+    function showToast(type, message) {
+        const container = document.getElementById('saleShowToastContainer');
+        if (!container) return;
+        const isSuccess = type === 'success';
+        const el = document.createElement('div');
+        el.className = 'toast align-items-center border-0 text-bg-' + (isSuccess ? 'success' : 'danger');
+        el.setAttribute('role', 'alert');
+        el.innerHTML = '<div class="d-flex">'
+            + '<div class="toast-body d-flex align-items-center gap-2">'
+            + '<i class="ti ' + (isSuccess ? 'ti-circle-check' : 'ti-alert-circle') + ' fs-lg"></i>'
+            + $('<div/>').text(message).html()
+            + '</div>'
+            + '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>'
+            + '</div>';
+        container.appendChild(el);
+        const toast = new bootstrap.Toast(el, { delay: 2500 });
+        el.addEventListener('hidden.bs.toast', () => el.remove());
+        toast.show();
+    }
+
+    // Status action buttons (post / complete / refund / cancel) — styled confirmation modal
+    const actionModalEl = document.getElementById('actionConfirmModal');
+    const actionModal = actionModalEl ? new bootstrap.Modal(actionModalEl) : null;
+    let pendingActionUrl = null;
+
     $('.js-status-action').on('click', function () {
-        const url     = $(this).data('url');
-        const confirm = $(this).data('confirm');
-        if (confirm && !window.confirm(confirm)) return;
+        pendingActionUrl = $(this).data('url');
+        $('#actionConfirmText').text($(this).data('confirm') || 'Are you sure?');
+        if (actionModal) actionModal.show();
+    });
+
+    $('#confirmActionBtn').on('click', function () {
+        if (!pendingActionUrl) return;
+        const $btn = $(this).prop('disabled', true);
 
         $.ajax({
-            url, type: 'POST',
+            url: pendingActionUrl, type: 'POST',
             headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
             success: function (res) {
-                if (res.ok) window.location.reload();
-                else alert(res.message || 'Action failed.');
+                if (res.ok) {
+                    if (actionModal) actionModal.hide();
+                    showToast('success', res.message || 'Done.');
+                    setTimeout(() => window.location.reload(), 600);
+                } else {
+                    showToast('error', res.message || 'Action failed.');
+                    $btn.prop('disabled', false);
+                }
             },
             error: function (xhr) {
-                alert((xhr.responseJSON && xhr.responseJSON.message) || 'Action failed.');
+                showToast('error', (xhr.responseJSON && xhr.responseJSON.message) || 'Action failed.');
+                $btn.prop('disabled', false);
             },
         });
     });
+
+    if (actionModalEl) {
+        actionModalEl.addEventListener('hidden.bs.modal', function () {
+            pendingActionUrl = null;
+            $('#confirmActionBtn').prop('disabled', false);
+        });
+    }
 
     $('.js-shipping-status').on('click', function () {
         const status = $('#shippingStatusSelect').val();
@@ -500,10 +587,10 @@ $(function () {
             headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
             success: function (res) {
                 if (res.ok) window.location.reload();
-                else alert(res.message || 'Update failed.');
+                else showToast('error', res.message || 'Update failed.');
             },
             error: function (xhr) {
-                alert((xhr.responseJSON && xhr.responseJSON.message) || 'Update failed.');
+                showToast('error', (xhr.responseJSON && xhr.responseJSON.message) || 'Update failed.');
             },
         });
     });
@@ -534,17 +621,39 @@ $(function () {
         });
     });
 
+    const removePaymentModalEl = document.getElementById('removePaymentModal');
+    const removePaymentModal = removePaymentModalEl ? new bootstrap.Modal(removePaymentModalEl) : null;
+    let pendingRemovePaymentUrl = null;
+
     $('.js-remove-payment').on('click', function () {
-        if (!confirm('Remove this payment?')) return;
-        const url = $(this).data('url');
+        pendingRemovePaymentUrl = $(this).data('url');
+        if (removePaymentModal) removePaymentModal.show();
+    });
+
+    $('#confirmRemovePaymentBtn').on('click', function () {
+        if (!pendingRemovePaymentUrl) return;
+        const $btn = $(this).prop('disabled', true);
+
         $.ajax({
-            url, type: 'DELETE',
+            url: pendingRemovePaymentUrl, type: 'DELETE',
             headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
             success: function (res) {
-                if (res.ok) window.location.reload();
-                else alert(res.message || 'Failed.');
+                if (res.ok) {
+                    showToast('success', res.message || 'Payment removed.');
+                    setTimeout(() => window.location.reload(), 600);
+                } else {
+                    showToast('error', res.message || 'Failed.');
+                    $btn.prop('disabled', false);
+                }
             },
-            error: function (xhr) { alert((xhr.responseJSON && xhr.responseJSON.message) || 'Failed.'); },
+            error: function (xhr) {
+                showToast('error', (xhr.responseJSON && xhr.responseJSON.message) || 'Failed.');
+                $btn.prop('disabled', false);
+            },
+            complete: function () {
+                if (removePaymentModal) removePaymentModal.hide();
+                pendingRemovePaymentUrl = null;
+            },
         });
     });
 
@@ -610,5 +719,13 @@ $(function () {
         .js-status-action, .js-remove-payment,
         #addPaymentForm, .btn { display: none !important; }
     }
+
+    /* Confirmation modal icon badges, shared with Purchase/Stock Audit show pages */
+    .confirm-modal-icon {
+        width: 56px; height: 56px; border-radius: 50%;
+        display: inline-flex; align-items: center; justify-content: center; font-size: 1.5rem;
+    }
+    .confirm-modal-icon-primary { background: #eff6ff; color: #1d4ed8; }
+    .confirm-modal-icon-danger  { background: #fef2f2; color: #dc2626; }
 </style>
 @endpush

@@ -75,9 +75,11 @@
                         @endif
                     </div>
                     <div class="d-flex gap-1">
+                        @permission('products.edit')
                         <a href="{{ route('products.edit', $product) }}" class="btn btn-primary btn-sm">
                             <i class="ti ti-edit me-1"></i> Edit
                         </a>
+                        @endpermission
                         <a href="{{ route('products.index') }}" class="btn btn-light btn-sm">
                             <i class="ti ti-arrow-left me-1"></i> Back
                         </a>
