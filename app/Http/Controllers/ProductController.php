@@ -136,19 +136,21 @@ class ProductController extends Controller
                 return $dt->format('d M, Y') . ' <small class="text-muted">' . $dt->format('h:i A') . '</small>';
             })
             ->addColumn('action', function (Product $product) {
-                $show           = route('products.show', $product);
-                $edit           = route('products.edit', $product);
-                $toggleStatus   = route('products.toggle-status', $product);
-                $toggleWebsite  = route('products.toggle-website', $product);
-                $destroy        = route('products.destroy', $product);
+                $show         = route('products.show', $product);
+                $frontend     = route('website.product', $product);
+                $edit         = route('products.edit', $product);
+                $toggleStatus = route('products.toggle-status', $product);
+                $destroy      = route('products.destroy', $product);
 
-                $statusIcon  = $product->isActive() ? 'ti-toggle-right' : 'ti-toggle-left';
-                $websiteIcon = $product->isWebsiteEnabled() ? 'ti-world' : 'ti-world-off';
+                $statusIcon = $product->isActive() ? 'ti-toggle-right' : 'ti-toggle-left';
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
                         <a href="' . $show . '" class="action-btn action-view" title="View">
                             <i class="ti ti-eye"></i>
+                        </a>
+                        <a href="' . $frontend . '" class="action-btn action-frontend" target="_blank" rel="noopener" title="View on Website">
+                            <i class="ti ti-world"></i>
                         </a>
                         <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
                             <i class="ti ti-edit"></i>
@@ -156,10 +158,6 @@ class ProductController extends Controller
                         <button type="button" class="action-btn action-toggle js-toggle-status"
                             data-url="' . $toggleStatus . '" title="Toggle Status">
                             <i class="ti ' . $statusIcon . '"></i>
-                        </button>
-                        <button type="button" class="action-btn action-website js-toggle-website"
-                            data-url="' . $toggleWebsite . '" title="Toggle Website">
-                            <i class="ti ' . $websiteIcon . '"></i>
                         </button>
                         <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($product->title) . '" title="Delete">

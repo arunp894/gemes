@@ -32,6 +32,15 @@ return Application::configure(basePath: dirname(__DIR__))
          | Storefront customer redirects are handled by EnsureCustomerAuth.
          */
         $middleware->redirectGuestsTo(fn () => route('login'));
+
+        /*
+         | PayPal's webhook POSTs don't (and can't) carry a Laravel CSRF
+         | token — PaypalWebhookController verifies authenticity via
+         | PayPal's own signature-verification API instead.
+         */
+        $middleware->validateCsrfTokens(except: [
+            'paypal/webhook',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

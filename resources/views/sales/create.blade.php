@@ -253,7 +253,8 @@
                                             :disabled="line.on_hand === 1"
                                             class="form-control form-control-sm text-end"
                                             v-model.number="line.qty"
-                                            @input="checkStockWarning(idx)">
+                                            @input="checkStockWarning(idx)"
+                                            @blur="normalizeQty(idx)">
                                     </td>
                                     <td>
                                         <input type="number" min="0" step="0.01"
@@ -810,15 +811,27 @@ $(function () {
 
             // Clamps qty to on-hand stock rather than just flagging it —
             // typing past what's available snaps back to the ceiling.
+            // Deliberately does NOT floor an empty/invalid value to 1 here
+            // (see normalizeQty()) — this runs on every keystroke, and
+            // snapping back to 1 the instant the box goes empty made it
+            // impossible to clear the field and type a new number.
             checkStockWarning(idx) {
                 const l = this.form.lines[idx];
                 if (!l) return;
-                if (!l.qty || Number(l.qty) < 1) l.qty = 1;
                 if (l.qty_on_record !== null && Number(l.qty) > Number(l.qty_on_record)) {
                     l.qty = Number(l.qty_on_record);
                     l._stockWarning = true;
                     setTimeout(() => { l._stockWarning = false; }, 2000);
                 }
+            },
+
+            // Runs on blur, once the seller is done editing — this is
+            // where an emptied or invalid qty finally falls back to 1,
+            // instead of on every keystroke.
+            normalizeQty(idx) {
+                const l = this.form.lines[idx];
+                if (!l) return;
+                if (!l.qty || Number(l.qty) < 1) l.qty = 1;
             },
 
             /* ── carat ─────────────────────── */

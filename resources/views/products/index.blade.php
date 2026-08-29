@@ -94,15 +94,6 @@
                             <i class="ti ti-circle app-search-icon text-muted"></i>
                         </div>
 
-                        <div class="app-search">
-                            <select id="productWebsiteFilter" class="form-select form-control my-1 my-md-0">
-                                <option value="">Website: All</option>
-                                <option value="1" selected>Enabled</option>
-                                <option value="0">Disabled</option>
-                            </select>
-                            <i class="ti ti-world app-search-icon text-muted"></i>
-                        </div>
-
                         {{-- Bulk Actions Dropdown --}}
                         <div class="dropdown">
                             <button class="btn btn-light dropdown-toggle ms-1" type="button"
@@ -510,7 +501,7 @@
         background: #fffbeb;
         border: 1px solid #fde68a;
     }
-    .products-page .action-website {
+    .products-page .action-frontend {
         color: #7c3aed;
         background: #f5f3ff;
         border: 1px solid #ddd6fe;
@@ -626,9 +617,8 @@
                 url: '{{ route('products.data') }}',
                 type: 'GET',
                 data: function (d) {
-                    d.category_id     = $('#productCategoryFilter').val();
-                    d.status          = $('#productStatusFilter').val();
-                    d.website_enabled = $('#productWebsiteFilter').val();
+                    d.category_id = $('#productCategoryFilter').val();
+                    d.status      = $('#productStatusFilter').val();
                 },
             },
             dom: 'rt<"datatables-tail"ip>',
@@ -678,7 +668,7 @@
             dt.page.len(parseInt(this.value, 10)).draw();
         });
 
-        $('#productCategoryFilter, #productStatusFilter, #productWebsiteFilter').on('change', function () {
+        $('#productCategoryFilter, #productStatusFilter').on('change', function () {
             dt.draw();
         });
 
@@ -772,29 +762,6 @@
                     const msg = (xhr.responseJSON && xhr.responseJSON.message)
                         ? xhr.responseJSON.message
                         : 'Failed to update status.';
-                    showToast('error', msg);
-                },
-            });
-        });
-
-        $('#productsTable tbody').on('click', '.js-toggle-website', function () {
-            const url = $(this).data('url');
-            $.ajax({
-                url: url,
-                type: 'PATCH',
-                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
-                success: function (res) {
-                    if (res.success) {
-                        dt.ajax.reload(null, false);
-                        showToast('success', 'Website visibility set to ' + (res.label || (res.enabled ? 'Enabled' : 'Disabled')) + '.');
-                    } else {
-                        showToast('error', res.message || 'Failed to update website visibility.');
-                    }
-                },
-                error: function (xhr) {
-                    const msg = (xhr.responseJSON && xhr.responseJSON.message)
-                        ? xhr.responseJSON.message
-                        : 'Failed to update website visibility.';
                     showToast('error', msg);
                 },
             });
