@@ -32,8 +32,6 @@
     <!-- App css -->
     <link id="app-style" href="{{ asset('assets/css/app.min.css') }}" rel="stylesheet" type="text/css" />
     <link id="app-style" href="{{ asset('assets/plugins/select2/select2.min.css') }}" rel="stylesheet" type="text/css" />
-    <link rel="stylesheet" href="{{ asset('assets/vendor/datatables.net-bs5/css/dataTables.bootstrap5.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/vendor/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css') }}">
             <link rel="stylesheet" href="{{ asset('assets/plugins/filepond/filepond.min.css') }}" type="text/css" />
         <link rel="stylesheet" href="{{ asset('assets/plugins/filepond/filepond-plugin-image-preview.min.css') }}" />
     @stack('styles')
@@ -166,7 +164,7 @@
 
     <div class="offcanvas offcanvas-end overflow-hidden" tabindex="-1" id="theme-settings-offcanvas">
         <div class="d-flex justify-content-between text-bg-primary gap-2 p-3"
-            style="background-image: url(assets/images/settings-bg.png)">
+            style="background-image: url('{{ asset('assets/images/settings-bg.png') }}')">
             <div>
                 <h5 class="mb-1 fw-bold text-white text-uppercase">Admin Customizer</h5>
                 <p class="text-white text-opacity-75 fst-italic fw-medium mb-0">Easily configure layout, styles, and
