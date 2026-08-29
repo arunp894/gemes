@@ -3,18 +3,24 @@
 namespace App\Http\Controllers;
 
 use App\Services\BarcodeHistoryService;
+use App\Services\SettingService;
 use Illuminate\Http\Request;
 
 class BarcodeHistoryController extends Controller
 {
-    public function __construct(private BarcodeHistoryService $historyService) {}
+    public function __construct(
+        private BarcodeHistoryService $historyService,
+        private SettingService $settings,
+    ) {}
 
     /**
      * Show the barcode scanner / history page.
      */
     public function index()
     {
-        return view('barcode-history.index');
+        return view('barcode-history.index', [
+            'currencySymbol' => $this->settings->get('currency_symbol', '₹'),
+        ]);
     }
 
     /**

@@ -5,52 +5,26 @@ namespace Database\Seeders;
 use App\Models\CountryOfOrigin;
 use Illuminate\Database\Seeder;
 
+/**
+ * Idempotent: upserts on `name`. This seeder does not delete countries
+ * that existed before but are no longer listed here — those rows are
+ * left untouched in the database.
+ */
 class CountryOfOriginSeeder extends Seeder
 {
     public function run(): void
     {
         $countries = [
-            'Himalayan',
-            'Kenya',
-            'Nigeria',
-            'Mexico',
-            'Switzerland',
-            'Zambia',
-            'Cambodia',
-            'Ceylon – Sri Lanka',
-            'Pakistan',
             'Tanzania',
-            'Burma (Myanmar)',
-            'Siberia',
-            'Spain',
-            'Tanzania – Merelani Hills',
-            'Thailand',
-            'Turkey',
-            'United States',
-            'Sri Lanka',
-            'Nepal',
-            'Namibia',
-            'Ireland',
-            'Indonesia',
-            'Germany',
-            'Czech Republic',
-            'Congo',
-            'Cambodia',
-            'Colombia',
-            'Bolivia',
-            'Australia',
-            'Africa',
-            'Afghanistan',
-            'Canada',
-            'Russia',
-            'Mexico',
-            'India',
-            'Vietnam',
-            'Madagascar',
-            'Ethiopia',
-            'Brazil',
             'Mozambique',
-            'Tanzania – United Republic of',
+            'Zambia',
+            'Nigeria',
+            'Brazil',
+            'Ethiopia',
+            'Ceylon',
+            'Africa',
+            'Madagascar',
+            'India',
         ];
 
         foreach ($countries as $i => $name) {

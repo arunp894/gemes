@@ -16,6 +16,7 @@ use App\Http\Controllers\CountryOfOriginController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\PaypalWebhookController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PurchaseController;
@@ -68,6 +69,12 @@ Route::name('website.')->group(function () {
         Route::post('/capture',  [CheckoutController::class, 'captureOrder'])->name('capture');
         Route::get('/success',   [CheckoutController::class, 'success'])->name('success');
     });
+
+    // PayPal calls this directly — no customer session, so it can't sit
+    // behind customer.auth. Trust comes from PaypalWebhookController's own
+    // signature verification instead. CSRF is exempted for this URI in
+    // bootstrap/app.php (PayPal doesn't send a CSRF token either).
+    Route::post('/paypal/webhook', [PaypalWebhookController::class, 'handle'])->name('paypal.webhook');
 
     Route::prefix('auth')->name('auth.')->group(function () {
         Route::get('/login',     [CustomerAuthController::class, 'showLogin'])->name('login');

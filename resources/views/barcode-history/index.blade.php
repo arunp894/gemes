@@ -191,7 +191,7 @@
                         </div>
                         <div class="small opacity-75">
                             @{{ result.summary.total_purchased_qty }} units &bull;
-                            ₹@{{ fmt(result.summary.total_purchased_value) }}
+                            @{{ currencySymbol }}@{{ fmt(result.summary.total_purchased_value) }}
                         </div>
                     </div>
                 </div>
@@ -211,7 +211,7 @@
                         </div>
                         <div class="small opacity-75">
                             @{{ result.summary.total_sold_qty }} units &bull;
-                            ₹@{{ fmt(result.summary.total_sold_value) }}
+                            @{{ currencySymbol }}@{{ fmt(result.summary.total_sold_value) }}
                         </div>
                     </div>
                 </div>
@@ -260,9 +260,9 @@
                                 <i class="ti ti-chart-line opacity-40" style="font-size:1.75rem;"></i>
                             </div>
                             <div class="fw-bold mb-1" style="font-size:2.2rem;line-height:1;">
-                                ₹@{{ fmt(result.summary.total_sold_value - result.summary.total_purchased_value) }}
+                                @{{ currencySymbol }}@{{ fmt(result.summary.total_sold_value - result.summary.total_purchased_value) }}
                             </div>
-                            <div class="small opacity-75">Sales ₹@{{ fmt(result.summary.total_sold_value) }} − Cost ₹@{{ fmt(result.summary.total_purchased_value) }}</div>
+                            <div class="small opacity-75">Sales @{{ currencySymbol }}@{{ fmt(result.summary.total_sold_value) }} − Cost @{{ currencySymbol }}@{{ fmt(result.summary.total_purchased_value) }}</div>
                         </template>
                     </div>
                 </div>
@@ -347,7 +347,7 @@
                                                 <th class="text-center">Type</th>
                                                 <th class="text-end">Qty</th>
                                                 <th class="text-end">Carats</th>
-                                                <th class="text-end">Value (₹)</th>
+                                                <th class="text-end">Value ({{ $currencySymbol }})</th>
                                                 <th class="text-center">Status</th>
                                             </tr>
                                         </thead>
@@ -376,7 +376,7 @@
                                                 <td class="text-end text-muted small">
                                                     @{{ row.carats > 0 ? row.carats + ' ct' : '—' }}
                                                 </td>
-                                                <td class="text-end fw-semibold">₹@{{ fmt(row.total) }}</td>
+                                                <td class="text-end fw-semibold">@{{ currencySymbol }}@{{ fmt(row.total) }}</td>
                                                 <td class="text-center">
                                                     <span class="badge" :class="row.status_class">@{{ row.status }}</span>
                                                 </td>
@@ -391,7 +391,7 @@
                                                 <td class="text-end text-muted">
                                                     @{{ result.product.is_gemstone ? result.summary.total_purchased_carats + ' ct' : '—' }}
                                                 </td>
-                                                <td class="text-end">₹@{{ fmt(result.summary.total_purchased_value) }}</td>
+                                                <td class="text-end">@{{ currencySymbol }}@{{ fmt(result.summary.total_purchased_value) }}</td>
                                                 <td></td>
                                             </tr>
                                         </tfoot>
@@ -421,7 +421,7 @@
                                                 <th class="text-end">Qty</th>
                                                 <th class="text-end">Carat</th>
                                                 <th class="text-end">Unit Price</th>
-                                                <th class="text-end">Total (₹)</th>
+                                                <th class="text-end">Total ({{ $currencySymbol }})</th>
                                                 <th class="text-center">Status</th>
                                             </tr>
                                         </thead>
@@ -449,8 +449,8 @@
                                                 <td class="text-end text-muted small">
                                                     @{{ row.carat !== null && row.carat !== undefined ? row.carat + ' ct' : '—' }}
                                                 </td>
-                                                <td class="text-end text-muted">₹@{{ fmt(row.unit_price) }}</td>
-                                                <td class="text-end fw-semibold">₹@{{ fmt(row.total) }}</td>
+                                                <td class="text-end text-muted">@{{ currencySymbol }}@{{ fmt(row.unit_price) }}</td>
+                                                <td class="text-end fw-semibold">@{{ currencySymbol }}@{{ fmt(row.total) }}</td>
                                                 <td class="text-center">
                                                     <span class="badge" :class="row.status_class">@{{ row.status }}</span>
                                                 </td>
@@ -466,7 +466,7 @@
                                                     @{{ result.product.is_gemstone ? result.summary.total_sold_carats + ' ct' : '—' }}
                                                 </td>
                                                 <td></td>
-                                                <td class="text-end">₹@{{ fmt(result.summary.total_sold_value) }}</td>
+                                                <td class="text-end">@{{ currencySymbol }}@{{ fmt(result.summary.total_sold_value) }}</td>
                                                 <td></td>
                                             </tr>
                                         </tfoot>
@@ -698,6 +698,7 @@
                 error:           null,
                 result:          null,
                 activeTab:       'purchases',
+                currencySymbol:  @json($currencySymbol),
             };
         },
 
@@ -756,7 +757,8 @@
             },
 
             /**
-             * Format a number as Indian currency (no ₹ symbol — caller adds it).
+             * Format a number as Indian-grouped digits (no currency symbol
+             * — caller prepends this.currencySymbol).
              */
             fmt: function (val) {
                 var n = parseFloat(val) || 0;

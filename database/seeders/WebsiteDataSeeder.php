@@ -52,8 +52,11 @@ class WebsiteDataSeeder extends Seeder
             ]
         );
 
+        // Code matches CategorySeeder's 'Tanzanite' row (GEMS-TNZ) so this
+        // resolves to that same category instead of colliding with it on
+        // the categories.name unique index.
         $tanzanite = Category::updateOrCreate(
-            ['code' => 'TANZANITE'],
+            ['code' => 'GEMS-TNZ'],
             [
                 'name'          => 'Tanzanite',
                 'is_gemstone'   => true,
@@ -74,8 +77,11 @@ class WebsiteDataSeeder extends Seeder
             ]
         );
 
+        // Code matches CategorySeeder's 'Peridot' row (GEMS-PRD) so this
+        // resolves to that same category instead of colliding with it on
+        // the categories.name unique index.
         $peridot = Category::updateOrCreate(
-            ['code' => 'PERIDOT'],
+            ['code' => 'GEMS-PRD'],
             [
                 'name'          => 'Peridot',
                 'is_gemstone'   => true,

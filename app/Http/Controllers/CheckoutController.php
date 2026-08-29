@@ -2,18 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Customer;
-use App\Models\Channel;
-use App\Models\Location;
-use App\Models\Sale;
-use App\Models\SaleLine;
+use App\Models\PaypalOrder;
 use App\Services\CartService;
+use App\Services\CheckoutService;
+use App\Services\PaypalService;
 use App\Services\SettingService;
-use App\Services\StockService;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\View\View;
 
@@ -21,20 +16,27 @@ use Illuminate\View\View;
  * PayPal Checkout Controller — customer-auth aware.
  *
  * Flow:
- *  1. GET  /store/checkout         — redirect to login if no customer session
- *  2. POST /store/checkout/create  — create PayPal order (AJAX)
- *  3. POST /store/checkout/capture — capture + create Sale + deduct stock
- *  4. GET  /store/checkout/success — thank-you page
+ *  1. GET  /checkout         — redirect to login if no customer session
+ *  2. POST /checkout/create  — create PayPal order (AJAX)
+ *  3. POST /checkout/capture — capture + create Sale + deduct stock
+ *  4. GET  /checkout/success — thank-you page
  *
- * Stock is deducted via StockService::recordSalePosting() which writes
- * OUT movements per location exactly as the back-office POS does.
+ * There's also an async fallback: PaypalWebhookController handles
+ * PAYMENT.CAPTURE.COMPLETED events for cases where step 3 never lands
+ * (browser closed, network drop after payment). Both paths share Sale
+ * creation via CheckoutService, which is idempotent per PayPal order id.
+ *
+ * Stock is deducted via StockService::recordSalePosting() (inside
+ * CheckoutService), which writes OUT movements per location exactly as
+ * the back-office POS does.
  */
 class CheckoutController extends Controller
 {
     public function __construct(
-        private readonly SettingService $settings,
-        private readonly StockService   $stock,
-        private readonly CartService    $cartService,
+        private readonly SettingService  $settings,
+        private readonly CartService     $cartService,
+        private readonly CheckoutService $checkout,
+        private readonly PaypalService   $paypal,
     ) {}
 
     /* ---------------------------------------------------------------
@@ -125,11 +127,11 @@ class CheckoutController extends Controller
         ], $cart));
 
         try {
-            $accessToken = $this->getAccessToken();
+            $accessToken = $this->paypal->getAccessToken();
 
             $response = Http::withToken($accessToken)
                 ->withHeaders(['Content-Type' => 'application/json', 'Prefer' => 'return=representation'])
-                ->post($this->apiBase() . '/v2/checkout/orders', [
+                ->post($this->paypal->apiBase() . '/v2/checkout/orders', [
                     'intent' => 'CAPTURE',
                     'purchase_units' => [[
                         'amount' => [
@@ -152,7 +154,18 @@ class CheckoutController extends Controller
                 return response()->json(['error' => 'Could not create PayPal order. Please try again.'], 422);
             }
 
-            return response()->json(['orderID' => $response->json('id')]);
+            $orderId = $response->json('id');
+
+            // Snapshot who/what this order is for, keyed by PayPal's order
+            // id, so PaypalWebhookController can reconstruct the Sale later
+            // even with no session at all (see PaypalOrder migration).
+            PaypalOrder::create([
+                'paypal_order_id' => $orderId,
+                'customer_id'     => auth('customer')->id(),
+                'cart_snapshot'   => $cart,
+            ]);
+
+            return response()->json(['orderID' => $orderId]);
 
         } catch (\Throwable $e) {
             logger()->error('PayPal create order exception', ['message' => $e->getMessage()]);
@@ -173,11 +186,17 @@ class CheckoutController extends Controller
         $request->validate(['orderID' => ['required', 'string']]);
 
         try {
-            $accessToken = $this->getAccessToken();
+            $accessToken = $this->paypal->getAccessToken();
 
+            // ->post($url) with no second argument still sends a body —
+            // Laravel's HTTP client defaults to json_encode([]), i.e. the
+            // literal 2 bytes "[]" (a JSON array). PayPal's capture
+            // endpoint expects an object-shaped body and was rejecting
+            // that array as MALFORMED_REQUEST_JSON. Passing (object) []
+            // makes json_encode emit "{}" instead.
             $response = Http::withToken($accessToken)
                 ->withHeaders(['Content-Type' => 'application/json'])
-                ->post($this->apiBase() . '/v2/checkout/orders/' . $request->orderID . '/capture');
+                ->post($this->paypal->apiBase() . '/v2/checkout/orders/' . $request->orderID . '/capture', (object) []);
 
             if ($response->failed()) {
                 logger()->error('PayPal capture failed', ['body' => $response->body()]);
@@ -188,8 +207,15 @@ class CheckoutController extends Controller
             $status = $data['status'] ?? '';
 
             if ($status === 'COMPLETED') {
-                // Create the ERP Sale record + deduct stock
-                $sale = $this->createSaleFromCart($data['id']);
+                // Create the ERP Sale record + deduct stock. Idempotent —
+                // if the PayPal webhook already converted this same order
+                // (race with this request), this returns that Sale instead
+                // of creating a duplicate.
+                $sale = $this->checkout->createSaleFromCart(
+                    auth('customer')->user(),
+                    session('sg_cart', []),
+                    $data['id'],
+                );
 
                 session()->forget('sg_cart');
 
@@ -232,176 +258,5 @@ class CheckoutController extends Controller
         }
 
         return view('website.checkout_success', compact('orderId', 'sale'));
-    }
-
-    /* ---------------------------------------------------------------
-     |  Create ERP Sale from Cart (internal)
-     | --------------------------------------------------------------- */
-
-    /**
-     * Convert the session cart into a posted Sale + SaleLines, then
-     * trigger StockService::recordSalePosting() to write OUT movements
-     * against the correct location(s).
-     *
-     * The 'online' location is preferred; falls back to default location.
-     * The customer in session is used as the sale's customer_id.
-     */
-    private function createSaleFromCart(string $paypalOrderId): ?Sale
-    {
-        $cart     = session('sg_cart', []);
-        $customer = auth('customer')->user();
-
-        if (empty($cart) || ! $customer) {
-            return null;
-        }
-
-        // Payment is already captured for the full cart by this point, so
-        // items are NOT dropped here even if one became unavailable in the
-        // (usually seconds-long) window since createOrder() last checked --
-        // same "log but don't block" call as the stock-availability check
-        // below; the store fulfils manually rather than leaving the
-        // customer paid with nothing.
-        $availability = $this->cartService->validate($cart);
-        if ($availability['removed']) {
-            logger()->warning('Checkout: cart item(s) became unavailable between order creation and capture', [
-                'paypal_order_id' => $paypalOrderId,
-                'customer_id'     => $customer->id,
-                'items'           => $availability['removed'],
-            ]);
-        }
-
-        // Resolve the location for this online sale
-        $locationId = Location::where('type', 'online')->where('status', true)->value('id')
-            ?? $this->stock->defaultLocationId();
-
-        if (! $locationId) {
-            logger()->error('Checkout: no online/default location found — skipping sale creation.');
-            return null;
-        }
-
-        try {
-            return DB::transaction(function () use ($cart, $customer, $locationId, $paypalOrderId) {
-                $today    = Carbon::today();
-                $subtotal = 0.0;
-
-                // Build Sale header
-                // Resolve the 'website' channel — set on all online orders
-                $websiteChannelId = Channel::where('code', Channel::CODE_WEBSITE)->value('id');
-
-                $sale = Sale::create([
-                    'sale_number'    => Sale::generateSaleNumber($today),
-                    'sale_date'      => $today,
-                    'customer_id'    => $customer->id,
-                    'location_id'    => $locationId,
-                    'channel_id'     => $websiteChannelId,
-                    'salesperson_id' => null,
-                    'tax_type'       => Sale::TAX_NONE,
-                    'subtotal'       => 0,
-                    'tax_total'      => 0,
-                    'discount_total' => 0,
-                    'shipping_charge' => 0,
-                    'shipping_status' => Sale::SHIPPING_PENDING,
-                    'grand_total'    => 0,
-                    'paid_amount'    => 0,
-                    'balance_due'    => 0,
-                    'payment_status' => Sale::PAY_UNPAID,
-                    'status'         => Sale::STATUS_DRAFT,
-                    'note'           => 'Online order. PayPal ID: ' . $paypalOrderId,
-                ]);
-
-                // Build SaleLines from cart
-                foreach ($cart as $item) {
-                    $qty   = max(1, (int) ($item['qty'] ?? 1));
-                    $price = (float) $item['price'];
-                    // Already price x qty (kept in sync by CartController::
-                    // updateQty()) — reuse it rather than recompute, so the
-                    // sale total always matches what was actually charged.
-                    $lineTotal = (float) ($item['subtotal'] ?? ($price * $qty));
-                    $subtotal += $lineTotal;
-
-                    SaleLine::create([
-                        'sale_id'             => $sale->id,
-                        'product_id'          => $item['id'],
-                        'purchase_product_id' => null, // FIFO allocated by StockService
-                        'barcode'             => $item['sku'] ?? null,
-                        'qty'                 => $qty,
-                        // Whole-listing carat for this line, from the
-                        // cart (set at add-to-cart time from the
-                        // product's own recorded weight) — null for
-                        // non-gemstone products, which never carry one.
-                        'carat_weight'        => $item['carat'] ?? null,
-                        'unit_price'          => $price,
-                        'tax_percent'         => 0,
-                        'tax_amount'          => 0,
-                        'discount_percent'    => 0,
-                        'discount_amount'     => 0,
-                        'subtotal'            => $lineTotal,
-                        'total'               => $lineTotal,
-                    ]);
-                }
-
-                // Update totals
-                $sale->update([
-                    'subtotal'       => $subtotal,
-                    'grand_total'    => $subtotal,
-                    'paid_amount'    => $subtotal,
-                    'balance_due'    => 0,
-                    'payment_status' => Sale::PAY_PAID,
-                ]);
-
-                // Post the sale (draft → posted) + deduct stock via StockService
-                $availabilityErrors = $this->stock->checkSaleAvailability($sale);
-
-                if (! empty($availabilityErrors)) {
-                    // Log but don't block — payment is already captured; fulfil manually
-                    logger()->warning('Checkout stock shortage after payment capture', [
-                        'sale_id' => $sale->id,
-                        'errors'  => $availabilityErrors,
-                    ]);
-                } else {
-                    // recordSalePosting writes OUT movements per location
-                    $this->stock->recordSalePosting($sale);
-                }
-
-                // Mark as posted regardless (money is collected)
-                $sale->update(['status' => Sale::STATUS_POSTED]);
-
-                return $sale;
-            });
-
-        } catch (\Throwable $e) {
-            logger()->error('Checkout sale creation failed', [
-                'message'         => $e->getMessage(),
-                'paypal_order_id' => $paypalOrderId,
-            ]);
-            return null;
-        }
-    }
-
-    /* ---------------------------------------------------------------
-     |  PayPal REST Helpers
-     | --------------------------------------------------------------- */
-
-    private function apiBase(): string
-    {
-        return $this->settings->get('paypal_mode', 'sandbox') === 'live'
-            ? 'https://api-m.paypal.com'
-            : 'https://api-m.sandbox.paypal.com';
-    }
-
-    private function getAccessToken(): string
-    {
-        $clientId = $this->settings->get('paypal_client_id', '');
-        $secret   = $this->settings->get('paypal_secret', '');
-
-        $response = Http::withBasicAuth($clientId, $secret)
-            ->asForm()
-            ->post($this->apiBase() . '/v1/oauth2/token', ['grant_type' => 'client_credentials']);
-
-        if ($response->failed()) {
-            throw new \RuntimeException('Could not obtain PayPal access token.');
-        }
-
-        return $response->json('access_token');
     }
 }

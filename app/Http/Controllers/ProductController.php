@@ -136,19 +136,21 @@ class ProductController extends Controller
                 return $dt->format('d M, Y') . ' <small class="text-muted">' . $dt->format('h:i A') . '</small>';
             })
             ->addColumn('action', function (Product $product) {
-                $show           = route('products.show', $product);
-                $edit           = route('products.edit', $product);
-                $toggleStatus   = route('products.toggle-status', $product);
-                $toggleWebsite  = route('products.toggle-website', $product);
-                $destroy        = route('products.destroy', $product);
+                $show         = route('products.show', $product);
+                $frontend     = route('website.product', $product);
+                $edit         = route('products.edit', $product);
+                $toggleStatus = route('products.toggle-status', $product);
+                $destroy      = route('products.destroy', $product);
 
-                $statusIcon  = $product->isActive() ? 'ti-toggle-right' : 'ti-toggle-left';
-                $websiteIcon = $product->isWebsiteEnabled() ? 'ti-world' : 'ti-world-off';
+                $statusIcon = $product->isActive() ? 'ti-toggle-right' : 'ti-toggle-left';
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
                         <a href="' . $show . '" class="action-btn action-view" title="View">
                             <i class="ti ti-eye"></i>
+                        </a>
+                        <a href="' . $frontend . '" class="action-btn action-frontend" target="_blank" rel="noopener" title="View on Website">
+                            <i class="ti ti-world"></i>
                         </a>
                         <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
                             <i class="ti ti-edit"></i>
@@ -156,10 +158,6 @@ class ProductController extends Controller
                         <button type="button" class="action-btn action-toggle js-toggle-status"
                             data-url="' . $toggleStatus . '" title="Toggle Status">
                             <i class="ti ' . $statusIcon . '"></i>
-                        </button>
-                        <button type="button" class="action-btn action-website js-toggle-website"
-                            data-url="' . $toggleWebsite . '" title="Toggle Website">
-                            <i class="ti ' . $websiteIcon . '"></i>
                         </button>
                         <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($product->title) . '" title="Delete">
@@ -240,9 +238,28 @@ class ProductController extends Controller
             'barcodes.channels',
         ]);
 
+        $categories = Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone', 'display_order']);
+
+        // The product's own category may since have been deactivated or
+        // soft-deleted. Without a matching <option> the <select> falls back
+        // to its placeholder, and the gemstone panel (including Carat
+        // Weight) — whose visibility is read off the selected <option>'s
+        // data-gemstone attribute, see _product_app_script.blade.php — is
+        // wrongly hidden even though the product IS a gemstone product.
+        if ($product->category_id && ! $categories->contains('id', $product->category_id)) {
+            $currentCategory = Category::withTrashed()
+                ->find($product->category_id, ['id', 'name', 'code', 'is_gemstone', 'display_order']);
+
+            if ($currentCategory) {
+                $categories = $categories->push($currentCategory)
+                    ->sortBy(fn (Category $category) => [$category->display_order, $category->name])
+                    ->values();
+            }
+        }
+
         return view('products.edit', [
             'product'    => $product,
-            'categories' => Category::active()->ordered()->get(['id', 'name', 'code', 'is_gemstone']),
+            'categories' => $categories,
             'channels'   => Channel::active()->ordered()->get(['id', 'name', 'code']),
             'countriesOfOrigin' => CountryOfOrigin::active()->ordered()->get(['id', 'name']),
         ]);

@@ -189,7 +189,7 @@
                                         <code class="small">@{{ line.barcode || '—' }}</code>
                                         <small v-if="line._stockWarning" class="d-block text-danger">Capped at stock on hand</small>
                                     </td>
-                                    <td><input type="number" min="1" step="1" :max="line.on_hand" :disabled="line.on_hand === 1" class="form-control form-control-sm text-end" v-model.number="line.qty" @input="checkStockWarning(idx)"></td>
+                                    <td><input type="number" min="1" step="1" :max="line.on_hand" :disabled="line.on_hand === 1" class="form-control form-control-sm text-end" v-model.number="line.qty" @input="checkStockWarning(idx)" @blur="normalizeQty(idx)"></td>
                                     <td><input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" v-model.number="line.unit_price"></td>
                                     <td><input type="number" min="0" max="100" step="0.01" class="form-control form-control-sm text-end" v-model.number="line.discount_percent"></td>
                                     <td><input type="number" min="0" max="100" step="0.01" class="form-control form-control-sm text-end" v-model.number="line.tax_percent"></td>
@@ -458,16 +458,27 @@ $(function () {
                 return (Math.round(Number(v) * 1000) / 1000).toString();
             },
             // Clamps qty to on-hand stock (when known) rather than just
-            // flagging it.
+            // flagging it. Deliberately does NOT floor an empty/invalid
+            // value to 1 here (see normalizeQty()) — this runs on every
+            // keystroke, and snapping back to 1 the instant the box goes
+            // empty made it impossible to clear the field and type a new
+            // number.
             checkStockWarning(idx) {
                 const l = this.form.lines[idx];
                 if (!l) return;
-                if (!l.qty || Number(l.qty) < 1) l.qty = 1;
                 if (l.on_hand !== null && l.on_hand !== undefined && Number(l.qty) > Number(l.on_hand)) {
                     l.qty = Number(l.on_hand);
                     l._stockWarning = true;
                     setTimeout(() => { l._stockWarning = false; }, 2000);
                 }
+            },
+            // Runs on blur, once the seller is done editing — this is
+            // where an emptied or invalid qty finally falls back to 1,
+            // instead of on every keystroke.
+            normalizeQty(idx) {
+                const l = this.form.lines[idx];
+                if (!l) return;
+                if (!l.qty || Number(l.qty) < 1) l.qty = 1;
             },
             // Clamps the sold-carat figure to this piece's actual
             // remaining CT balance — never a qty-derived guess, since
