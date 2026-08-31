@@ -411,10 +411,12 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:stock.view')->name('data');
         Route::get('/category-data', [StockController::class, 'categoryData'])
             ->middleware('permission:stock.view')->name('category-data');
-        Route::get('/sales-data', [StockController::class, 'salesData'])
-            ->middleware('permission:stock.view')->name('sales-data');
-        Route::get('/sales-summary', [StockController::class, 'salesSummary'])
-            ->middleware('permission:stock.view')->name('sales-summary');
+        Route::get('/by-stone-data', [StockController::class, 'byStoneData'])
+            ->middleware('permission:stock.view')->name('by-stone-data');
+        Route::get('/movements-data', [StockController::class, 'movementsData'])
+            ->middleware('permission:stock.view')->name('movements-data');
+        Route::get('/search-products', [StockController::class, 'searchProducts'])
+            ->middleware('permission:stock.view')->name('search-products');
         Route::get('/product/{product}', [StockController::class, 'product'])
             ->whereNumber('product')->middleware('permission:stock.view')->name('product');
         Route::get('/piece/{purchaseProduct}', [StockController::class, 'piece'])
