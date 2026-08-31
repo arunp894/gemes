@@ -46,15 +46,15 @@
             <thead class="bg-light bg-opacity-25 text-uppercase fs-xxs">
                 <tr>
                     <th style="width: 32px;">#</th>
-                    <th style="min-width: 240px;"><i class="ti ti-diamond me-1"></i>Item</th>
+                    <th style="min-width: 240px;"><i class="ti ti-diamond me-1"></i>Item <span class="text-danger">*</span></th>
                     <th style="width: 140px;"><i class="ti ti-map-pin me-1"></i>Origin</th>
                     <th style="width: 130px;"><i class="ti ti-box me-1"></i>Type</th>
-                    <th style="width: 90px;"><i class="ti ti-stack-2 me-1"></i>Pcs</th>
+                    <th style="width: 90px;"><i class="ti ti-stack-2 me-1"></i>Pcs <span class="text-danger">*</span></th>
                     <th style="width: 100px;"><i class="ti ti-scale me-1"></i>Carat</th>
                     <th style="width: 100px;"><i class="ti ti-barcode me-1"></i>Barcode</th>
                     <th style="width: 130px;" title="Lot Code"><i class="ti ti-tag me-1"></i>Lot</th>
                     {{-- Rack column hidden --}}
-                    <th style="width: 110px;"><i class="ti ti-cash me-1"></i>Price</th>
+                    <th style="width: 110px;"><i class="ti ti-cash me-1"></i>Price <span class="text-danger">*</span></th>
                     <th style="width: 100px;" title="Selling Price"><i class="ti ti-world me-1"></i>S.Price</th>
                     {{-- Tax % and Disc % hidden --}}
                     <th style="width: 70px;" class="text-end" title="Line Total"><i class="ti ti-calculator me-1"></i>Total</th>
@@ -66,7 +66,8 @@
                 <template v-for="(line, li) in form.lines">
 
                     {{-- ═══════ PARENT ROW (always rendered) ═══════ --}}
-                    <tr :key="'l-' + li" class="line-parent" :class="{ 'line-highlight': line._highlight }">
+                    <tr :key="'l-' + li" class="line-parent"
+                        :class="{ 'line-highlight': line._highlight, 'line-has-error': hasLineError(li) }">
 
                         <td class="text-muted small">
     <div class="d-flex align-items-center gap-1">
@@ -87,13 +88,17 @@
                                      row — persisted lines stay read-only here (changing an
                                      already-purchased line's category wouldn't reach the
                                      product it already created, so it's not offered). --}}
-                                <select v-if="!line.id" v-select2 data-placeholder="— Select Stone —"
-                                        class="form-select form-select-sm" style="min-width: 140px;"
-                                        v-model.number="line.category_id"
-                                        @change="onLineCategoryChange(li)" required>
-                                    <option :value="null">— Select Stone —</option>
-                                    <option v-for="c in categoryOptions" :key="c.id" :value="c.id">@{{ c.name }}</option>
-                                </select>
+                                <div v-if="!line.id" style="min-width: 140px;">
+                                    <select v-select2 data-placeholder="— Select Stone —"
+                                            class="form-select form-select-sm"
+                                            :class="{ 'is-invalid': lineError(li, 'category_id') }"
+                                            v-model.number="line.category_id"
+                                            @change="onLineCategoryChange(li)" required>
+                                        <option :value="null">— Select Stone —</option>
+                                        <option v-for="c in categoryOptions" :key="c.id" :value="c.id">@{{ c.name }}</option>
+                                    </select>
+                                    <div class="invalid-feedback d-block small" v-if="lineError(li, 'category_id')">@{{ lineError(li, 'category_id') }}</div>
+                                </div>
                                 <div v-else class="text-truncate" style="min-width: 0;"
                                      :title="line.title + (categoryName(line.category_id) ? ' — ' + categoryName(line.category_id) : '')">
                                     <div class="fw-semibold text-truncate">@{{ line.title }}</div>
@@ -153,12 +158,16 @@
                         <template v-if="line.rows.length === 1">
                             <td>
                                 <input type="number" min="0" class="form-control form-control-sm"
+                                       :class="{ 'is-invalid': rowError(li, 0, 'qty') }"
                                        v-model.number="line.rows[0].qty" placeholder="qty">
+                                <div class="invalid-feedback d-block" v-if="rowError(li, 0, 'qty')">@{{ rowError(li, 0, 'qty') }}</div>
                             </td>
                             <td>
                                 <input type="number" step="0.001" min="0" class="form-control form-control-sm"
+                                       :class="{ 'is-invalid': rowError(li, 0, 'carat_weight') }"
                                        v-model.number="line.rows[0].carat_weight"
                                        placeholder="ct">
+                                <div class="invalid-feedback d-block" v-if="rowError(li, 0, 'carat_weight')">@{{ rowError(li, 0, 'carat_weight') }}</div>
                             </td>
                             <td>
                                 <input type="text" class="form-control form-control-sm"
@@ -173,7 +182,9 @@
                             {{-- Rack column hidden --}}
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
+                                       :class="{ 'is-invalid': rowError(li, 0, 'price') }"
                                        v-model.number="line.rows[0].price" placeholder="0.00">
+                                <div class="invalid-feedback d-block" v-if="rowError(li, 0, 'price')">@{{ rowError(li, 0, 'price') }}</div>
                             </td>
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
@@ -191,16 +202,18 @@
                         {{-- Multi-row lines (Pack Qty > 1): aggregate
                              readouts + expand/collapse toggle for the child rows. --}}
                         <template v-else>
-                            <td colspan="7" class="bg-light bg-opacity-25"
-    style="cursor: pointer;"
-    @click="toggleExpand(li)">
-                                <div class="d-flex flex-wrap gap-3 small">
+                            <td colspan="7" class="line-summary-cell" @click="toggleExpand(li)">
+                                <div class="d-flex flex-wrap align-items-center gap-3 small">
+                                    <i class="ti fs-14 text-muted" :class="line._expanded ? 'ti-chevron-down' : 'ti-chevron-right'"></i>
                                     <span><span class="text-muted">Total pieces:</span>
                                         <strong>@{{ totalPieces(line) }}</strong></span>
                                     <span><span class="text-muted">Inventory rows:</span>
                                         <strong>@{{ line.rows.length }}</strong></span>
                                     <span><span class="text-muted">Line total:</span>
                                         <strong>@{{ formatMoney(lineNet(line)) }}</strong></span>
+                                    <span v-if="hasLineError(li)" class="badge badge-soft-danger ms-auto">
+                                        <i class="ti ti-alert-circle me-1"></i>Needs attention — click to view
+                                    </span>
                                 </div>
                             </td>
                             <td class="text-center">
@@ -217,7 +230,7 @@
                         <tr v-for="(row, ri) in line.rows"
                             :key="'l-' + li + '-r-' + ri"
                             class="line-child"
-                            :class="{ 'table-active': row._focused }">
+                            :class="{ 'table-active': row._focused, 'line-has-error': rowError(li, ri, 'qty') || rowError(li, ri, 'carat_weight') || rowError(li, ri, 'price') }">
 
                             <td class="text-muted small bg-light bg-opacity-25"></td>
 
@@ -242,12 +255,16 @@
 
                             <td>
                                 <input type="number" min="0" class="form-control form-control-sm"
+                                       :class="{ 'is-invalid': rowError(li, ri, 'qty') }"
                                        v-model.number="row.qty" placeholder="qty">
+                                <div class="invalid-feedback d-block" v-if="rowError(li, ri, 'qty')">@{{ rowError(li, ri, 'qty') }}</div>
                             </td>
                             <td>
                                 <input type="number" step="0.001" min="0" class="form-control form-control-sm"
+                                       :class="{ 'is-invalid': rowError(li, ri, 'carat_weight') }"
                                        v-model.number="row.carat_weight"
                                        placeholder="ct">
+                                <div class="invalid-feedback d-block" v-if="rowError(li, ri, 'carat_weight')">@{{ rowError(li, ri, 'carat_weight') }}</div>
                             </td>
                             <td>
                                 <input type="text" class="form-control form-control-sm"
@@ -264,7 +281,9 @@
                             {{-- Rack column hidden --}}
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
+                                       :class="{ 'is-invalid': rowError(li, ri, 'price') }"
                                        v-model.number="row.price" placeholder="0.00">
+                                <div class="invalid-feedback d-block" v-if="rowError(li, ri, 'price')">@{{ rowError(li, ri, 'price') }}</div>
                             </td>
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
@@ -290,6 +309,18 @@
                         </template>
                     </td>
                 </tr>
+
+                {{-- A second, always-in-context "Add Row" affordance right
+                     under the last line — after entering several rows the
+                     header button can be a long scroll away. --}}
+                <tr v-else class="add-row-tray">
+                    <td colspan="12">
+                        <button type="button" class="btn btn-sm btn-soft-success" @click="addBlankLine"
+                                :disabled="!form.supplier_id" :title="!form.supplier_id ? 'Pick a supplier first' : ''">
+                            <i class="ti ti-plus me-1"></i> Add Another Row
+                        </button>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -304,6 +335,54 @@
     .purchases-form-page .purchase-line-table tr.line-highlight > td {
         background-color: #eff6ff !important;
         transition: background-color 1.5s ease;
+    }
+
+    /* A row (or its collapsed parent) carrying a real validation error —
+       a solid left stripe plus a faint red tint draws the eye straight to
+       it, instead of leaving the user to scan every field for a stray
+       .is-invalid border in a dense, bordered table. */
+    .purchases-form-page .purchase-line-table tr.line-has-error > td {
+        background-color: #fef2f2 !important;
+    }
+    .purchases-form-page .purchase-line-table tr.line-has-error > td:first-child {
+        box-shadow: inset 3px 0 0 #dc2626;
+    }
+    .purchases-form-page .purchase-line-table .invalid-feedback {
+        font-size: 0.6875rem;
+        margin-top: 2px;
+    }
+
+    /* Multi-row aggregate/expand bar — was a plain, unstyled clickable
+       cell; a hover state and a bit more breathing room make it read as
+       an interactive control rather than a static summary line. */
+    .purchases-form-page .purchase-line-table .line-summary-cell {
+        cursor: pointer;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        transition: background-color .15s ease;
+    }
+    .purchases-form-page .purchase-line-table .line-summary-cell:hover {
+        background-color: #eef2ff !important;
+    }
+
+    /* Persistent "Add Another Row" tray under the last line — dashed
+       top border sets it apart from real data rows without a heavy box. */
+    .purchases-form-page .purchase-line-table tr.add-row-tray > td {
+        padding: 10px 12px;
+        border-top: 1px dashed #cbd5e1;
+        background-color: #fafbfc;
+    }
+
+    /* A little extra breathing room on every data-entry cell — the
+       original spacing was tuned for maximum density, which made the
+       table feel cramped and hard to tap on smaller screens. */
+    .purchases-form-page .purchase-line-table > tbody > tr > td {
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+    .purchases-form-page .purchase-line-table .form-control-sm,
+    .purchases-form-page .purchase-line-table .form-select-sm {
+        min-height: 32px;
     }
 
     /* Compact Select2 sizing for the Stone / Country of Origin pickers inside

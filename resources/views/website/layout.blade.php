@@ -28,6 +28,7 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
 .sg-nav.scrolled{height:56px;background:rgba(7,20,16,.98);border-bottom-color:rgba(0,191,176,.22)}
 .sg-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
 .sg-logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--teal-400),var(--teal-700));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;box-shadow:0 0 16px rgba(0,191,176,.4)}
+.sg-logo-img{height:36px;width:auto;max-width:160px;object-fit:contain}
 .sg-logo-text{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--white);letter-spacing:2px;text-transform:uppercase}
 .sg-nav-links{display:flex;align-items:center;gap:36px}
 .sg-nav-links a{text-decoration:none;color:var(--white-dim);font-size:13px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;position:relative;transition:color .3s}
@@ -37,6 +38,8 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
 .sg-nav-right{display:flex;gap:8px;align-items:center}
 .sg-icon-btn{background:none;border:none;cursor:pointer;color:var(--white-dim);font-size:18px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;transition:all .3s;position:relative;text-decoration:none}
 .sg-icon-btn:hover{color:var(--teal-300);background:var(--white-ghost)}
+.sg-nav-name{font-size:13px;font-weight:500;color:var(--white-dim);text-decoration:none;white-space:nowrap;transition:color .3s;margin-right:2px}
+.sg-nav-name:hover{color:var(--teal-300)}
 
 /* Mobile menu toggle (hamburger) */
 .sg-menu-toggle{display:none;background:none;border:none;cursor:pointer;color:var(--white);width:38px;height:38px;align-items:center;justify-content:center;border-radius:50%;transition:all .3s;position:relative;flex-direction:column;gap:5px}
@@ -179,6 +182,7 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
 @media(max-width:768px){
   .sg-product-grid{grid-template-columns:repeat(2,1fr)}
   .sg-nav-links{display:none}
+  .sg-nav-name{display:none}
   .sg-menu-toggle{display:flex}
   .sg-bottom-nav{display:block}
   .sg-main{padding-bottom:64px}
@@ -204,20 +208,27 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
 {{-- NAVBAR --}}
 <nav class="sg-nav" id="sgNav">
   <a class="sg-logo" href="{{ route('website.home') }}">
-    <div class="sg-logo-icon">SG</div>
+    @if ($settings->logoUrl())
+      <img src="{{ $settings->logoUrl() }}" alt="{{ $settings->get('site_name', 'Sukaina Gems') }}" class="sg-logo-img">
+    @else
+      <div class="sg-logo-icon">SG</div>
+    @endif
     <span class="sg-logo-text">{{ $settings->get('site_name', 'Sukaina Gems') }}</span>
   </a>
   <div class="sg-nav-links">
     <a href="{{ route('website.home') }}"        class="{{ request()->routeIs('website.home')        ? 'active' : '' }}">Home</a>
     <a href="{{ route('website.collections') }}" class="{{ request()->routeIs('website.collections') ? 'active' : '' }}">Collections</a>
-    <a href="{{ route('website.blog.index') }}" class="{{ request()->routeIs('website.blog.*') ? 'active' : '' }}">Journal</a>
+    <a href="{{ route('website.blog.index') }}" class="{{ request()->routeIs('website.blog.*') ? 'active' : '' }}">Events</a>
     <a href="{{ route('website.pages.show', \App\Models\Page::SLUG_ABOUT_US) }}">About</a>
-    <a href="#">Contact</a>
+    <a href="{{ route('website.contact') }}" class="{{ request()->routeIs('website.contact') ? 'active' : '' }}">Contact</a>
   </div>
   <div class="sg-nav-right">
     <button class="sg-icon-btn" title="Search">🔍</button>
     @if(auth('customer')->check())
       <a href="{{ route('website.account.profile') }}" class="sg-icon-btn" title="My Account" style="text-decoration:none">👤</a>
+      <a href="{{ route('website.account.profile') }}" class="sg-nav-name" title="My Account">
+        {{ explode(' ', trim(auth('customer')->user()->name))[0] }}
+      </a>
     @else
       <a href="{{ route('website.auth.login') }}" class="sg-icon-btn" title="Sign In" style="text-decoration:none">👤</a>
     @endif
@@ -248,9 +259,9 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
   <ul class="sg-mobile-menu-links">
     <li><a href="{{ route('website.home') }}" class="{{ request()->routeIs('website.home') ? 'active' : '' }}">Home</a></li>
     <li><a href="{{ route('website.collections') }}" class="{{ request()->routeIs('website.collections') ? 'active' : '' }}">Collections</a></li>
-    <li><a href="{{ route('website.blog.index') }}" class="{{ request()->routeIs('website.blog.*') ? 'active' : '' }}">Journal</a></li>
+    <li><a href="{{ route('website.blog.index') }}" class="{{ request()->routeIs('website.blog.*') ? 'active' : '' }}">Events</a></li>
     <li><a href="{{ route('website.pages.show', \App\Models\Page::SLUG_ABOUT_US) }}">About</a></li>
-    <li><a href="#">Contact</a></li>
+    <li><a href="{{ route('website.contact') }}" class="{{ request()->routeIs('website.contact') ? 'active' : '' }}">Contact</a></li>
   </ul>
   <div class="sg-mobile-menu-foot">
     @if(auth('customer')->check())
@@ -369,13 +380,14 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
         <li><a href="{{ route('website.collections') }}">All Gems</a></li>
         <li><a href="{{ route('website.collections', ['category' => 'paraiba']) }}">Paraiba Tourmaline</a></li>
         <li><a href="{{ route('website.collections', ['category' => 'tanzanite']) }}">Tanzanite</a></li>
-        <li><a href="{{ route('website.blog.index') }}">Journal</a></li>
+        <li><a href="{{ route('website.blog.index') }}">Events</a></li>
       </ul>
     </div>
     <div>
       <div class="sg-footer-heading">Connect</div>
       <ul class="sg-footer-links">
         <li><a href="{{ route('website.pages.show', \App\Models\Page::SLUG_ABOUT_US) }}">About Us</a></li>
+        <li><a href="{{ route('website.contact') }}">Contact Us</a></li>
         @if($settings->get('contact_email'))<li><a href="mailto:{{ $settings->get('contact_email') }}">Email Us</a></li>@endif
         @if($settings->get('contact_whatsapp'))<li><a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $settings->get('contact_whatsapp')) }}">WhatsApp</a></li>@endif
         <li><a href="{{ route('website.pages.show', \App\Models\Page::SLUG_TERMS_CONDITIONS) }}">Terms &amp; Conditions</a></li>

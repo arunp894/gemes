@@ -125,6 +125,7 @@
                                 <th><i class="ti ti-map-pin me-1"></i>Location</th>
                                 <th><i class="ti ti-tag me-1"></i>Stone</th>
                                 <th><i class="ti ti-list-check me-1"></i>Progress</th>
+                                <th><i class="ti ti-scale me-1"></i>Carat</th>
                                 <th><i class="ti ti-flag me-1"></i>Status</th>
                                 <th class="text-center" style="width: 1%;"><i class="ti ti-settings me-1"></i>Actions</th>
                             </tr>
@@ -444,6 +445,7 @@ $(function () {
             { data: 'location_label',   name: 'location_label', orderable: false, searchable: false },
             { data: 'category_label',   name: 'category_label', orderable: false, searchable: false },
             { data: 'progress_label',   name: 'progress_label', orderable: false, searchable: false },
+            { data: 'carat_label',      name: 'carat_label',    orderable: false, searchable: false },
             { data: 'status_badge',     name: 'stock_audits.status', orderable: false, searchable: false },
             { data: 'actions',          name: 'actions',        orderable: false, searchable: false, className: 'text-center' },
         ],

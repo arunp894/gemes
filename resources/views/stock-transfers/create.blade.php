@@ -20,7 +20,13 @@
         </div>
     </div>
 
-    <form id="transferForm" novalidate @submit.prevent="submit('in_transit')" :class="{ 'was-validated': wasValidated }">
+    {{-- No 'was-validated' class here on purpose: validation is entirely
+         manual (.is-invalid bindings driven by `errors`), and Bootstrap's
+         was-validated turns on native :valid/:invalid styling for every
+         control including ones with no `required` attribute — which would
+         paint a false-positive green checkmark on genuinely optional,
+         still-empty fields (Notes, To Rack…). --}}
+    <form id="transferForm" novalidate @submit.prevent="submit('in_transit')">
 
         <div class="row g-3">
             <div class="col-xl-8">
@@ -29,14 +35,14 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-3">
-                                <label class="form-label">Transfer Date <span class="text-danger">*</span></label>
+                                <label class="form-label"><i class="ti ti-calendar text-primary me-2"></i>Transfer Date <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control" v-model="form.transfer_date"
                                     :class="{ 'is-invalid': errors.transfer_date }" required>
                                 <div class="invalid-feedback">@{{ errors.transfer_date }}</div>
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">From Location <span class="text-danger">*</span></label>
+                                <label class="form-label"><i class="ti ti-map-pin text-primary me-2"></i>From Location <span class="text-danger">*</span></label>
                                 <select class="form-select" v-model.number="form.from_location_id"
                                     @change="onSourceChange"
                                     :class="{ 'is-invalid': errors.from_location_id }" required>
@@ -50,7 +56,7 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label">To Location <span class="text-danger">*</span></label>
+                                <label class="form-label"><i class="ti ti-map-pin-check text-primary me-2"></i>To Location <span class="text-danger">*</span></label>
                                 <select class="form-select" v-model.number="form.to_location_id"
                                     :class="{ 'is-invalid': errors.to_location_id }" required>
                                     <option :value="null">— Select destination —</option>
@@ -121,7 +127,10 @@
                 {{-- Lines --}}
                 <div class="card">
                     <div class="card-header border-light d-flex justify-content-between align-items-center">
-                        <h5 class="card-title mb-0">Pieces to Transfer</h5>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="ti ti-list-details fs-18 text-primary"></i>
+                            <h5 class="card-title mb-0">Pieces to Transfer</h5>
+                        </div>
                         <span class="text-muted small" v-if="form.lines.length">
                             @{{ form.lines.length }} line@{{ form.lines.length === 1 ? '' : 's' }}
                         </span>
@@ -140,20 +149,19 @@
                                     <th style="width: 12%;">Ct</th>
                                     <th>Barcode</th>
                                     <th class="text-end" style="width: 10%;">On Hand</th>
-                                    <th class="text-end" style="width: 10%;">Qty</th>
+                                    <th class="text-end" style="width: 10%;">Piece <span class="text-danger">*</span></th>
                                     <th>Notes</th>
                                     <th class="text-center" style="width: 1%;"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="(line, idx) in form.lines" :key="idx"
-                                    :class="{ 'table-warning': line.qty > line.on_hand || line._stockWarning }">
+                                    :class="{ 'table-warning': line.qty > line.on_hand || line._stockWarning, 'line-has-error': hasLineError(idx) }">
                                     <td>
                                         <div class="fw-semibold">
                                             @{{ line.product_title }}
                                             <span v-if="line.is_group" class="badge badge-soft-info fs-xxs ms-1">group of @{{ line.on_hand }}</span>
                                         </div>
-                                        <small class="text-muted" v-if="line.product_sku">SKU: @{{ line.product_sku }}</small>
                                     </td>
                                     <td>
                                         {{-- CT is its own independent ledger, separate from qty — the
@@ -177,13 +185,16 @@
                                     <td class="text-end">@{{ line.on_hand }}</td>
                                     <td>
                                         <input type="number" min="1" :max="line.on_hand" step="1"
-                                            :disabled="line.on_hand === 1"
+                                            :placeholder="'max ' + line.on_hand"
                                             class="form-control form-control-sm text-end"
+                                            :class="{ 'is-invalid': lineError(idx, 'qty') }"
                                             v-model.number="line.qty"
-                                            @input="checkStockWarning(idx)">
+                                            @input="checkStockWarning(idx)"
+                                            @blur="normalizeQty(idx)">
                                         <small v-if="line._stockWarning" class="d-block text-danger">
                                             <i class="ti ti-alert-triangle"></i> Capped at on-hand
                                         </small>
+                                        <div class="invalid-feedback d-block" v-if="lineError(idx, 'qty')">@{{ lineError(idx, 'qty') }}</div>
                                     </td>
                                     <td>
                                         <input type="text" class="form-control form-control-sm"
@@ -202,7 +213,10 @@
                 </div>
 
                 <div class="card">
-                    <div class="card-header border-light"><h5 class="card-title mb-0">Note</h5></div>
+                    <div class="card-header border-light d-flex align-items-center gap-2">
+                        <i class="ti ti-note fs-18 text-primary"></i>
+                        <h5 class="card-title mb-0">Note</h5>
+                    </div>
                     <div class="card-body">
                         <textarea class="form-control" rows="2" v-model="form.note" maxlength="2000"
                             placeholder="Optional note for this transfer"></textarea>
@@ -213,7 +227,10 @@
             <div class="col-xl-4">
 
                 <div class="card">
-                    <div class="card-header border-light"><h5 class="card-title mb-0">Summary</h5></div>
+                    <div class="card-header border-light d-flex align-items-center gap-2">
+                        <i class="ti ti-receipt-2 fs-18 text-primary"></i>
+                        <h5 class="card-title mb-0">Summary</h5>
+                    </div>
                     <div class="card-body">
                         <dl class="row mb-0 small">
                             <dt class="col-7 text-muted">Lines</dt>
@@ -252,6 +269,29 @@
             </div>
         </div>
     </form>
+
+    {{-- Confirm clearing the cart on source-location change — a Bootstrap
+         modal instead of a native confirm(), matching the rest of the app. --}}
+    <div class="modal fade" id="clearCartModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title"><i class="ti ti-alert-triangle text-warning me-1"></i>Change source location?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Changing the source location will clear the pieces already added to this transfer,
+                    since they belong to the previous location. Continue?
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="clearCartConfirmBtn">
+                        <i class="ti ti-trash me-1"></i>Clear and Continue
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -293,6 +333,20 @@
     .stock-transfers-form-page .form-control, .stock-transfers-form-page .form-select { padding: 0.4rem 0.65rem; font-size: 0.8125rem; }
     .stock-transfers-form-page small.text-muted { display: inline-block; margin-top: 3px; font-size: 0.75rem; }
     .stock-transfers-form-page .d-flex.justify-content-end.gap-2 { margin-top: 16px !important; }
+
+    /* A cart row carrying a real validation error — a solid left stripe
+       plus a faint red tint, matching the same treatment on the Purchase
+       and Sales forms' line tables, so the eye goes straight to it. */
+    .stock-transfers-form-page tr.line-has-error > td {
+        background-color: #fef2f2 !important;
+    }
+    .stock-transfers-form-page tr.line-has-error > td:first-child {
+        box-shadow: inset 3px 0 0 #dc2626;
+    }
+    .stock-transfers-form-page .invalid-feedback {
+        font-size: 0.6875rem;
+        margin-top: 2px;
+    }
 </style>
 @endpush
 
@@ -321,7 +375,6 @@ $(function () {
 
             errors: {},
             submitting: false,
-            wasValidated: false,
             serverError: null,
         },
         computed: {
@@ -346,6 +399,7 @@ $(function () {
             },
         },
         mounted() {
+            this._prevFromLocationId = this.form.from_location_id;
             this.$nextTick(() => this.$refs.searchInput?.focus());
         },
         methods: {
@@ -354,17 +408,46 @@ $(function () {
                 return l ? l.name : '';
             },
 
+            // Clear cart when source changes — pieces from the old source
+            // aren't valid against the new one. Confirmed via a Bootstrap
+            // modal rather than a native confirm(), matching the rest of
+            // the app; if the user cancels, the location select reverts
+            // to its previous value (v-model already applied the new one
+            // by the time @change fires).
             onSourceChange() {
-                // Clear cart when source changes — pieces from old source
-                // aren't valid against the new one.
-                if (this.form.lines.length > 0) {
-                    if (!confirm('Changing source location will clear the cart. Continue?')) {
-                        return;
-                    }
-                    this.form.lines = [];
+                if (this.form.lines.length === 0) {
+                    this._prevFromLocationId = this.form.from_location_id;
+                    this.searchResults = [];
+                    this.$nextTick(() => this.$refs.searchInput?.focus());
+                    return;
                 }
-                this.searchResults = [];
-                this.$nextTick(() => this.$refs.searchInput?.focus());
+
+                const newLocationId = this.form.from_location_id;
+                const modalEl = document.getElementById('clearCartModal');
+                const modal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                const confirmBtn = document.getElementById('clearCartConfirmBtn');
+
+                // Replace the button on each open so listeners never stack
+                // across repeated location changes.
+                const freshBtn = confirmBtn.cloneNode(true);
+                confirmBtn.parentNode.replaceChild(freshBtn, confirmBtn);
+
+                let confirmed = false;
+                const onHidden = () => {
+                    if (!confirmed) this.form.from_location_id = this._prevFromLocationId;
+                    modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                };
+                freshBtn.addEventListener('click', () => {
+                    confirmed = true;
+                    this.form.lines = [];
+                    this._prevFromLocationId = newLocationId;
+                    this.searchResults = [];
+                    modal.hide();
+                    this.$nextTick(() => this.$refs.searchInput?.focus());
+                }, { once: true });
+                modalEl.addEventListener('hidden.bs.modal', onHidden);
+
+                modal.show();
             },
 
             searchPieces() {
@@ -412,7 +495,10 @@ $(function () {
                     // is clamped against. Independent of qty entirely.
                     remaining_carat_before: r.remaining_carat,
                     on_hand:              r.on_hand,
-                    qty:                  r.on_hand,
+                    // Left blank on purpose — the person moving stock
+                    // must consciously type how many to transfer, rather
+                    // than the field silently pre-filling "move all N".
+                    qty:                  null,
                     to_rack_id:           null,
                     notes:                '',
                     _stockWarning:        false,
@@ -434,16 +520,28 @@ $(function () {
                 if (v === null || v === undefined || isNaN(v)) return '—';
                 return (Math.round(Number(v) * 1000) / 1000).toString();
             },
-            // Clamps qty to on-hand stock rather than just flagging it.
+            // Clamps qty to on-hand stock rather than just flagging it —
+            // typing past what's available snaps back to the ceiling.
+            // Deliberately does NOT floor an empty/invalid value to 1 here
+            // (see normalizeQty()) — this runs on every keystroke, and
+            // snapping back to 1 the instant the box goes empty would make
+            // it impossible to clear the field and type a new number.
             checkStockWarning(idx) {
                 const l = this.form.lines[idx];
                 if (!l) return;
-                if (!l.qty || Number(l.qty) < 1) l.qty = 1;
                 if (Number(l.qty) > Number(l.on_hand)) {
                     l.qty = Number(l.on_hand);
                     l._stockWarning = true;
                     setTimeout(() => { l._stockWarning = false; }, 2000);
                 }
+            },
+            // Runs on blur, once the person is done editing — this is
+            // where an emptied or invalid qty finally falls back to 1,
+            // instead of on every keystroke.
+            normalizeQty(idx) {
+                const l = this.form.lines[idx];
+                if (!l) return;
+                if (!l.qty || Number(l.qty) < 1) l.qty = 1;
             },
             // Clamps the moved-carat figure to this piece's actual
             // remaining CT balance — never a qty-derived guess, since
@@ -499,9 +597,39 @@ $(function () {
                 return Object.keys(this.errors).length === 0;
             },
 
+            /* ── error mapping ─────────────── */
+            // Laravel returns dot-path keys like:
+            //   from_location_id       — a top-level field, kept flat
+            //   lines.1.qty            — a specific piece row's field, nested
+            //     under errors.lines[idx] so that exact row/input can look
+            //     its own message up, instead of every field on the page
+            //     silently sharing one raw, meaningless dot-path string.
+            applyServerErrors(errs) {
+                const flat = { lines: {} };
+                Object.keys(errs).forEach((key) => {
+                    const msg = Array.isArray(errs[key]) ? errs[key][0] : String(errs[key]);
+                    const m = key.match(/^lines\.(\d+)\.(.+)$/);
+                    if (m) {
+                        const [, idx, field] = m;
+                        flat.lines[idx] = flat.lines[idx] || {};
+                        flat.lines[idx][field] = msg;
+                    } else {
+                        flat[key] = msg;
+                    }
+                });
+                this.errors = flat;
+            },
+            lineError(idx, field) {
+                const l = this.errors.lines && this.errors.lines[idx];
+                return (l && l[field]) || '';
+            },
+            hasLineError(idx) {
+                const l = this.errors.lines && this.errors.lines[idx];
+                return !!(l && Object.values(l).some(Boolean));
+            },
+
             async submit(status) {
                 this.serverError = null;
-                this.wasValidated = true;
                 if (!this.validate()) return;
                 this.submitting = true;
 
@@ -535,11 +663,14 @@ $(function () {
                     if (res.status === 422) {
                         const data = await res.json();
                         if (data.errors) {
-                            Object.keys(data.errors).forEach((k) => {
-                                this.$set(this.errors, k.replace(/\.\d+(\.|$)/g, '$1'), data.errors[k][0]);
-                            });
+                            this.applyServerErrors(data.errors);
+                            const count = Object.keys(data.errors).length;
+                            this.serverError = count > 1
+                                ? `Please fix the ${count} highlighted fields below.`
+                                : (data.message || 'Please fix the highlighted field below.');
+                        } else {
+                            this.serverError = data.message || 'Please fix the highlighted fields.';
                         }
-                        this.serverError = data.message || 'Please fix the highlighted fields.';
                         this.submitting = false;
                         return;
                     }

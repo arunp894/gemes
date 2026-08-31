@@ -230,7 +230,6 @@
             formMessage:    '',
             formLevel:      '',   // 'success' | 'danger' | 'info'
             submitting:     false,
-            wasValidated:   false,
             errors:         {},
 
             form: {
@@ -686,7 +685,6 @@
                 return payload;
             },
             submit(post) {
-                this.wasValidated = true;
                 this.errors = {};
 
                 if (!this.form.supplier_id || !this.form.purchase_date || !this.form.location_id) {
@@ -717,8 +715,26 @@
                 .then(async r => {
                     const j = await r.json();
                     if (!r.ok) {
-                        if (j.errors) this.errors = this.flattenErrors(j.errors);
-                        this.setMessage('danger', j.message || 'Save failed.');
+                        if (j.errors) {
+                            this.errors = this.flattenErrors(j.errors);
+
+                            // A multi-row line collapses to an aggregate summary
+                            // by default — if one of its rows failed validation,
+                            // auto-expand it so the highlighted field is actually
+                            // visible instead of hiding behind that summary.
+                            Object.keys(this.errors.lines).forEach(li => {
+                                if (this.errors.lines[li].rows && this.form.lines[li]) {
+                                    this.form.lines[li]._expanded = true;
+                                }
+                            });
+
+                            const count = Object.keys(j.errors).length;
+                            this.setMessage('danger', count > 1
+                                ? `Please fix the ${count} highlighted fields below.`
+                                : 'Please fix the highlighted field below.');
+                        } else {
+                            this.setMessage('danger', j.message || 'Save failed.');
+                        }
                         return;
                     }
                     window.location.href = j.redirect;
@@ -727,14 +743,50 @@
                 .finally(() => { this.submitting = false; });
             },
             flattenErrors(errs) {
-                // Laravel returns nested keys like "lines.0.rows.2.price".
-                // Use the first message of each key, keyed by the leaf field
-                // for the simple cases we care about (top-level fields).
-                const flat = {};
-                Object.keys(errs).forEach(k => {
-                    flat[k] = Array.isArray(errs[k]) ? errs[k][0] : String(errs[k]);
+                // Laravel returns dot-path keys like:
+                //   supplier_id              — a top-level field
+                //   lines.0.category_id      — a line's own field
+                //   lines.0.rows.2.price     — a specific inventory row's field
+                // Top-level keys stay flat (existing header-field lookups like
+                // errors.supplier_id keep working); line/row keys nest under
+                // errors.lines[li] / .rows[ri] so a specific cell can look its
+                // own message up via lineError()/rowError() instead of every
+                // field on the page sharing one raw dot-path sentence.
+                const flat = { lines: {} };
+                Object.keys(errs).forEach(key => {
+                    const msg = Array.isArray(errs[key]) ? errs[key][0] : String(errs[key]);
+                    const rowMatch  = key.match(/^lines\.(\d+)\.rows\.(\d+)\.(.+)$/);
+                    const lineMatch = key.match(/^lines\.(\d+)\.(.+)$/);
+
+                    if (rowMatch) {
+                        const [, li, ri, field] = rowMatch;
+                        flat.lines[li] = flat.lines[li] || { rows: {} };
+                        flat.lines[li].rows[ri] = flat.lines[li].rows[ri] || {};
+                        flat.lines[li].rows[ri][field] = msg;
+                    } else if (lineMatch) {
+                        const [, li, field] = lineMatch;
+                        flat.lines[li] = flat.lines[li] || { rows: {} };
+                        flat.lines[li][field] = msg;
+                    } else {
+                        flat[key] = msg;
+                    }
                 });
                 return flat;
+            },
+            lineError(li, field) {
+                const l = this.errors.lines && this.errors.lines[li];
+                return (l && l[field]) || '';
+            },
+            rowError(li, ri, field) {
+                const l = this.errors.lines && this.errors.lines[li];
+                return (l && l.rows && l.rows[ri] && l.rows[ri][field]) || '';
+            },
+            hasLineError(li) {
+                const l = this.errors.lines && this.errors.lines[li];
+                if (!l) return false;
+                if (Object.keys(l).some(k => k !== 'rows' && l[k])) return true;
+                if (l.rows) return Object.keys(l.rows).some(ri => Object.values(l.rows[ri]).some(Boolean));
+                return false;
             },
         },
     });

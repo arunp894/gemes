@@ -451,7 +451,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[1, 'asc']],
+            order: [[5, 'desc']], // most recently updated first
             ajax: {
                 url: '{{ route('roles.data') }}',
                 type: 'GET',

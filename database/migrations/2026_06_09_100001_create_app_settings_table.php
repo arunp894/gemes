@@ -23,7 +23,7 @@ return new class extends Migration
             ['key' => 'site_name',            'value' => 'Sukaina Gems',  'group' => 'general', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'site_tagline',         'value' => 'Specialists in Paraiba Tourmaline and Tanzanite', 'group' => 'general', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'currency_symbol',      'value' => '₹',             'group' => 'general', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'currency_code',        'value' => 'USD',           'group' => 'general', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'currency_code',        'value' => 'INR',           'group' => 'general', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'currency_position',    'value' => 'before',        'group' => 'general', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'contact_email',        'value' => '',              'group' => 'general', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'contact_phone',        'value' => '',              'group' => 'general', 'created_at' => now(), 'updated_at' => now()],

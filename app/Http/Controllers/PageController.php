@@ -7,6 +7,8 @@ use App\Http\Requests\UpdatePageRequest;
 use App\Models\Page;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 /**
@@ -43,6 +45,7 @@ class PageController extends Controller
     public function store(StorePageRequest $request): JsonResponse|RedirectResponse
     {
         $data = $request->validated();
+        $data['content'] = clean($data['content']);
 
         $page = Page::create([
             'slug'             => $data['slug'] ?? null, // model auto-generates if blank
@@ -72,6 +75,7 @@ class PageController extends Controller
     public function update(UpdatePageRequest $request, Page $page): JsonResponse|RedirectResponse
     {
         $data = $request->validated();
+        $data['content'] = clean($data['content']);
 
         $page->fill([
             'slug'             => $data['slug'] ?? $page->slug,
@@ -100,6 +104,27 @@ class PageController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Page deleted successfully.',
+        ]);
+    }
+
+    /**
+     * Inline content image upload — consumed by the Quill editor's image
+     * toolbar button on the Add/Edit forms. Same pattern as
+     * BlogController::uploadImage(): a plain public file, not Spatie
+     * MediaLibrary, since it's a free-form content asset referenced by URL
+     * from inside the page body rather than a structured model relationship.
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:4096'],
+        ]);
+
+        $path = $request->file('image')->store('page-content', 'public');
+
+        return response()->json([
+            'success' => true,
+            'url'     => Storage::disk('public')->url($path),
         ]);
     }
 }

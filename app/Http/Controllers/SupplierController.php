@@ -50,16 +50,16 @@ class SupplierController extends Controller
      */
     public function data(Request $request): JsonResponse
     {
-        $query = Supplier::query();
+        $query = Supplier::query()
+            ->withSum('purchases as purchase_payment_sum', 'grand_total')
+            ->withSum('purchases as paid_payment_sum', 'paid_amount')
+            ->withSum('purchases as pending_payment_sum', 'due_amount');
 
         return DataTables::of($query)
             ->addIndexColumn()
             ->addColumn('checkbox', function (Supplier $supplier) {
                 return '<input class="form-check-input form-check-input-light fs-14 product-item-check mt-0" '
                     . 'type="checkbox" value="' . $supplier->id . '" />';
-            })
-            ->editColumn('supplier_code', function (Supplier $supplier) {
-                return '<code class="text-muted">' . e($supplier->supplier_code) . '</code>';
             })
             ->editColumn('name', function (Supplier $supplier) {
                 $sub = $supplier->company_name && $supplier->name !== $supplier->company_name
@@ -89,6 +89,17 @@ class SupplierController extends Controller
             })
             ->editColumn('credit_limit', function (Supplier $supplier) {
                 return '<span class="fw-medium">' . $this->settings->formatMoney($supplier->credit_limit) . '</span>';
+            })
+            ->addColumn('purchase_payment', function (Supplier $supplier) {
+                return '<span class="fw-medium">' . $this->settings->formatMoney($supplier->purchase_payment_sum ?? 0) . '</span>';
+            })
+            ->addColumn('paid_payment', function (Supplier $supplier) {
+                return '<span class="text-success fw-medium">' . $this->settings->formatMoney($supplier->paid_payment_sum ?? 0) . '</span>';
+            })
+            ->addColumn('pending_payment', function (Supplier $supplier) {
+                $due = (float) ($supplier->pending_payment_sum ?? 0);
+                $class = $due > 0 ? 'text-danger fw-medium' : 'text-muted';
+                return '<span class="' . $class . '">' . $this->settings->formatMoney($due) . '</span>';
             })
             ->addColumn('status_badge', function (Supplier $supplier) {
                 $class = $supplier->isActive() ? 'status-pill status-active' : 'status-pill status-inactive';
@@ -140,7 +151,7 @@ class SupplierController extends Controller
                     $query->where('suppliers.status', (int) $keyword);
                 }
             })
-            ->rawColumns(['checkbox', 'supplier_code', 'name', 'contact', 'location', 'credit_limit', 'status_badge', 'action'])
+            ->rawColumns(['checkbox', 'name', 'contact', 'location', 'credit_limit', 'purchase_payment', 'paid_payment', 'pending_payment', 'status_badge', 'action'])
             ->make(true);
     }
 

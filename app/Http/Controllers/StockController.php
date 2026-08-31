@@ -435,12 +435,11 @@ class StockController extends Controller
         return DataTables::query($query)
             ->addIndexColumn()
             ->addColumn('stone_label', fn ($row) =>
-                '<div class="d-flex align-items-center gap-2">'
+                '<a href="' . route('stock.stone', $row->category_id) . '" '
+                . 'class="d-flex align-items-center gap-2 text-decoration-none text-reset" title="View products, purchase rate, and stock value for this stone">'
                 . '<span class="movement-thumb movement-thumb-sm"><i class="ti ti-diamond"></i></span>'
-                . '<div class="min-w-0">'
                 . '<div class="fw-semibold text-truncate">' . e($row->category_name) . '</div>'
-                . '<small class="text-muted">' . (int) $row->product_count . ' product' . ((int) $row->product_count === 1 ? '' : 's') . '</small>'
-                . '</div></div>'
+                . '</a>'
             )
             ->editColumn('pieces', fn ($row) => number_format((int) $row->pieces))
             ->addColumn('carat_label', fn ($row) => number_format((float) $row->carat_weight, 2) . ' ct')
@@ -457,14 +456,78 @@ class StockController extends Controller
                     ? '<span class="badge badge-soft-warning">Low Stock</span>'
                     : '<span class="badge badge-soft-success">In Stock</span>'
             )
-            ->addColumn('action', fn ($row) =>
-                '<a href="javascript:void(0)" class="action-link action-link-view js-view-stone" '
-                . 'data-category-id="' . $row->category_id . '" title="View products in Current Stock">'
-                . '<i class="ti ti-eye fs-sm"></i></a>'
-            )
             ->filterColumn('stone_label', fn ($q, $keyword) => $q->where('categories.name', 'like', "%{$keyword}%"))
-            ->rawColumns(['stone_label', 'status_label', 'action'])
+            ->rawColumns(['stone_label', 'status_label'])
             ->toJson();
+    }
+
+    /**
+     * Drill-down from a Stones & Carat row: the individual products that
+     * make up that stone's totals, each with its own approximate purchase
+     * rate (this product's stock value ÷ its remaining carat — "approx."
+     * because a product can be fed by more than one purchase at different
+     * prices, so this is a weighted average, not a single quoted rate)
+     * and stock value. Same piece-level-first aggregation as byStoneData()
+     * for the same fan-out-avoidance reason.
+     */
+    public function stone(Category $category, Request $request): View
+    {
+        $locationId = (int) $request->query('location_id', 0);
+
+        $onHandPieces = DB::table('stock_movements')
+            ->whereNull('deleted_at')
+            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
+            ->groupBy('purchase_product_id', 'product_id')
+            ->havingRaw("SUM(CASE WHEN direction = 'in' THEN qty ELSE -qty END) > 0")
+            ->select([
+                'purchase_product_id',
+                'product_id',
+                DB::raw("SUM(CASE WHEN direction = 'in' THEN qty ELSE -qty END) as on_hand"),
+            ]);
+
+        $caratLedgerByPiece = DB::table('carat_movements')
+            ->whereNull('deleted_at')
+            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
+            ->groupBy('purchase_product_id')
+            ->selectRaw("purchase_product_id, SUM(CASE WHEN direction = 'in' THEN carat ELSE -carat END) as remaining_carat");
+
+        $products = DB::query()
+            ->fromSub($onHandPieces, 'op')
+            ->join('purchase_products', 'purchase_products.id', '=', 'op.purchase_product_id')
+            ->join('products', 'products.id', '=', 'op.product_id')
+            ->leftJoinSub($caratLedgerByPiece, 'cl', 'cl.purchase_product_id', '=', 'op.purchase_product_id')
+            ->where('products.category_id', $category->id)
+            ->groupBy('products.id', 'products.title', 'products.sku')
+            ->select([
+                'products.id    as product_id',
+                'products.title as product_title',
+                'products.sku   as product_sku',
+                DB::raw('SUM(op.on_hand) as pieces'),
+                DB::raw('SUM(op.on_hand * purchase_products.price) as stock_value'),
+                DB::raw('SUM(COALESCE(cl.remaining_carat, purchase_products.carat_weight * op.on_hand)) as carat_weight'),
+            ])
+            ->orderByDesc('stock_value')
+            ->get();
+
+        $totalPieces = (int) $products->sum('pieces');
+        $totalCarat  = (float) $products->sum('carat_weight');
+        $totalValue  = (float) $products->sum('stock_value');
+
+        return view('stock.stone', [
+            'category'          => $category,
+            'products'          => $products,
+            'locations'         => Location::active()->orderBy('name')->get(['id', 'location_code', 'name']),
+            'locationId'        => $locationId,
+            'totalPieces'       => $totalPieces,
+            'totalCarat'        => $totalCarat,
+            'totalValue'        => $totalValue,
+            'avgRatePerCarat'   => $totalCarat > 0 ? $totalValue / $totalCarat : null,
+            // Per-PRODUCT threshold here, not STONE_LOW_STOCK_THRESHOLD —
+            // this table lists individual products, and the stone-level
+            // threshold (tuned for a whole category's total) would flag
+            // almost every single-purchase product as "low".
+            'lowStockThreshold' => self::LOW_STOCK_THRESHOLD,
+        ]);
     }
 
     /* ─── Stock Movement (unified ledger, all sources) ─────── */
@@ -574,15 +637,15 @@ class StockController extends Controller
         return DataTables::query($query)
             ->addIndexColumn()
             ->addColumn('when_label', fn ($row) =>
-                '<div class="fw-semibold movement-date">' . date('d M Y', strtotime($row->movement_date)) . '</div>'
-                . '<small class="text-muted movement-time">' . date('h:i A', strtotime($row->created_at)) . '</small>'
+                '<span class="fw-semibold movement-date">' . date('d M Y', strtotime($row->movement_date)) . '</span>'
+                . ' <span class="text-muted movement-time">' . date('h:i A', strtotime($row->created_at)) . '</span>'
             )
             ->addColumn('product_label', fn ($row) =>
-                '<div class="d-flex align-items-center gap-2">'
+                '<a href="' . route('stock.product', $row->product_id) . '" '
+                . 'class="d-flex align-items-center gap-2 text-decoration-none text-reset" title="View full stock history for this product">'
                 . '<span class="movement-thumb"><i class="ti ti-diamond"></i></span>'
-                . '<div><div class="fw-semibold">' . e($row->product_title) . '</div>'
-                . '<small class="text-muted">' . e($row->product_sku) . '</small></div>'
-                . '</div>'
+                . '<div class="fw-semibold">' . e($row->product_title) . '</div>'
+                . '</a>'
             )
             ->addColumn('movement_label', function ($row) {
                 [$label, $badge, $icon] = $this->movementTypeMeta($row->reason);
@@ -712,60 +775,37 @@ class StockController extends Controller
     {
         $locationId = (int) $request->query('location_id', 0) ?: null;
 
-        $movements = StockMovement::query()
+        $base = StockMovement::query()
             ->where('product_id', $product->id)
-            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
-            ->with(['location:id,name,location_code', 'purchaseProduct:id,barcode,carat_weight', 'creator:id,name'])
-            ->orderBy('movement_date')
-            ->orderBy('id')
-            ->get();
+            ->when($locationId, fn ($q) => $q->where('location_id', $locationId));
 
-        // Real per-movement CT — see StockService::caratForMovements() for
-        // why this can't just be purchaseProduct->carat_weight (that's the
-        // piece's static original weight, constant across every row).
-        $caratByMovementId = $this->stock->caratForMovements($movements);
-
-        // Compute running balance per piece+location so the ledger reads
-        // naturally — each row shows the balance immediately after it.
-        $balances = [];
-        $rows     = [];
-        foreach ($movements as $m) {
-            $key = $m->purchase_product_id . ':' . $m->location_id;
-            $balances[$key] = ($balances[$key] ?? 0) + $m->signedQty();
-
-            $rows[] = [
-                'movement'      => $m,
-                'balance_after' => $balances[$key],
-                'carat'         => $caratByMovementId[$m->id] ?? null,
-            ];
-        }
-
-        // KPI summary computed from the (optionally location-filtered) movements.
+        // KPI summary + filter-tab counts — a lightweight aggregate query
+        // rather than loading every movement, now that the table itself
+        // renders via the same movements-data AJAX endpoint the Stock
+        // Dashboard's ledger tabs use (see stone/index.blade.php).
         $summary = [
-            'total_in'    => (int) $movements->where('direction', 'in')->sum('qty'),
-            'total_out'   => (int) $movements->where('direction', 'out')->sum('qty'),
-            'count'       => $movements->count(),
-            'sold_qty'    => (int) $movements->where('reason', StockMovement::REASON_SALE)->sum('qty'),
-            'purchased_qty' => (int) $movements->where('reason', StockMovement::REASON_PURCHASE)->sum('qty'),
+            'total_in'  => (int) (clone $base)->where('direction', 'in')->sum('qty'),
+            'total_out' => (int) (clone $base)->where('direction', 'out')->sum('qty'),
+            'count'     => (clone $base)->count(),
+            'sold_qty'      => (int) (clone $base)->where('reason', StockMovement::REASON_SALE)->sum('qty'),
+            'purchased_qty' => (int) (clone $base)->where('reason', StockMovement::REASON_PURCHASE)->sum('qty'),
+            'cat_purchase'   => (clone $base)->whereIn('reason', [
+                StockMovement::REASON_PURCHASE, StockMovement::REASON_PURCHASE_CANCEL,
+            ])->count(),
+            'cat_sale'       => (clone $base)->whereIn('reason', [
+                StockMovement::REASON_SALE, StockMovement::REASON_SALE_RETURN,
+                StockMovement::REASON_SALE_CANCEL, StockMovement::REASON_SALE_EDIT_REVERSE,
+            ])->count(),
+            'cat_transfer'   => (clone $base)->whereIn('reason', [
+                StockMovement::REASON_TRANSFER_OUT, StockMovement::REASON_TRANSFER_IN,
+                StockMovement::REASON_TRANSFER_CANCEL_OUT,
+            ])->count(),
+            'cat_adjustment' => (clone $base)->whereIn('reason', [
+                StockMovement::REASON_ADJUSTMENT_IN, StockMovement::REASON_ADJUSTMENT_OUT,
+                StockMovement::REASON_OPENING,
+            ])->count(),
         ];
         $summary['balance'] = $summary['total_in'] - $summary['total_out'];
-
-        // Counts per category for filter tab badges.
-        $summary['cat_purchase']   = $movements->whereIn('reason', [
-            StockMovement::REASON_PURCHASE, StockMovement::REASON_PURCHASE_CANCEL,
-        ])->count();
-        $summary['cat_sale']       = $movements->whereIn('reason', [
-            StockMovement::REASON_SALE, StockMovement::REASON_SALE_RETURN,
-            StockMovement::REASON_SALE_CANCEL, StockMovement::REASON_SALE_EDIT_REVERSE,
-        ])->count();
-        $summary['cat_transfer']   = $movements->whereIn('reason', [
-            StockMovement::REASON_TRANSFER_OUT, StockMovement::REASON_TRANSFER_IN,
-            StockMovement::REASON_TRANSFER_CANCEL_OUT,
-        ])->count();
-        $summary['cat_adjustment'] = $movements->whereIn('reason', [
-            StockMovement::REASON_ADJUSTMENT_IN, StockMovement::REASON_ADJUSTMENT_OUT,
-            StockMovement::REASON_OPENING,
-        ])->count();
 
         // Total on-hand (across all pieces) for the header.
         $onHand = $locationId
@@ -782,10 +822,9 @@ class StockController extends Controller
                 : $this->stock->remainingCaratForProductGlobal($product->id))
             : null;
 
-        $locations    = Location::active()->orderBy('name')->get(['id', 'name', 'location_code']);
-        $sourceLabels = $this->buildSourceLabels($movements);
+        $locations = Location::active()->orderBy('name')->get(['id', 'name', 'location_code']);
 
-        return view('stock.product', compact('product', 'rows', 'summary', 'onHand', 'onHandCt', 'locations', 'locationId', 'sourceLabels'));
+        return view('stock.product', compact('product', 'summary', 'onHand', 'onHandCt', 'locations', 'locationId'));
     }
 
     /* ─── Per-piece ledger ────────────────────────────────── */

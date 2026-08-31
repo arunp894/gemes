@@ -93,6 +93,14 @@ class StoreSaleRequest extends FormRequest
         ];
     }
 
+    /**
+     * Friendly names for both top-level and wildcard array fields — without
+     * the wildcard entries, a validation failure on e.g. lines.0.unit_price
+     * that isn't covered by a specific messages() key falls back to
+     * Laravel's generic ":attribute field must be at least 0" using the raw
+     * dot-path itself as the attribute ("The lines.0.unit_price field..."),
+     * which means nothing to the person at the register.
+     */
     public function attributes(): array
     {
         return [
@@ -102,6 +110,11 @@ class StoreSaleRequest extends FormRequest
             'salesperson_id'  => 'Salesperson',
             'tax_type'        => 'Tax Type',
             'shipping_charge' => 'Shipping Charge',
+            'lines.*.qty'           => 'quantity',
+            'lines.*.unit_price'    => 'unit price',
+            'lines.*.carat_weight'  => 'carat weight',
+            'lines.*.tax_percent'      => 'tax %',
+            'lines.*.discount_percent' => 'discount %',
         ];
     }
 }

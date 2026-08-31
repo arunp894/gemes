@@ -51,11 +51,22 @@ class StoreStockTransferRequest extends FormRequest
         ];
     }
 
+    /**
+     * Friendly names for both top-level and wildcard array fields —
+     * without the wildcard entries, a validation failure on e.g.
+     * lines.1.qty that isn't covered by a specific messages() key falls
+     * back to Laravel's generic ":attribute field is required" using the
+     * raw dot-path itself as the attribute ("The lines.1.qty field..."),
+     * which means nothing to the person moving stock.
+     */
     public function attributes(): array
     {
         return [
             'from_location_id' => 'Source Location',
             'to_location_id'   => 'Destination Location',
+            'lines.*.qty'          => 'quantity',
+            'lines.*.carat_weight' => 'carat weight',
+            'lines.*.notes'        => 'notes',
         ];
     }
 }

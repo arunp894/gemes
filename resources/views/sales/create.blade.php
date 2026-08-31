@@ -20,7 +20,13 @@
         </div>
     </div>
 
-    <form id="saleForm" novalidate @submit.prevent="submit('completed')" :class="{ 'was-validated': wasValidated }">
+    {{-- No 'was-validated' class here on purpose: validation is entirely
+         manual (.is-invalid bindings driven by `errors`), and Bootstrap's
+         was-validated turns on native :valid/:invalid styling for every
+         control including ones with no `required` attribute — which would
+         paint a false-positive green checkmark on genuinely optional,
+         still-empty fields (Discount %, Tax %, Note, Reference…). --}}
+    <form id="saleForm" novalidate @submit.prevent="submit('completed')">
 
         <div class="row g-3">
 
@@ -202,28 +208,25 @@
                         <table class="table table-custom align-middle mb-0">
                             <thead class="bg-light bg-opacity-25 thead-sm">
                                 <tr class="text-uppercase fs-xxs">
-                                    <th style="width: 24%;">Product</th>
-                                    <th>Ct</th>
-                                    <th>Barcode</th>
-                                    <th class="text-end" style="width: 8%;">Qty</th>
-                                    <th class="text-end" style="width: 12%;">Unit Price</th>
+                                    <th style="width: 26%;">Product</th>
+                                    <th class="text-center" style="width: 8%;">Ct</th>
+                                    <th style="width: 13%;">Barcode</th>
+                                    <th class="text-end" style="width: 8%;">Piece <span class="text-danger">*</span></th>
+                                    <th class="text-end" style="width: 12%;">Unit Price <span class="text-danger">*</span></th>
                                     <th class="text-end" style="width: 8%;">Disc %</th>
                                     <th class="text-end" style="width: 8%;">Tax %</th>
                                     <th class="text-end" style="width: 14%;">Total</th>
-                                    <th class="text-center" style="width: 1%;"></th>
+                                    <th class="text-center" style="width: 3%;"></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr v-for="(line, idx) in form.lines" :key="idx"
-                                    :class="{ 'table-warning': line._stockWarning }">
+                                    :class="{ 'table-warning': line._stockWarning, 'line-has-error': hasLineError(idx) }">
                                     <td>
                                         <div class="fw-semibold">@{{ line.product_title }}</div>
                                         <small class="text-muted">SKU: @{{ line.product_sku }}</small>
-                                        <small v-if="line.cost_price > 0" class="d-block text-muted">
-                                            Cost: @{{ formatMoney(line.cost_price) }}
-                                        </small>
                                     </td>
-                                    <td>
+                                    <td class="text-center">
                                         {{-- CT is its own independent ledger, separate from qty — the
                                              seller enters exactly how much CT this line consumes, capped
                                              at that piece's actual remaining CT balance (never a
@@ -246,20 +249,25 @@
                                         <small v-if="line._stockWarning" class="d-block text-danger">
                                             <i class="ti ti-alert-triangle"></i> Capped at stock on hand
                                         </small>
-                                        <small v-else class="d-block text-success">Qty @{{ line.on_hand }} On Hand</small>
+                                        <small v-else class="d-block text-success">@{{ line.on_hand }} Piece@{{ line.on_hand === 1 ? '' : 's' }} On Hand</small>
                                     </td>
                                     <td>
                                         <input type="number" min="1" step="1" :max="line.on_hand"
                                             :disabled="line.on_hand === 1"
+                                            :title="line.on_hand === 1 ? 'Only 1 in stock — quantity is locked' : ''"
                                             class="form-control form-control-sm text-end"
+                                            :class="{ 'is-invalid': lineError(idx, 'qty') }"
                                             v-model.number="line.qty"
                                             @input="checkStockWarning(idx)"
                                             @blur="normalizeQty(idx)">
+                                        <div class="invalid-feedback d-block" v-if="lineError(idx, 'qty')">@{{ lineError(idx, 'qty') }}</div>
                                     </td>
                                     <td>
                                         <input type="number" min="0" step="0.01"
                                             class="form-control form-control-sm text-end"
+                                            :class="{ 'is-invalid': lineError(idx, 'unit_price') }"
                                             v-model.number="line.unit_price">
+                                        <div class="invalid-feedback d-block" v-if="lineError(idx, 'unit_price')">@{{ lineError(idx, 'unit_price') }}</div>
                                     </td>
                                     <td>
                                         <input type="number" min="0" max="100" step="0.01"
@@ -536,6 +544,21 @@
     .sales-terminal-page .card-title { font-size: 0.9375rem; font-weight: 700; }
     .sales-terminal-page .form-label { margin-bottom: 4px; font-size: 0.8125rem; font-weight: 600; }
     .sales-terminal-page .mb-3 { margin-bottom: 12px !important; }
+
+    /* A cart row carrying a real validation error — a solid left stripe
+       plus a faint red tint, matching the same treatment on the Purchase
+       form's line table, so the eye goes straight to it instead of
+       scanning every row for a stray .is-invalid border. */
+    .sales-terminal-page .table tr.line-has-error > td {
+        background-color: #fef2f2 !important;
+    }
+    .sales-terminal-page .table tr.line-has-error > td:first-child {
+        box-shadow: inset 3px 0 0 #dc2626;
+    }
+    .sales-terminal-page .table .invalid-feedback {
+        font-size: 0.6875rem;
+        margin-top: 2px;
+    }
 </style>
 @endpush
 
@@ -551,6 +574,9 @@ $(function () {
     const defaultSPId   = @json($defaultSalespersonId);
     const channels      = @json($channels);
     const defaultChId   = @json($defaultChannelId);
+    const currencySymbol   = @json($currencySymbol);
+    const currencyCode     = @json($currencyCode);
+    const currencyPosition = @json($currencyPosition);
 
     new Vue({
         el: '#salesTerminalApp',
@@ -559,6 +585,7 @@ $(function () {
             userLocations, salespeople,
             locationMode,
             channels,
+            currencySymbol, currencyCode, currencyPosition,
             newCustomerUrl: '{{ route('customers.create') }}',
 
             // Search states
@@ -593,7 +620,6 @@ $(function () {
 
             errors: {},
             submitting: false,
-            wasValidated: false,
             serverError: null,
         },
         computed: {
@@ -637,7 +663,10 @@ $(function () {
         methods: {
             /* ── formatting ────────────────── */
             formatMoney(v) {
-                return Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const formatted = Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return this.currencyPosition === 'after'
+                    ? `${formatted} ${this.currencyCode}`
+                    : `${this.currencySymbol}${formatted}`;
             },
             lineTotal(l) {
                 const qty   = Number(l.qty) || 0;
@@ -904,6 +933,37 @@ $(function () {
                 last.amount = +(this.totals.grand - others).toFixed(2);
             },
 
+            /* ── error mapping ─────────────── */
+            // Laravel returns dot-path keys like:
+            //   customer_id            — a top-level field, kept flat
+            //   lines.2.qty            — a specific cart row's field, nested
+            //     under errors.lines[idx] so that exact row/input can look
+            //     its own message up, instead of every field on the page
+            //     silently sharing one raw, meaningless dot-path string.
+            applyServerErrors(errs) {
+                const flat = { lines: {} };
+                Object.keys(errs).forEach((key) => {
+                    const msg = Array.isArray(errs[key]) ? errs[key][0] : String(errs[key]);
+                    const m = key.match(/^lines\.(\d+)\.(.+)$/);
+                    if (m) {
+                        const [, idx, field] = m;
+                        flat.lines[idx] = flat.lines[idx] || {};
+                        flat.lines[idx][field] = msg;
+                    } else {
+                        flat[key] = msg;
+                    }
+                });
+                this.errors = flat;
+            },
+            lineError(idx, field) {
+                const l = this.errors.lines && this.errors.lines[idx];
+                return (l && l[field]) || '';
+            },
+            hasLineError(idx) {
+                const l = this.errors.lines && this.errors.lines[idx];
+                return !!(l && Object.values(l).some(Boolean));
+            },
+
             /* ── submit ───────────────────── */
             validate(intendedStatus) {
                 this.errors = {};
@@ -979,11 +1039,14 @@ $(function () {
                     if (res.status === 422) {
                         const data = await res.json();
                         if (data.errors) {
-                            Object.keys(data.errors).forEach((k) => {
-                                this.$set(this.errors, k.replace(/\.\d+(\.|$)/g, '$1'), data.errors[k][0]);
-                            });
+                            this.applyServerErrors(data.errors);
+                            const count = Object.keys(data.errors).length;
+                            this.serverError = count > 1
+                                ? `Please fix the ${count} highlighted fields below.`
+                                : (data.message || 'Please fix the highlighted field below.');
+                        } else {
+                            this.serverError = data.message || 'Please fix the highlighted fields.';
                         }
-                        this.serverError = data.message || 'Please fix the highlighted fields.';
                         this.submitting = false;
                         return;
                     }

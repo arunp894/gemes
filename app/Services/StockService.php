@@ -596,13 +596,15 @@ class StockService
                 'stock_movements.purchase_product_id',
                 'stock_movements.product_id',
                 'purchase_products.barcode',
-                'purchase_products.lot_code'
+                'purchase_products.lot_code',
+                'purchase_products.carat_weight'
             )
             ->select([
                 'stock_movements.purchase_product_id',
                 'stock_movements.product_id',
                 'purchase_products.barcode',
                 'purchase_products.lot_code',
+                'purchase_products.carat_weight',
                 DB::raw($signedSql . ' as on_hand'),
             ])
             ->havingRaw($signedSql . ' > 0')

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Channel;
 use App\Models\Customer;
 use App\Models\Product;
 use App\Models\Purchase;
@@ -72,6 +73,27 @@ class DashboardController extends Controller
 
             $salesRevenueChange = $salesLastMonth->revenue > 0
                 ? round((($salesThisMonth->revenue - $salesLastMonth->revenue) / $salesLastMonth->revenue) * 100, 1)
+                : 0;
+        }
+
+        /* ── Website Order KPIs ──────────────────────────────────────── */
+        $websiteOrdersThisMonth = (object) ['count' => 0, 'revenue' => 0];
+        $websiteOrdersChange = 0;
+        if ($canSales) {
+            $websiteOrdersThisMonth = Sale::whereHas('channel', fn ($q) => $q->where('code', Channel::CODE_WEBSITE))
+                ->whereIn('status', [Sale::STATUS_POSTED, Sale::STATUS_COMPLETED])
+                ->where('sale_date', '>=', $thisMonth)
+                ->selectRaw('COUNT(*) as count, COALESCE(SUM(grand_total),0) as revenue')
+                ->first();
+
+            $websiteOrdersLastMonth = Sale::whereHas('channel', fn ($q) => $q->where('code', Channel::CODE_WEBSITE))
+                ->whereIn('status', [Sale::STATUS_POSTED, Sale::STATUS_COMPLETED])
+                ->whereBetween('sale_date', [$lastMonth, $lastMonthEnd])
+                ->selectRaw('COUNT(*) as count, COALESCE(SUM(grand_total),0) as revenue')
+                ->first();
+
+            $websiteOrdersChange = $websiteOrdersLastMonth->count > 0
+                ? round((($websiteOrdersThisMonth->count - $websiteOrdersLastMonth->count) / $websiteOrdersLastMonth->count) * 100, 1)
                 : 0;
         }
 
@@ -147,9 +169,7 @@ class DashboardController extends Controller
         $todaySalesCount    = $canSales ? Sale::whereDate('sale_date', $today)->count() : 0;
         $todayPurchaseCount = $canPurchases ? Purchase::whereDate('purchase_date', $today)->count() : 0;
 
-        /* ── Stock summary: distinct products with at least 1 purchase_product ─
-         *  purchase_products has no product_id; it links via purchase_line_id
-         *  → purchase_lines.product_id.                                         */
+        /* ── Stock summary: distinct products with at least 1 purchase_product ── */
         $inStockCount = 0;
         if ($canStock) {
             $inStockCount = DB::table('purchase_products as pp')
@@ -157,7 +177,7 @@ class DashboardController extends Controller
                 ->whereNull('pp.deleted_at')
                 ->whereNull('pl.deleted_at')
                 ->distinct()
-                ->count('pl.product_id');
+                ->count('pp.product_id');
         }
 
         return view('welcome', compact(
@@ -175,6 +195,8 @@ class DashboardController extends Controller
             'activeCustomers',
             'salesThisMonth',
             'salesRevenueChange',
+            'websiteOrdersThisMonth',
+            'websiteOrdersChange',
             'purchasesThisMonth',
             'purchaseSpendChange',
             'months',

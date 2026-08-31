@@ -83,7 +83,6 @@
       <div class="sg-product-price-lg" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:var(--teal-300)">
         {{ $settings->formatPrice($product->website_price) }}
       </div>
-      <div style="font-size:17px;color:var(--white-faint)">{{ strtoupper($settings->get('currency_code', 'USD')) }}</div>
       @else
       <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--teal-300)">Price on Request</div>
       @endif

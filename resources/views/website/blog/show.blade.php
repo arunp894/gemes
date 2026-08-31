@@ -14,8 +14,18 @@
 .sg-post-body{max-width:820px;margin:0 auto;font-size:16px;line-height:1.85;color:var(--white-dim)}
 .sg-post-body p{margin-bottom:1.4em}
 .sg-post-body a{color:var(--teal-300)}
-.sg-post-body h2,.sg-post-body h3{font-family:'Cormorant Garamond',serif;color:var(--white);margin:1.4em 0 .6em}
+.sg-post-body h2,.sg-post-body h3{font-family:'Cormorant Garamond',serif;color:var(--white);margin:1.4em 0 .6em;scroll-margin-top:88px}
 .sg-post-back{display:inline-block;margin-bottom:24px}
+.sg-post-toc{max-width:820px;margin:0 auto 40px;background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:20px 24px}
+.sg-post-toc-title{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--teal-400);margin-bottom:12px}
+.sg-post-toc ol{list-style:none;margin:0;padding:0;counter-reset:toc}
+.sg-post-toc li{counter-increment:toc;margin-bottom:8px}
+.sg-post-toc li:last-child{margin-bottom:0}
+.sg-post-toc li::before{content:counter(toc) ".";display:inline-block;width:20px;color:var(--teal-400);font-size:13px}
+.sg-post-toc li.sg-toc-level-3{counter-increment:none;padding-left:20px}
+.sg-post-toc li.sg-toc-level-3::before{content:"–";width:20px}
+.sg-post-toc a{color:var(--white-dim);text-decoration:none;font-size:14px;transition:color .3s}
+.sg-post-toc a:hover{color:var(--teal-300)}
 .sg-related{max-width:1000px;margin:0 auto}
 .sg-related-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:24px}
 @media(max-width:768px){.sg-post-title{font-size:30px}.sg-post-hero{padding:120px 0 24px}.sg-related-grid{grid-template-columns:1fr}}
@@ -42,10 +52,23 @@
 </div>
 @endif
 
-<section class="sg-section">
+<section class="sg-section" style="padding-bottom:0">
     <div class="sg-container">
+        @if (count($tableOfContents) > 1)
+        <nav class="sg-post-toc sg-reveal" aria-label="Table of contents">
+            <div class="sg-post-toc-title">On This Page</div>
+            <ol>
+                @foreach ($tableOfContents as $item)
+                    <li class="sg-toc-level-{{ $item['level'] }}">
+                        <a href="#{{ $item['id'] }}">{{ $item['text'] }}</a>
+                    </li>
+                @endforeach
+            </ol>
+        </nav>
+        @endif
+
         <div class="sg-post-body sg-reveal">
-            {!! $blog->content !!}
+            {!! $content !!}
         </div>
     </div>
 </section>

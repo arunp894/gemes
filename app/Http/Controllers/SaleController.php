@@ -196,6 +196,9 @@ class SaleController extends Controller
             'defaultSalespersonId' => auth()->id(),
             'channels'             => $channels,
             'defaultChannelId'     => $defaultChannel?->id,
+            'currencySymbol'       => $this->settings->get('currency_symbol', '₹'),
+            'currencyCode'         => strtoupper($this->settings->get('currency_code', 'INR')),
+            'currencyPosition'     => $this->settings->get('currency_position', 'before'),
         ]);
     }
 

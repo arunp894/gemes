@@ -145,6 +145,12 @@
                     <input type="text" name="contact_whatsapp" class="form-control"
                       value="{{ old('contact_whatsapp', $all['contact_whatsapp'] ?? '') }}" placeholder="+91 …">
                   </div>
+                  <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold">Address / Location</label>
+                    <input type="text" name="contact_address" class="form-control"
+                      value="{{ old('contact_address', $all['contact_address'] ?? '') }}" placeholder="Bangkok, Thailand">
+                    <div class="form-text">Shown on the storefront's Contact page.</div>
+                  </div>
                 </div>
 
                 <hr class="my-4">
@@ -162,7 +168,7 @@
                     <label class="form-label fw-semibold">ISO Code <span class="text-danger">*</span></label>
                     <input type="text" name="currency_code" id="currencyCode"
                       class="form-control @error('currency_code') is-invalid @enderror text-uppercase"
-                      value="{{ old('currency_code', $all['currency_code'] ?? 'USD') }}"
+                      value="{{ old('currency_code', $all['currency_code'] ?? 'INR') }}"
                       maxlength="3" minlength="3" required oninput="this.value=this.value.toUpperCase()">
                     <div class="form-text">3-letter code sent to PayPal (USD, EUR, INR…)</div>
                     @error('currency_code')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -453,7 +459,7 @@ $(function () {
   // ── Currency preview ──────────────────────────────────────────
   function updatePreview() {
     var sym = $('#currencySymbol').val() || '₹';
-    var code = $('#currencyCode').val() || 'USD';
+    var code = $('#currencyCode').val() || 'INR';
     var pos  = $('#currencyPosition').val();
     $('#currencyPreview').text(pos === 'before' ? sym + ' 1,250' : '1,250 ' + code);
   }

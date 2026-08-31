@@ -92,11 +92,16 @@
         {{-- Progress + scan breakdown --}}
         <div class="col-xl-8">
             <div class="row g-3">
+                @php
+                    $missingCarat = max(0, $caratProgress['expected_carat'] - $caratProgress['matched_carat']);
+                    $fmtCarat = fn ($v) => rtrim(rtrim(number_format((float) $v, 3), '0'), '.') ?: '0';
+                @endphp
                 <div class="col-sm-3 col-6">
                     <div class="card">
                         <div class="card-body text-center">
                             <h3 class="mb-0">{{ (int) $audit->expected_total }}</h3>
                             <p class="text-muted mb-0 fs-xxs text-uppercase">Expected</p>
+                            <p class="text-muted mb-0 fs-xxs">{{ $fmtCarat($caratProgress['expected_carat']) }} ct</p>
                         </div>
                     </div>
                 </div>
@@ -105,6 +110,7 @@
                         <div class="card-body text-center">
                             <h3 class="mb-0 text-success">{{ (int) $audit->matched_total }}</h3>
                             <p class="text-muted mb-0 fs-xxs text-uppercase">Matched</p>
+                            <p class="text-muted mb-0 fs-xxs">{{ $fmtCarat($caratProgress['matched_carat']) }} ct</p>
                         </div>
                     </div>
                 </div>
@@ -113,6 +119,7 @@
                         <div class="card-body text-center">
                             <h3 class="mb-0 text-danger">{{ $audit->missingTotal() }}</h3>
                             <p class="text-muted mb-0 fs-xxs text-uppercase">Missing</p>
+                            <p class="text-muted mb-0 fs-xxs">{{ $fmtCarat($missingCarat) }} ct</p>
                         </div>
                     </div>
                 </div>
@@ -121,6 +128,7 @@
                         <div class="card-body text-center">
                             <h3 class="mb-0">{{ $audit->progressPercent() }}%</h3>
                             <p class="text-muted mb-0 fs-xxs text-uppercase">Counted</p>
+                            <p class="text-muted mb-0 fs-xxs">&nbsp;</p>
                         </div>
                     </div>
                 </div>

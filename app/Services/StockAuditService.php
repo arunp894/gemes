@@ -43,6 +43,25 @@ class StockAuditService
     /* ─── Start ────────────────────────────────────────────── */
 
     /**
+     * Live preview of what starting the audit right now would freeze into
+     * its snapshot — same on-hand query start() itself uses
+     * (StockService::onHandPiecesForLocation()), so the count shown on the
+     * New Stock Audit form before submitting is exactly what the audit
+     * will actually contain, not a separate approximation that could
+     * drift from it.
+     */
+    public function previewCount(int $locationId, ?int $categoryId): array
+    {
+        $pieces = $this->stock->onHandPiecesForLocation($locationId, $categoryId);
+
+        return [
+            'products' => $pieces->pluck('product_id')->unique()->count(),
+            'pieces'   => (int) $pieces->sum('on_hand'),
+            'carat'    => (float) $pieces->sum('carat_weight'),
+        ];
+    }
+
+    /**
      * Expected payload: ['location_id' => int, 'category_id' => ?int, 'audit_date' => ?string, 'note' => ?string]
      *
      * category_id is optional - the audit's "Stone" scope. Null covers
@@ -300,6 +319,25 @@ class StockAuditService
             'matched'    => (int) ($rows[StockAuditScan::RESULT_MATCHED]    ?? 0),
             'duplicate'  => (int) ($rows[StockAuditScan::RESULT_DUPLICATE]  ?? 0),
             'unexpected' => (int) ($rows[StockAuditScan::RESULT_UNEXPECTED] ?? 0),
+        ];
+    }
+
+    /**
+     * Carat-weight counterpart to expected_total/matched_total — those two
+     * columns only ever count pieces, so the scan screen has no live carat
+     * progress without this. Sums stock_audit_items' linked
+     * purchase_products.carat_weight (the same static per-row weight the
+     * missing-stock report already reads), split into the frozen snapshot
+     * total vs. however much of it has been matched so far.
+     */
+    public function caratProgress(StockAudit $audit): array
+    {
+        $base = StockAuditItem::where('stock_audit_id', $audit->id)
+            ->join('purchase_products', 'purchase_products.id', '=', 'stock_audit_items.purchase_product_id');
+
+        return [
+            'expected_carat' => (float) (clone $base)->sum('purchase_products.carat_weight'),
+            'matched_carat'  => (float) (clone $base)->whereNotNull('stock_audit_items.matched_at')->sum('purchase_products.carat_weight'),
         ];
     }
 

@@ -87,7 +87,7 @@ class Page extends Model
      */
     public function scopeOrdered($query)
     {
-        return $query->orderBy('title', 'asc');
+        return $query->orderByDesc('updated_at');
     }
 
     /* -----------------------------------------------------------------
