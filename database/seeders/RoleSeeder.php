@@ -45,6 +45,7 @@ class RoleSeeder extends Seeder
             ],
         );
         $manager->syncPermissionsBySlug([
+            'dashboard.view',
             'categories.view', 'categories.create', 'categories.edit', 'categories.delete',
             'subcategories.view', 'subcategories.create', 'subcategories.edit', 'subcategories.delete',
             'products.view', 'products.create', 'products.edit', 'products.delete', 'products.toggle-website',
@@ -61,6 +62,7 @@ class RoleSeeder extends Seeder
             ],
         );
         $operator->syncPermissionsBySlug([
+            'dashboard.view',
             'categories.view', 'categories.edit',
             'subcategories.view', 'subcategories.edit',
             'products.view', 'products.edit', 'products.toggle-website',
@@ -77,6 +79,7 @@ class RoleSeeder extends Seeder
             ],
         );
         $viewer->syncPermissionsBySlug([
+            'dashboard.view',
             'categories.view',
             'subcategories.view',
             'products.view',

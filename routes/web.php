@@ -136,7 +136,8 @@ Route::get('/logout', [LoginController::class, 'logout'])
 Route::middleware('auth')->group(function () {
 
     Route::get('/', fn() => redirect()->route('dashboard'));
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->middleware('permission:dashboard.view')->name('dashboard');
     Route::get('/reports/today-performance', [TodayPerformanceController::class, 'index'])->name('reports.today-performance');
     Route::get('/reports/stock-activity', [StockActivityReportController::class, 'index'])
         ->middleware('permission:stock.view')->name('reports.stock-activity');

@@ -1,12 +1,14 @@
 <div id="sidenav-menu">
     <ul class="side-nav">
         <li class="side-nav-title mt-2" data-lang="main">Main</li>
+        @permission('dashboard.view')
         <li class="side-nav-item">
             <a href="{{ route('dashboard') }}" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-dashboard"></i></span>
                 <span class="menu-text" data-lang="dashboards">Dashboards</span>
             </a>
         </li>
+        @endpermission
         <li class="side-nav-item {{ request()->routeIs('reports.*') ? 'menuitem-active' : '' }}">
             <a data-bs-toggle="collapse" href="#reportsMenu"
                 aria-expanded="{{ request()->routeIs('reports.*') ? 'true' : 'false' }}"
