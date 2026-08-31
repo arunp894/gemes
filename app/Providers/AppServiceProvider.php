@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Services\CartService;
 use App\Services\SettingService;
+use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -52,6 +54,32 @@ class AppServiceProvider extends ServiceProvider
         Blade::if('allpermissions', function (array $slugs) {
             $user = auth()->user();
             return $user && $user->hasAllPermissions($slugs);
+        });
+
+        // Branded reset-password email, replacing Laravel's default plain
+        // notification template. toMailUsing()'s callback receives the raw
+        // token (not a built URL) and fully bypasses resetUrl()/
+        // createUrlUsing() inside ResetPassword::toMail(), so the reset
+        // link is built here directly — pointing at the storefront's own
+        // reset page, not the admin panel's (which has no password-reset
+        // feature at all, so the 'password.reset' route Laravel's default
+        // would build doesn't exist). Only customers ever trigger this in
+        // practice — there's no equivalent "forgot password" flow wired up
+        // for back-office User accounts — but this customization is global
+        // to the ResetPassword notification class, so it applies to both.
+        ResetPassword::toMailUsing(function ($notifiable, string $token) {
+            $url = route('website.auth.reset-password.show', [
+                'token' => $token,
+                'email' => $notifiable->getEmailForPasswordReset(),
+            ]);
+
+            return (new MailMessage())
+                ->subject('Reset Your Password')
+                ->view('emails.customer.reset-password', [
+                    'customer'      => $notifiable,
+                    'url'           => $url,
+                    'expireMinutes' => config('auth.passwords.customers.expire', 60),
+                ]);
         });
 
         // ----- Share $settings with ALL website.* views -----

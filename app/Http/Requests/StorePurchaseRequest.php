@@ -127,8 +127,31 @@ class StorePurchaseRequest extends FormRequest
             'lines.required'             => 'Add at least one item to the purchase.',
             'lines.*.category_id.required' => 'Choose a category for each item.',
             'lines.*.rows.required'      => 'Each item needs at least one inventory row.',
+            'lines.*.rows.*.qty.required'   => 'Quantity is required for every inventory row.',
             'lines.*.rows.*.qty.min'     => 'Quantity must be zero or more.',
+            'lines.*.rows.*.price.required' => 'Price is required for every inventory row.',
             'lines.*.rows.*.price.min'   => 'Price cannot be negative.',
+        ];
+    }
+
+    /**
+     * Friendly names for the wildcard array fields above — without these,
+     * a validation failure on e.g. lines.0.rows.1.qty that isn't covered
+     * by a specific message() key falls back to Laravel's generic
+     * ":attribute field is required" using the raw dot-path itself as
+     * the attribute name ("The lines.0.rows.1.qty field is required."),
+     * which means nothing to the person filling out the form.
+     */
+    public function attributes(): array
+    {
+        return [
+            'lines.*.category_id'      => 'stone',
+            'lines.*.country_of_origin_id' => 'country of origin',
+            'lines.*.package_qty'      => 'pack qty',
+            'lines.*.rows.*.qty'          => 'quantity',
+            'lines.*.rows.*.carat_weight' => 'carat weight',
+            'lines.*.rows.*.price'        => 'price',
+            'lines.*.rows.*.barcode'      => 'barcode',
         ];
     }
 }

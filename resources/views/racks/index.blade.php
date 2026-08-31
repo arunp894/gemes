@@ -14,7 +14,7 @@
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="#">Procurement</a></li>
+                <li class="breadcrumb-item"><a href="#">Transaction</a></li>
                 <li class="breadcrumb-item active">Racks</li>
             </ol>
         </div>
@@ -479,7 +479,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[1, 'asc']], // code asc
+            order: [[5, 'desc']], // most recently added first
             ajax: {
                 url: '{{ route('racks.data') }}',
                 type: 'GET',

@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\ContactFormMail;
 use App\Models\Banner;
 use App\Models\Blog;
 use App\Models\Category;
+use App\Models\ContactMessage;
 use App\Models\Page;
 use App\Models\Product;
+use App\Services\SettingService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 /**
@@ -176,7 +182,61 @@ class WebsiteController extends Controller
             ->limit(3)
             ->get();
 
-        return view('website.blog.show', compact('blog', 'relatedPosts'));
+        [$content, $tableOfContents] = $this->extractTableOfContents($blog->content);
+
+        return view('website.blog.show', compact('blog', 'relatedPosts', 'content', 'tableOfContents'));
+    }
+
+    /**
+     * Pulls every h2/h3 out of the post's (already-purified) content HTML,
+     * stamps each with a unique #id, and returns the modified HTML alongside
+     * a flat [{id, text, level}] outline for the post page's table-of-contents
+     * jump links. Posts with no headings just get an empty outline back —
+     * the view hides the TOC box in that case.
+     *
+     * @return array{0: string, 1: array<int, array{id: string, text: string, level: int}>}
+     */
+    private function extractTableOfContents(string $html): array
+    {
+        if (! str_contains($html, '<h2') && ! str_contains($html, '<h3')) {
+            return [$html, []];
+        }
+
+        libxml_use_internal_errors(true);
+        $dom = new \DOMDocument();
+        $dom->loadHTML(
+            '<?xml encoding="utf-8" ?><div>' . $html . '</div>',
+            LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD
+        );
+        libxml_clear_errors();
+
+        $toc  = [];
+        $used = [];
+
+        foreach ((new \DOMXPath($dom))->query('//h2 | //h3') as $heading) {
+            $text = trim($heading->textContent);
+            if ($text === '') {
+                continue;
+            }
+
+            $slug = Str::slug($text) ?: 'section';
+            $id   = $slug;
+            for ($i = 2; in_array($id, $used, true); $i++) {
+                $id = "{$slug}-{$i}";
+            }
+            $used[] = $id;
+
+            $heading->setAttribute('id', $id);
+            $toc[] = ['id' => $id, 'text' => $text, 'level' => (int) substr($heading->nodeName, 1)];
+        }
+
+        $wrapper = $dom->getElementsByTagName('div')->item(0);
+        $newHtml = '';
+        foreach ($wrapper->childNodes as $child) {
+            $newHtml .= $dom->saveHTML($child);
+        }
+
+        return [$newHtml, $toc];
     }
 
     // ── Static pages (About Us, Terms & Conditions, ...) ────────────
@@ -184,5 +244,42 @@ class WebsiteController extends Controller
     public function pageShow(Page $page): View
     {
         return view('website.page', compact('page'));
+    }
+
+    // ── Contact ───────────────────────────────────────────────────
+
+    public function contact(): View
+    {
+        return view('website.contact');
+    }
+
+    public function submitContact(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name'    => ['required', 'string', 'max:191'],
+            'email'   => ['required', 'email', 'max:191'],
+            'phone'   => ['nullable', 'string', 'max:30'],
+            'message' => ['required', 'string', 'max:5000'],
+        ]);
+
+        $contactMessage = ContactMessage::create($data);
+
+        // A mail-server hiccup should never turn an otherwise-successful
+        // submission (already saved above) into a failed one for the
+        // visitor — log and move on. No notification address configured
+        // yet is the same "nothing to send to" case, not an error.
+        $notifyEmail = app(SettingService::class)->get('contact_email');
+        if ($notifyEmail) {
+            try {
+                Mail::to($notifyEmail)->send(new ContactFormMail($contactMessage));
+            } catch (\Throwable $e) {
+                logger()->error('Contact form notification email failed', [
+                    'contact_message_id' => $contactMessage->id,
+                    'message'            => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return back()->with('success', "Thanks, {$contactMessage->name}! We've received your message and will be in touch soon.");
     }
 }

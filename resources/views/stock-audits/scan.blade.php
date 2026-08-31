@@ -30,12 +30,17 @@
             <div class="d-flex align-items-end gap-4 flex-grow-1 flex-wrap">
                 <div>
                     <div class="scan-big-number">@{{ progress.matched_total }}</div>
-                    <div class="scan-big-sub">/ @{{ progress.expected_total }} matched</div>
+                    <div class="scan-big-sub">/ @{{ progress.expected_total }} pieces matched</div>
                 </div>
                 <div class="scan-divider-v"></div>
                 <div>
                     <div class="scan-big-number scan-big-number-accent">@{{ progress.missing_total }}</div>
                     <div class="scan-big-sub">remaining</div>
+                </div>
+                <div class="scan-divider-v"></div>
+                <div>
+                    <div class="scan-big-number">@{{ formatCarat(progress.matched_carat) }}</div>
+                    <div class="scan-big-sub">/ @{{ formatCarat(progress.expected_carat) }} ct matched</div>
                 </div>
             </div>
             <div class="scan-ring" :style="{ '--pct': progress.percent }">
@@ -165,12 +170,13 @@
                         <th>Time</th>
                         <th>Lot Code / Barcode</th>
                         <th>Product</th>
+                        <th class="text-end">Carat</th>
                         <th>Result</th>
                     </tr>
                 </thead>
                 <tbody v-if="scans.length === 0">
                     <tr>
-                        <td colspan="4" class="text-center py-5">
+                        <td colspan="5" class="text-center py-5">
                             <div class="scan-empty-icon mx-auto mb-2"><i class="ti ti-clipboard-list"></i></div>
                             <div class="fw-bold">No scans yet</div>
                             <div class="text-muted small">Start scanning above to see results here.</div>
@@ -182,6 +188,7 @@
                         <td class="text-muted">@{{ s.scanned_at }}</td>
                         <td><code>@{{ s.scanned_value }}</code></td>
                         <td>@{{ s.product_title || '—' }}</td>
+                        <td class="text-end">@{{ s.carat_weight !== null ? formatCarat(s.carat_weight) + ' ct' : '—' }}</td>
                         <td><span class="badge fs-xxs" :class="s.badge_class">@{{ s.result_label }}</span></td>
                     </tr>
                 </transition-group>
@@ -454,7 +461,7 @@
         'matched_total'  => (int) $audit->matched_total,
         'missing_total'  => $audit->missingTotal(),
         'percent'        => $audit->progressPercent(),
-    ];
+    ] + $caratProgress;
     $scanRecentScansData = $recentScans->map(fn ($s) => [
         'id'            => $s->id,
         'scanned_value' => $s->scanned_value,
@@ -462,6 +469,9 @@
         'result_label'  => $s->resultLabel(),
         'badge_class'   => $s->resultBadgeClass(),
         'product_title' => $s->item?->product?->title,
+        'carat_weight'  => $s->item?->purchaseProduct?->carat_weight !== null
+            ? (float) $s->item->purchaseProduct->carat_weight
+            : null,
         'scanned_at'    => $s->scanned_at->format('H:i:s'),
     ]);
     $scanCountsData = $scanCounts;
@@ -546,6 +556,10 @@ $(function () {
             });
         },
         methods: {
+            formatCarat(v) {
+                if (v === null || v === undefined || isNaN(v)) return '0';
+                return (Math.round(Number(v) * 1000) / 1000).toString();
+            },
             focusInput() {
                 this.$nextTick(() => this.$refs.scanInput?.focus());
             },

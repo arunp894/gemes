@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\OrderConfirmationMail;
 use App\Models\Channel;
 use App\Models\Customer;
 use App\Models\Location;
@@ -10,6 +11,7 @@ use App\Models\SaleLine;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 /**
  * Converts a captured PayPal order into an ERP Sale + SaleLines, then
@@ -74,7 +76,7 @@ class CheckoutService
         }
 
         try {
-            return DB::transaction(function () use ($cart, $customer, $locationId, $paypalOrderId, $websiteChannelId) {
+            $sale = DB::transaction(function () use ($cart, $customer, $locationId, $paypalOrderId, $websiteChannelId) {
                 $today = Carbon::today();
                 $subtotal = 0.0;
 
@@ -160,6 +162,16 @@ class CheckoutService
                 return $sale;
             });
 
+            // Sent after the transaction commits, and only on this genuine
+            // first-time creation path — the idempotent early-returns above
+            // (existing sale, or the QueryException race below) never reach
+            // here, so a retried/duplicate capture can't double-send this.
+            if ($sale) {
+                $this->sendOrderConfirmation($sale);
+            }
+
+            return $sale;
+
         } catch (QueryException $e) {
             // The other path (webhook vs. direct browser capture) won the
             // race and created the Sale first — the unique index on
@@ -184,6 +196,20 @@ class CheckoutService
             ]);
 
             return null;
+        }
+    }
+
+    /**
+     * A mail-server hiccup should never turn an otherwise-successful,
+     * already-paid order into a failed checkout response — log and move on.
+     */
+    private function sendOrderConfirmation(Sale $sale): void
+    {
+        try {
+            $sale->load(['lines.product', 'customer']);
+            Mail::to($sale->customer->email)->send(new OrderConfirmationMail($sale));
+        } catch (\Throwable $e) {
+            logger()->error('Order confirmation email failed', ['sale_id' => $sale->id, 'message' => $e->getMessage()]);
         }
     }
 

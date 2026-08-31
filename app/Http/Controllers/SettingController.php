@@ -48,6 +48,7 @@ class SettingController extends Controller
             'contact_email'     => $data['contact_email']      ?? '',
             'contact_phone'     => $data['contact_phone']      ?? '',
             'contact_whatsapp'  => $data['contact_whatsapp']   ?? '',
+            'contact_address'   => $data['contact_address']    ?? '',
             'cart_enabled'      => isset($data['cart_enabled'])     ? '1' : '0',
             'checkout_enabled'  => isset($data['checkout_enabled']) ? '1' : '0',
         ], 'general');

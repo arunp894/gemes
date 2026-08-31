@@ -15,6 +15,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -76,6 +77,23 @@ class StockAuditController extends Controller
             $q->where('category_id', $categoryId);
         }
 
+        // Carat counterpart to expected_total/matched_total — those two
+        // columns only ever count pieces (see
+        // StockAuditService::caratProgress() for the same logic used on
+        // the scan screen). Correlated subqueries so the list page stays
+        // a single query instead of one extra query per row.
+        $caratSubquery = fn (bool $matchedOnly) => DB::table('stock_audit_items')
+            ->selectRaw('COALESCE(SUM(purchase_products.carat_weight), 0)')
+            ->join('purchase_products', 'purchase_products.id', '=', 'stock_audit_items.purchase_product_id')
+            ->whereColumn('stock_audit_items.stock_audit_id', 'stock_audits.id')
+            ->whereNull('stock_audit_items.deleted_at')
+            ->when($matchedOnly, fn ($sub) => $sub->whereNotNull('stock_audit_items.matched_at'));
+
+        $q->addSelect([
+            'expected_carat' => $caratSubquery(false),
+            'matched_carat'  => $caratSubquery(true),
+        ]);
+
         return DataTables::eloquent($q)
             ->addIndexColumn()
             ->editColumn('audit_number', fn (StockAudit $a) =>
@@ -86,7 +104,12 @@ class StockAuditController extends Controller
             ->addColumn('category_label', fn (StockAudit $a) => $a->category ? e($a->category->name) : 'All Stones')
             ->addColumn('progress_label', fn (StockAudit $a) =>
                 '<span class="fw-semibold">' . (int) $a->matched_total . ' / ' . (int) $a->expected_total . '</span>'
-                . ' <span class="text-muted fs-xxs">(' . $a->progressPercent() . '%)</span>'
+                . ' <span class="text-muted fs-xxs">pcs (' . $a->progressPercent() . '%)</span>'
+            )
+            ->addColumn('carat_label', fn (StockAudit $a) =>
+                '<span class="fw-semibold">' . rtrim(rtrim(number_format((float) $a->matched_carat, 3), '0'), '.')
+                . ' / ' . rtrim(rtrim(number_format((float) $a->expected_carat, 3), '0'), '.') . '</span>'
+                . ' <span class="text-muted fs-xxs">ct</span>'
             )
             ->addColumn('status_badge', function (StockAudit $a) {
                 $class = match ($a->status) {
@@ -108,7 +131,7 @@ class StockAuditController extends Controller
                 $html .= '</div>';
                 return $html;
             })
-            ->rawColumns(['audit_number', 'progress_label', 'status_badge', 'actions'])
+            ->rawColumns(['audit_number', 'progress_label', 'carat_label', 'status_badge', 'actions'])
             ->toJson();
     }
 
@@ -120,6 +143,23 @@ class StockAuditController extends Controller
             'locations'  => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'type']),
             'categories' => Category::active()->ordered()->get(['id', 'name']),
         ]);
+    }
+
+    /**
+     * Live pieces/carat preview for the New Stock Audit form — updates as
+     * the user picks a Location and/or Stone, before they've committed to
+     * starting the audit.
+     */
+    public function previewCount(Request $request): JsonResponse
+    {
+        $locationId = (int) $request->query('location_id', 0);
+        if ($locationId <= 0) {
+            return response()->json(['ok' => false, 'message' => 'Location is required.'], 422);
+        }
+
+        $categoryId = $request->query('category_id') ? (int) $request->query('category_id') : null;
+
+        return response()->json(['ok' => true] + $this->service->previewCount($locationId, $categoryId));
     }
 
     public function store(StoreStockAuditRequest $request): JsonResponse
@@ -144,9 +184,10 @@ class StockAuditController extends Controller
         $audit = $this->repo->find($stockAudit->id);
 
         return view('stock-audits.show', [
-            'audit'       => $audit,
-            'scanCounts'  => $this->service->scanResultCounts($audit),
-            'canWriteOff' => $audit->isCompleted() && $audit->missingTotal() > 0,
+            'audit'         => $audit,
+            'scanCounts'    => $this->service->scanResultCounts($audit),
+            'caratProgress' => $this->service->caratProgress($audit),
+            'canWriteOff'   => $audit->isCompleted() && $audit->missingTotal() > 0,
         ]);
     }
 
@@ -161,16 +202,22 @@ class StockAuditController extends Controller
         }
 
         $recentScans = StockAuditScan::where('stock_audit_id', $stockAudit->id)
-            ->with(['item:id,lot_code,barcode,product_id', 'item.product:id,title,sku', 'scanner:id,name'])
+            ->with([
+                'item:id,lot_code,barcode,product_id,purchase_product_id',
+                'item.product:id,title,sku',
+                'item.purchaseProduct:id,carat_weight',
+                'scanner:id,name',
+            ])
             ->latest('scanned_at')
             ->latest('id')
             ->limit(25)
             ->get();
 
         return view('stock-audits.scan', [
-            'audit'       => $this->repo->find($stockAudit->id),
-            'recentScans' => $recentScans,
-            'scanCounts'  => $this->service->scanResultCounts($stockAudit),
+            'audit'         => $this->repo->find($stockAudit->id),
+            'recentScans'   => $recentScans,
+            'scanCounts'    => $this->service->scanResultCounts($stockAudit),
+            'caratProgress' => $this->service->caratProgress($stockAudit),
         ]);
     }
 
@@ -181,9 +228,10 @@ class StockAuditController extends Controller
         try {
             $scan = $this->service->scan($stockAudit, $value, auth()->id());
             $stockAudit->refresh();
-            $scan->load(['item.product:id,title,sku']);
+            $scan->load(['item.product:id,title,sku', 'item.purchaseProduct:id,carat_weight']);
 
             $productTitle = $scan->item?->product?->title;
+            $caratWeight  = $scan->item?->purchaseProduct?->carat_weight;
 
             return response()->json([
                 'ok'      => true,
@@ -202,6 +250,7 @@ class StockAuditController extends Controller
                     'badge_class'    => $scan->resultBadgeClass(),
                     'product_title'  => $productTitle,
                     'lot_code'       => $scan->item?->lot_code,
+                    'carat_weight'   => $caratWeight !== null ? (float) $caratWeight : null,
                     'scanned_at'     => $scan->scanned_at->format('H:i:s'),
                 ],
                 'progress' => [
@@ -209,7 +258,7 @@ class StockAuditController extends Controller
                     'matched_total'  => (int) $stockAudit->matched_total,
                     'missing_total'  => $stockAudit->missingTotal(),
                     'percent'        => $stockAudit->progressPercent(),
-                ],
+                ] + $this->service->caratProgress($stockAudit),
                 'scan_counts' => $this->service->scanResultCounts($stockAudit),
             ]);
         } catch (Throwable $e) {
@@ -232,7 +281,7 @@ class StockAuditController extends Controller
                     'matched_total'  => (int) $stockAudit->matched_total,
                     'missing_total'  => $stockAudit->missingTotal(),
                     'percent'        => $stockAudit->progressPercent(),
-                ],
+                ] + $this->service->caratProgress($stockAudit),
                 'scan_counts' => $this->service->scanResultCounts($stockAudit),
             ]);
         } catch (Throwable $e) {

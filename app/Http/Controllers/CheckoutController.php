@@ -72,7 +72,7 @@ class CheckoutController extends Controller
         $paypalEnabled  = $this->settings->bool('paypal_enabled');
         $paypalClientId = $this->settings->get('paypal_client_id', '');
         $paypalMode     = $this->settings->get('paypal_mode', 'sandbox');
-        $currencyCode   = strtoupper($this->settings->get('currency_code', 'USD'));
+        $currencyCode   = strtoupper($this->settings->get('currency_code', 'INR'));
 
         return view('website.checkout', compact(
             'cart', 'total', 'customer',
@@ -109,7 +109,7 @@ class CheckoutController extends Controller
 
         $cart         = $result['cart'];
         $total        = array_sum(array_column($cart, 'subtotal'));
-        $currencyCode = strtoupper($this->settings->get('currency_code', 'USD'));
+        $currencyCode = strtoupper($this->settings->get('currency_code', 'INR'));
 
         if (empty($cart) || $total <= 0) {
             return response()->json(['error' => 'Cart is empty.'], 422);

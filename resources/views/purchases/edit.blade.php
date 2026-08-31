@@ -34,7 +34,10 @@
         </div>
     @endif
 
-    <form id="purchaseForm" novalidate @submit.prevent="submit(false)" :class="{ 'was-validated': wasValidated }">
+    {{-- No 'was-validated' class here on purpose — see create.blade.php's
+         form tag for why: it painted false-positive green checkmarks on
+         genuinely optional, still-empty fields. --}}
+    <form id="purchaseForm" novalidate @submit.prevent="submit(false)">
         <div class="row g-3">
             <div class="col-xl-10">
 

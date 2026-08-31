@@ -6,7 +6,7 @@
                                 document.write(new Date().getFullYear())
 
                             </script>
-                            © Sukina Gems - By <span
+                            © {{ $settings->get('site_name', 'Sukaina Gems') }} - By <span
                                 class="fw-bold text-decoration-underline text-uppercase text-reset fs-12">macromend.com</span>
                         </div>
                         

@@ -14,7 +14,7 @@
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="#">Procurement</a></li>
+                <li class="breadcrumb-item"><a href="#">Transaction</a></li>
                 <li class="breadcrumb-item active">Suppliers</li>
             </ol>
         </div>
@@ -103,11 +103,13 @@
                                         type="checkbox" />
                                 </th>
                                 <th class="text-center" style="width: 1%;">S.No</th>
-                                <th><i class="ti ti-barcode me-1"></i>Code</th>
                                 <th><i class="ti ti-building-store me-1"></i>Supplier</th>
                                 <th><i class="ti ti-phone me-1"></i>Contact</th>
                                 <th><i class="ti ti-map-pin me-1"></i>Location</th>
                                 <th class="text-end"><i class="ti ti-currency-dollar me-1"></i>Credit Limit</th>
+                                <th class="text-end"><i class="ti ti-shopping-cart me-1"></i>Purchase Payment</th>
+                                <th class="text-end"><i class="ti ti-circle-check me-1"></i>Paid Payment</th>
+                                <th class="text-end"><i class="ti ti-alert-circle me-1"></i>Pending Payment</th>
                                 <th><i class="ti ti-toggle-right me-1"></i>Status</th>
                                 <th><i class="ti ti-calendar-time me-1"></i>Created</th>
                                 <th class="text-center" style="width: 1%;"><i class="ti ti-settings me-1"></i>Actions</th>
@@ -341,10 +343,11 @@
     .suppliers-page .supplier-name-cell { line-height: 1.3; }
     .suppliers-page .supplier-name-link {
         font-weight: 600;
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         color: var(--suppliers-text);
         text-decoration: none;
     }
+    .suppliers-page .supplier-name-cell small { font-size: 0.75rem; }
     .suppliers-page .supplier-name-link:hover { color: var(--suppliers-primary); }
 
     /* Status pill */
@@ -492,7 +495,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[8, 'desc']],
+            order: [[10, 'desc']],
             ajax: {
                 url: '{{ route('suppliers.data') }}',
                 type: 'GET',
@@ -503,11 +506,13 @@
             columns: [
                 { data: 'checkbox',      name: 'checkbox',                orderable: false, searchable: false, className: 'ps-3' },
                 { data: 'DT_RowIndex',   name: 'DT_RowIndex',             orderable: false, searchable: false, className: 'text-center' },
-                { data: 'supplier_code', name: 'suppliers.supplier_code' },
                 { data: 'name',          name: 'suppliers.name' },
                 { data: 'contact',       name: 'contact',                 orderable: false, searchable: false },
                 { data: 'location',      name: 'location',                orderable: false, searchable: false },
                 { data: 'credit_limit',  name: 'suppliers.credit_limit',  className: 'text-end' },
+                { data: 'purchase_payment', name: 'purchase_payment', orderable: false, searchable: false, className: 'text-end' },
+                { data: 'paid_payment',    name: 'paid_payment',    orderable: false, searchable: false, className: 'text-end' },
+                { data: 'pending_payment', name: 'pending_payment', orderable: false, searchable: false, className: 'text-end' },
                 { data: 'status_badge',  name: 'suppliers.status',        searchable: true },
                 { data: 'created_at',    name: 'suppliers.created_at' },
                 { data: 'action',        name: 'action',                  orderable: false, searchable: false, className: 'text-center' },

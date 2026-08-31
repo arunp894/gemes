@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-menu-color="gradient">
 
 <!-- Mirrored from coderthemes.com/paces/bootstrap/index.html by HTTrack Website Copier/3.x [XR&CO'2014], Mon, 11 May 2026 07:15:56 GMT -->
 
@@ -8,10 +8,10 @@
     <title>@hasSection('title')@yield('title') | @endif{{ $settings->get('site_name', 'Sukaina Gems') }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description"
-        content="Paces is a modern, responsive admin dashboard available on ThemeForest. Ideal for building CRM, CMS, project management tools, and custom web applications with a clean UI, flexible layouts, and rich features." />
+        content="{{ $settings->get('site_name', 'Sukaina Gems') }} — ERP and e-commerce platform for gemstone and jewelry procurement, inventory, and sales." />
     <meta name="keywords"
-        content="Paces, admin dashboard, ThemeForest, Bootstrap 5 admin, responsive admin, CRM dashboard, CMS admin, web app UI, admin theme, premium admin template" />
-    <meta name="author" content="Coderthemes" />
+        content="{{ $settings->get('site_name', 'Sukaina Gems') }}, gemstone ERP, jewelry inventory, admin dashboard" />
+    <meta name="author" content="{{ $settings->get('site_name', 'Sukaina Gems') }}" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
 
     <!-- App favicon -->

@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
@@ -128,6 +129,7 @@ class BlogController extends Controller
     public function store(StoreBlogRequest $request): JsonResponse|RedirectResponse
     {
         $data = $request->validated();
+        $data['content'] = clean($data['content']);
 
         $blog = DB::transaction(function () use ($data, $request) {
             $blog = Blog::create([
@@ -182,6 +184,7 @@ class BlogController extends Controller
     public function update(UpdateBlogRequest $request, Blog $blog): JsonResponse|RedirectResponse
     {
         $data = $request->validated();
+        $data['content'] = clean($data['content']);
 
         DB::transaction(function () use ($blog, $data, $request) {
             $blog->fill([
@@ -246,6 +249,29 @@ class BlogController extends Controller
             'status'  => (bool) $blog->status,
             'label'   => $blog->statusLabel(),
             'message' => 'Status updated.',
+        ]);
+    }
+
+    /* -----------------------------------------------------------------
+     |  Inline content image upload — consumed by the Quill editor's
+     |  image toolbar button on the Add/Edit forms. Stored as a plain
+     |  public file rather than through Spatie MediaLibrary: these images
+     |  are free-form content assets referenced by URL from inside the
+     |  post body, not a structured "one blog has one X" relationship
+     |  like the featured image.
+     | -----------------------------------------------------------------
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:4096'],
+        ]);
+
+        $path = $request->file('image')->store('blog-content', 'public');
+
+        return response()->json([
+            'success' => true,
+            'url'     => Storage::disk('public')->url($path),
         ]);
     }
 }

@@ -7,7 +7,12 @@
   <div style="width:100%;max-width:480px">
 
     <div style="text-align:center;margin-bottom:32px">
-      <div style="width:52px;height:52px;background:linear-gradient(135deg,var(--teal-400),var(--teal-700));border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;margin-bottom:16px;box-shadow:0 0 28px rgba(0,191,176,.3)">SG</div>
+      @if ($settings->logoUrl())
+        <img src="{{ $settings->logoUrl() }}" alt="{{ $settings->get('site_name', 'Sukaina Gems') }}"
+             style="height:52px;width:auto;max-width:220px;object-fit:contain;margin-bottom:16px">
+      @else
+        <div style="width:52px;height:52px;background:linear-gradient(135deg,var(--teal-400),var(--teal-700));border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;margin-bottom:16px;box-shadow:0 0 28px rgba(0,191,176,.3)">SG</div>
+      @endif
       <h1 style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--white)">Create your account</h1>
       <p style="font-size:14px;color:var(--white-faint);margin-top:6px">Join Sukaina Gems to track orders and checkout faster</p>
     </div>

@@ -41,4 +41,19 @@ class UpdateStockTransferRequest extends FormRequest
             'lines.*.notes'                      => ['nullable', 'string', 'max:500'],
         ];
     }
+
+    /**
+     * Friendly names for the wildcard array fields — see
+     * StoreStockTransferRequest::attributes() for why this matters.
+     */
+    public function attributes(): array
+    {
+        return [
+            'from_location_id' => 'Source Location',
+            'to_location_id'   => 'Destination Location',
+            'lines.*.qty'          => 'quantity',
+            'lines.*.carat_weight' => 'carat weight',
+            'lines.*.notes'        => 'notes',
+        ];
+    }
 }

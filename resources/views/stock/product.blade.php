@@ -129,13 +129,14 @@
         </div>
     </div>
 
-    {{-- Movements Table --}}
+    {{-- Movement History — the same ledger table (and pagination) used by
+         the Stock Dashboard's Stock In / Stock Out / Transfer tabs, fixed
+         to this one product via a hidden product_id filter. --}}
     <div class="card">
         <div class="card-header border-light d-flex align-items-center justify-content-between flex-wrap gap-2">
             <h5 class="card-title mb-0">Movement History</h5>
-            {{-- Filter tabs --}}
             <div class="d-flex flex-wrap gap-1" id="categoryTabs">
-                <button class="btn btn-sm btn-primary filter-tab active" data-filter="all">
+                <button class="btn btn-sm btn-primary filter-tab active" data-filter="">
                     All <span class="badge bg-white text-primary ms-1">{{ $summary['count'] }}</span>
                 </button>
                 @if($summary['cat_purchase'] > 0)
@@ -166,123 +167,36 @@
         </div>
 
         <div class="table-responsive">
-            <table class="table table-custom table-centered align-middle mb-0" id="movementsTbl">
-                <thead class="bg-light bg-opacity-25 thead-sm">
+            <table id="movementsTbl" class="table table-custom table-centered table-hover w-100 mb-0 stock-ledger-table">
+                <thead class="bg-light align-middle bg-opacity-25 thead-sm">
                     <tr class="text-uppercase fs-xxs">
-                        <th style="min-width:110px">Date</th>
-                        <th>Direction</th>
-                        <th>Reason</th>
-                        <th style="min-width:180px">Source Document</th>
-                        <th>Piece</th>
-                        <th class="text-end">Carat</th>
-                        <th>Location</th>
-                        <th class="text-end">Qty</th>
-                        <th class="text-end">Balance</th>
-                        <th>By</th>
+                        <th class="text-center" style="width: 1%;">S.No</th>
+                        <th><i class="ti ti-calendar me-1"></i>Date &amp; Time</th>
+                        <th><i class="ti ti-arrows-exchange me-1"></i>Movement Type</th>
+                        <th class="text-end"><i class="ti ti-arrow-down me-1"></i>Stock In</th>
+                        <th class="text-end"><i class="ti ti-arrow-up me-1"></i>Stock Out</th>
+                        <th><i class="ti ti-hash me-1"></i>Reference No.</th>
+                        <th><i class="ti ti-building-warehouse me-1"></i>Source / Destination</th>
+                        <th><i class="ti ti-map-pin me-1"></i>Location</th>
+                        <th><i class="ti ti-user me-1"></i>User</th>
                     </tr>
                 </thead>
-                <tbody>
-                    @forelse ($rows as $row)
-                        @php
-                            $m       = $row['movement'];
-                            $srcType = $m->source_type;
-                            $srcId   = $m->source_id;
-
-                            // Source document link
-                            $srcLabel = null;
-                            $srcUrl   = null;
-                            $srcIcon  = null;
-                            $srcBadge = 'secondary';
-                            if ($srcType && $srcId) {
-                                switch ($srcType) {
-                                    case 'purchase':
-                                        $srcLabel = $sourceLabels['purchase'][$srcId] ?? ('PUR #'.$srcId);
-                                        $srcUrl   = route('purchases.show', $srcId);
-                                        $srcIcon  = 'ti-shopping-cart';
-                                        $srcBadge = 'success';
-                                        break;
-                                    case 'sale':
-                                        $srcLabel = $sourceLabels['sale'][$srcId] ?? ('SALE #'.$srcId);
-                                        $srcUrl   = route('sales.show', $srcId);
-                                        $srcIcon  = 'ti-receipt';
-                                        $srcBadge = 'danger';
-                                        break;
-                                    case 'stock_transfer':
-                                        $srcLabel = $sourceLabels['stock_transfer'][$srcId] ?? ('TRF #'.$srcId);
-                                        $srcUrl   = route('stock-transfers.show', $srcId);
-                                        $srcIcon  = 'ti-transfer';
-                                        $srcBadge = 'info';
-                                        break;
-                                }
-                            }
-
-                            // Category for JS filter
-                            $cat = match(true) {
-                                in_array($m->reason, ['purchase','purchase_cancel'])  => 'purchase',
-                                in_array($m->reason, ['sale','sale_return','sale_cancel','sale_edit_reverse']) => 'sale',
-                                in_array($m->reason, ['transfer_out','transfer_in','transfer_cancel_out']) => 'transfer',
-                                default => 'adjustment',
-                            };
-                        @endphp
-                        <tr data-category="{{ $cat }}">
-                            <td>
-                                <div class="fw-semibold small">{{ optional($m->movement_date)->format('d M Y') }}</div>
-                                @if($m->notes)
-                                    <small class="text-muted d-block" title="{{ $m->notes }}">
-                                        <i class="ti ti-message-circle fs-xxs"></i>
-                                        {{ Str::limit($m->notes, 30) }}
-                                    </small>
-                                @endif
-                            </td>
-                            <td>
-                                @if($m->isIn())
-                                    <span class="badge badge-soft-success"><i class="ti ti-arrow-down-circle me-1"></i>IN</span>
-                                @else
-                                    <span class="badge badge-soft-danger"><i class="ti ti-arrow-up-circle me-1"></i>OUT</span>
-                                @endif
-                            </td>
-                            <td>
-                                <span class="badge {{ $m->reasonBadgeClass() }} fs-xxs">{{ $m->reasonLabel() }}</span>
-                            </td>
-                            <td>
-                                @if($srcUrl)
-                                    <a href="{{ $srcUrl }}" class="d-inline-flex align-items-center gap-1 text-decoration-none src-link">
-                                        <span class="badge badge-soft-{{ $srcBadge }} d-inline-flex align-items-center gap-1">
-                                            <i class="ti {{ $srcIcon }} fs-xs"></i>
-                                            {{ $srcLabel }}
-                                        </span>
-                                        <i class="ti ti-external-link fs-xxs text-muted"></i>
-                                    </a>
-                                @else
-                                    <span class="text-muted">—</span>
-                                @endif
-                            </td>
-                            <td>
-                                <a href="{{ route('stock.piece', $m->purchase_product_id) }}" class="text-primary">
-                                    <code class="small">#{{ $m->purchase_product_id }}</code>
-                                </a>
-                                @if ($m->purchaseProduct?->barcode)
-                                    <small class="d-block text-muted">{{ $m->purchaseProduct->barcode }}</small>
-                                @endif
-                            </td>
-                            <td class="text-end">{{ $row['carat'] !== null ? rtrim(rtrim(number_format((float) $row['carat'], 3), '0'), '.') . ' ct' : '—' }}</td>
-                            <td>{{ optional($m->location)->name ?? '—' }}</td>
-                            <td class="text-end {{ $m->isIn() ? 'text-success' : 'text-danger' }} fw-semibold">
-                                {{ $m->isIn() ? '+' : '−' }}{{ (int) $m->qty }}
-                            </td>
-                            <td class="text-end fw-semibold">{{ (int) $row['balance_after'] }}</td>
-                            <td><small class="text-muted">{{ optional($m->creator)->name ?? '—' }}</small></td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="10" class="text-center text-muted py-5">
-                                <i class="ti ti-inbox d-block fs-2xl mb-2"></i>
-                                No movements recorded for this product yet.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
             </table>
+        </div>
+
+        <div class="card-footer border-0">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div id="movementsInfoSlot" class="text-muted small"></div>
+                <div class="d-flex align-items-center gap-2 footer-pagination-group">
+                    <select id="movementsPerPage" class="form-select form-select-sm" style="width: auto;">
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                    </select>
+                    <div id="movementsPaginationSlot"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -336,14 +250,34 @@
     .stock-page .card-header { padding: 10px 16px; }
     .stock-page .card-title { font-size: 0.9375rem; font-weight: 700; }
 
-    .stock-page #movementsTbl thead th {
+    .stock-page .stock-ledger-table thead th {
         background: #f1f5f9; font-weight: 700; font-size: 0.6875rem; letter-spacing: 0.03em; padding: 8px 12px;
     }
-    .stock-page #movementsTbl tbody td { padding: 8px 12px; font-size: 0.8125rem; }
-    .stock-page #movementsTbl tbody tr:hover { background: #f8fafc; }
+    .stock-page .stock-ledger-table tbody td {
+        padding: 6px 12px; font-size: 0.75rem; vertical-align: middle;
+        white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .stock-page .stock-ledger-table tbody tr:hover { background: #f8fafc; }
+    .stock-page .stock-ledger-table .badge,
+    .stock-page .stock-ledger-table small { font-size: 0.75rem; }
+    .stock-page .stock-ledger-table .movement-qty,
+    .stock-page .stock-ledger-table .movement-date,
+    .stock-page .stock-ledger-table .movement-time {
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum";
+    }
+    /* Date + time now sit on one line per row instead of stacking —
+       shrunk slightly further so both fit comfortably together. */
+    .stock-page .stock-ledger-table .movement-date,
+    .stock-page .stock-ledger-table .movement-time {
+        font-size: 0.6875rem;
+    }
+    .stock-page .stock-ledger-table .movement-qty { display: inline-block; min-width: 2.5em; text-align: right; }
+    .badge-soft-purple { background: #ede9fe; color: #9333ea; }
 
-    .src-link { transition: opacity .15s; }
-    .src-link:hover { opacity: .8; }
+    #movementsTbl_wrapper .dataTables_length, #movementsTbl_wrapper .dataTables_filter { display: none !important; }
+    #movementsInfoSlot .dataTables_info { padding: 0; font-size: 0.875rem; }
+
     .filter-tab { border-radius: 4px; }
     .filter-tab.active { box-shadow: 0 0 0 2px rgba(var(--bs-primary-rgb),.25); }
     .avatar.avatar-sm { width: 32px; height: 32px; display:inline-flex; align-items:center; justify-content:center; border-radius: .375rem; }
@@ -352,31 +286,66 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    var tabs = document.querySelectorAll('.filter-tab');
-    var rows = document.querySelectorAll('#movementsTbl tbody tr[data-category]');
+$(function () {
+    let movementType = '';
 
-    tabs.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            var filter = this.dataset.filter;
+    const dt = $('#movementsTbl').DataTable({
+        processing: true,
+        serverSide: true,
+        responsive: false,
+        ordering: false,
+        ajax: {
+            url: '{{ route('stock.movements-data') }}',
+            data: function (d) {
+                d.product_id  = {{ $product->id }};
+                d.location_id = {{ $locationId ?? 0 }};
+                d.type        = movementType;
+            },
+        },
+        dom: 'rt<"movements-tail"ip>',
+        pageLength: 25,
+        columns: [
+            { data: 'DT_RowIndex',     name: 'DT_RowIndex',     orderable: false, searchable: false, className: 'text-center' },
+            { data: 'when_label',      name: 'when_label',      orderable: false, searchable: false },
+            { data: 'movement_label',  name: 'movement_label',  orderable: false, searchable: false },
+            { data: 'stock_in_label',  name: 'stock_in_label',  orderable: false, searchable: false, className: 'text-end' },
+            { data: 'stock_out_label', name: 'stock_out_label', orderable: false, searchable: false, className: 'text-end' },
+            { data: 'reference_label', name: 'reference_label', orderable: false, searchable: false },
+            { data: 'source_label',    name: 'source_label',    orderable: false, searchable: false },
+            { data: 'location_label',  name: 'location_label',  orderable: false, searchable: false },
+            { data: 'by_label',        name: 'by_label',        orderable: false, searchable: false },
+        ],
+        language: {
+            info: 'Showing _START_ to _END_ of _TOTAL_ movements',
+            emptyTable: 'No movements recorded for this product yet.',
+            zeroRecords: 'No movements match this filter.',
+            paginate: { previous: '<i class="ti ti-chevron-left"></i>', next: '<i class="ti ti-chevron-right"></i>' },
+        },
+        initComplete: function () {
+            const container = $(this.api().table().container());
+            $('#movementsInfoSlot').append(container.find('#movementsTbl_info'));
+            $('#movementsPaginationSlot').append(container.find('.movements-tail'));
+        },
+    });
 
-            rows.forEach(function (row) {
-                row.style.display = (filter === 'all' || row.dataset.category === filter) ? '' : 'none';
-            });
+    $('#movementsPerPage').on('change', function () { dt.page.len(parseInt(this.value, 10)).draw(); });
 
-            tabs.forEach(function (b) {
-                b.classList.remove('active');
-                // toggle outline vs solid
-                var cls = b.className;
-                if (!b.classList.contains('btn-primary')) {
-                    b.classList.remove('btn-outline-success','btn-outline-danger','btn-outline-info','btn-outline-warning','btn-outline-secondary');
-                    var colorMap = {purchase:'btn-outline-success', sale:'btn-outline-danger', transfer:'btn-outline-info', adjustment:'btn-outline-warning'};
-                    b.classList.add(colorMap[b.dataset.filter] || 'btn-outline-secondary');
-                }
-            });
+    $('#categoryTabs .filter-tab').on('click', function () {
+        const $btn = $(this);
+        movementType = $btn.data('filter') || '';
 
-            this.classList.add('active');
+        $('.filter-tab').each(function () {
+            const $b = $(this);
+            $b.removeClass('active');
+            if (!$b.hasClass('btn-primary')) {
+                $b.removeClass('btn-outline-success btn-outline-danger btn-outline-info btn-outline-warning btn-outline-secondary');
+                const colorMap = { purchase: 'btn-outline-success', sale: 'btn-outline-danger', transfer: 'btn-outline-info', adjustment: 'btn-outline-warning' };
+                $b.addClass(colorMap[$b.data('filter')] || 'btn-outline-secondary');
+            }
         });
+        $btn.addClass('active');
+
+        dt.draw();
     });
 });
 </script>

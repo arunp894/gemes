@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Channel;
 use App\Models\Customer;
 use App\Models\Purchase;
+use App\Models\PurchasePayment;
 use App\Models\Sale;
 use App\Models\SaleLine;
 use App\Models\SalePayment;
@@ -86,18 +88,35 @@ class TodayPerformanceController extends Controller
                 });
         }
 
-        /* ── Payment methods collected today ────────────────────── */
-        $paymentMethodLabels = $paymentMethodTotals = [];
+        /* ── Payout today (payments made to suppliers) ───────────── */
+        $payoutToday = (object) ['count' => 0, 'amount' => 0];
+        $supplierPaymentsToday = collect();
+        if ($canPurchases) {
+            $payoutToday = PurchasePayment::whereDate('payment_date', $today)
+                ->selectRaw('COUNT(*) as count, COALESCE(SUM(amount),0) as amount')
+                ->first();
+
+            $supplierPaymentsToday = PurchasePayment::query()
+                ->join('purchases', 'purchases.id', '=', 'purchase_payments.purchase_id')
+                ->join('suppliers', 'suppliers.id', '=', 'purchases.supplier_id')
+                ->whereDate('purchase_payments.payment_date', $today)
+                ->groupBy('suppliers.id', 'suppliers.name', 'suppliers.company_name')
+                ->selectRaw('suppliers.id, suppliers.name, suppliers.company_name, COUNT(*) as count, COALESCE(SUM(purchase_payments.amount),0) as amount')
+                ->orderByDesc('amount')
+                ->limit(8)
+                ->get();
+        }
+
+        /* ── Website payments today (payments on website-channel sales) ── */
+        $websitePaymentsToday = (object) ['count' => 0, 'amount' => 0];
         if ($canSales) {
-            SalePayment::whereDate('payment_date', $today)
-                ->selectRaw('payment_method, COALESCE(SUM(amount),0) as total')
-                ->groupBy('payment_method')
-                ->having('total', '>', 0)
-                ->get()
-                ->each(function ($row) use (&$paymentMethodLabels, &$paymentMethodTotals) {
-                    $paymentMethodLabels[] = ucfirst(str_replace('_', ' ', $row->payment_method));
-                    $paymentMethodTotals[] = (float) $row->total;
-                });
+            $websitePaymentsToday = SalePayment::query()
+                ->join('sales', 'sales.id', '=', 'sale_payments.sale_id')
+                ->join('channels', 'channels.id', '=', 'sales.channel_id')
+                ->whereDate('sale_payments.payment_date', $today)
+                ->where('channels.code', Channel::CODE_WEBSITE)
+                ->selectRaw('COUNT(*) as count, COALESCE(SUM(sale_payments.amount),0) as amount')
+                ->first();
         }
 
         /* ── Top products sold today ─────────────────────────────── */
@@ -192,7 +211,7 @@ class TodayPerformanceController extends Controller
             'canSales', 'canPurchases', 'canStock', 'canCustomers', 'canStockAudits',
             'salesToday', 'purchasesToday', 'stockInQty', 'stockOutQty', 'newCustomersToday',
             'hours', 'salesByHour', 'purchasesByHour',
-            'paymentMethodLabels', 'paymentMethodTotals',
+            'payoutToday', 'supplierPaymentsToday', 'websitePaymentsToday',
             'topProductsToday', 'activity',
         ));
     }

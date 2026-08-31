@@ -10,7 +10,7 @@
         </div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
-                <li class="breadcrumb-item"><a href="#">Sukina Gems</a></li>
+                <li class="breadcrumb-item"><a href="#">{{ $settings->get('site_name', 'Sukaina Gems') }}</a></li>
                 <li class="breadcrumb-item active">Dashboard</li>
             </ol>
         </div>
@@ -61,6 +61,39 @@
                     </div>
                     <div class="mt-2 pt-2 border-top border-dashed d-flex gap-3">
                         <span class="text-muted fs-sm"><i class="ti ti-receipt me-1"></i>{{ $salesThisMonth->count }} invoices</span>
+                        <a href="{{ route('sales.index') }}" class="ms-auto text-primary fs-sm fw-semibold">View all &rarr;</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endpermission
+
+        {{-- Website Orders --}}
+        @permission('sales.view')
+        <div class="col-xl-3 col-md-6">
+            <div class="card card-h-100 dashboard-kpi-card dashboard-kpi-teal">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted fs-base text-uppercase fw-semibold mb-1">Website Orders This Month</p>
+                            <h3 class="fw-bold mb-1">{{ number_format($websiteOrdersThisMonth->count) }}</h3>
+                            <p class="mb-0 text-muted fs-sm">
+                                @if($websiteOrdersChange >= 0)
+                                    <span class="text-success me-1"><i class="ti ti-arrow-up"></i> {{ abs($websiteOrdersChange) }}%</span>
+                                @else
+                                    <span class="text-danger me-1"><i class="ti ti-arrow-down"></i> {{ abs($websiteOrdersChange) }}%</span>
+                                @endif
+                                vs last month
+                            </p>
+                        </div>
+                        <div class="avatar-md flex-shrink-0">
+                            <span class="avatar-title bg-teal-subtle rounded-circle fs-22">
+                                <i class="ti ti-world text-teal"></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="mt-2 pt-2 border-top border-dashed d-flex gap-3">
+                        <span class="text-muted fs-sm"><i class="ti ti-currency-rupee me-1"></i>₹{{ number_format($websiteOrdersThisMonth->revenue, 0) }}</span>
                         <a href="{{ route('sales.index') }}" class="ms-auto text-primary fs-sm fw-semibold">View all &rarr;</a>
                     </div>
                 </div>
@@ -524,6 +557,9 @@
     .dashboard-page .dashboard-kpi-primary { border-top-color: #3d7cc9; }
     .dashboard-page .dashboard-kpi-warning { border-top-color: #f9bf59; }
     .dashboard-page .dashboard-kpi-info    { border-top-color: #5bc3e1; }
+    .dashboard-page .dashboard-kpi-teal    { border-top-color: #14b8a6; }
+    .dashboard-page .bg-teal-subtle { background-color: #ccfbf1 !important; }
+    .dashboard-page .text-teal { color: #0d9488 !important; }
 
     /* Chart / list cards */
     .dashboard-page .card { border-radius: 10px; }

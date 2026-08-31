@@ -49,12 +49,9 @@
                         </div>
 
                         <div class="col-md-12">
-                            <label for="content" class="form-label">Content <span class="text-danger">*</span></label>
-                            <textarea class="form-control" rows="16" id="content"
-                                :class="{ 'is-invalid': errors.content }"
-                                v-model="form.content"
-                                placeholder="Basic HTML tags (e.g. <p>, <b>, <a>) are supported."></textarea>
-                            <div class="invalid-feedback">@{{ errors.content }}</div>
+                            <label for="content-editor" class="form-label">Content <span class="text-danger">*</span></label>
+                            <div id="content-editor" class="pages-editor" :class="{ 'is-invalid': errors.content }"></div>
+                            <div class="invalid-feedback" :class="{ 'd-block': errors.content }">@{{ errors.content }}</div>
                         </div>
                     </div>
                 </div>
@@ -102,8 +99,13 @@
 @endsection
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('assets/plugins/quill/quill.snow.css') }}">
 <style>
     /* Compact spacing for the Add/Edit Page form — scoped to this page only */
+    .pages-form-page .pages-editor .ql-container { min-height: 320px; font-size: 0.875rem; border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
+    .pages-form-page .pages-editor .ql-toolbar { border-top-left-radius: 4px; border-top-right-radius: 4px; }
+    .pages-form-page .pages-editor.is-invalid .ql-toolbar,
+    .pages-form-page .pages-editor.is-invalid .ql-container { border-color: #dc3545; }
     .pages-form-page { padding-top: 20px; padding-bottom: 20px; }
     .pages-form-page .page-title-head {
         display: flex !important;
@@ -142,6 +144,7 @@
 @endpush
 
 @push('scripts')
+<script src="{{ asset('assets/plugins/quill/quill.js') }}"></script>
 <script>
     $(function () {
         const csrfToken = $('meta[name="csrf-token"]').attr('content');
@@ -168,7 +171,63 @@
                 submitting: false,
                 serverError: null,
             },
+            mounted() {
+                this.quill = new Quill('#content-editor', {
+                    theme: 'snow',
+                    placeholder: 'Write the page content here…',
+                    modules: {
+                        toolbar: {
+                            container: [
+                                [{ header: [false, 1, 2, 3] }],
+                                ['bold', 'italic', 'underline', 'strike'],
+                                [{ color: [] }, { background: [] }],
+                                ['blockquote', 'code-block'],
+                                [{ list: 'ordered' }, { list: 'bullet' }],
+                                [{ align: [] }],
+                                ['link', 'image'],
+                                ['clean'],
+                            ],
+                            handlers: { image: () => this.pickEditorImage() },
+                        },
+                    },
+                });
+                this.quill.on('text-change', () => {
+                    this.form.content = this.quill.root.innerHTML;
+                    if (this.errors.content) this.$delete(this.errors, 'content');
+                });
+            },
             methods: {
+                pickEditorImage() {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/jpeg,image/png,image/webp';
+                    input.onchange = async () => {
+                        const file = input.files[0];
+                        if (!file) return;
+
+                        const range = this.quill.getSelection(true);
+                        const fd = new FormData();
+                        fd.append('image', file);
+
+                        try {
+                            const res = await fetch('{{ route('pages.upload-image') }}', {
+                                method: 'POST',
+                                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                                body: fd,
+                            });
+                            const data = await res.json();
+                            if (!res.ok || !data.url) {
+                                alert(data.message || 'Image upload failed.');
+                                return;
+                            }
+                            this.quill.insertEmbed(range.index, 'image', data.url, 'user');
+                            this.quill.setSelection(range.index + 1);
+                        } catch (err) {
+                            alert('Network error while uploading the image.');
+                        }
+                    };
+                    input.click();
+                },
                 onTitleInput() {
                     if (!this.slugTouched) {
                         this.form.slug = slugify(this.form.title);
@@ -177,7 +236,7 @@
                 validateLocal() {
                     this.errors = {};
                     if (!this.form.title.trim()) this.$set(this.errors, 'title', 'Title is required.');
-                    if (!this.form.content.trim()) this.$set(this.errors, 'content', 'Content is required.');
+                    if (!this.quill.getText().trim()) this.$set(this.errors, 'content', 'Content is required.');
                     if (this.form.slug && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(this.form.slug)) {
                         this.$set(this.errors, 'slug', 'Lowercase letters, numbers, and hyphens only.');
                     }

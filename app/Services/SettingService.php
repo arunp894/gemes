@@ -86,7 +86,7 @@ class SettingService
         if ($amount === null || $amount === '') return 'Price on Request';
 
         $symbol   = $this->get('currency_symbol', '₹');
-        $code     = $this->get('currency_code',   'USD');
+        $code     = $this->get('currency_code', 'INR');
         $position = $this->get('currency_position', 'before');
         $formatted = number_format((float) $amount, 0);
 
@@ -106,7 +106,7 @@ class SettingService
     public function formatMoney(float|int|string|null $amount, int $decimals = 2): string
     {
         $symbol    = $this->get('currency_symbol', '₹');
-        $code      = $this->get('currency_code',   'USD');
+        $code      = $this->get('currency_code', 'INR');
         $position  = $this->get('currency_position', 'before');
         $formatted = number_format((float) ($amount ?? 0), $decimals);
 

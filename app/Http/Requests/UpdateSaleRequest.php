@@ -70,4 +70,22 @@ class UpdateSaleRequest extends FormRequest
             'payments.*.notes'            => ['nullable', 'string', 'max:500'],
         ];
     }
+
+    /**
+     * Friendly names for the wildcard array fields — see
+     * StoreSaleRequest::attributes() for why this matters.
+     */
+    public function attributes(): array
+    {
+        return [
+            'sale_date'       => 'Sale Date',
+            'customer_id'     => 'Customer',
+            'location_id'     => 'Location',
+            'lines.*.qty'           => 'quantity',
+            'lines.*.unit_price'    => 'unit price',
+            'lines.*.carat_weight'  => 'carat weight',
+            'lines.*.tax_percent'      => 'tax %',
+            'lines.*.discount_percent' => 'discount %',
+        ];
+    }
 }

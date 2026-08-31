@@ -7,11 +7,28 @@
                 <span class="menu-text" data-lang="dashboards">Dashboards</span>
             </a>
         </li>
-        <li class="side-nav-item {{ request()->routeIs('reports.*') ? 'active' : '' }}">
-            <a href="{{ route('reports.today-performance') }}" class="side-nav-link">
+        <li class="side-nav-item {{ request()->routeIs('reports.*') ? 'menuitem-active' : '' }}">
+            <a data-bs-toggle="collapse" href="#reportsMenu"
+                aria-expanded="{{ request()->routeIs('reports.*') ? 'true' : 'false' }}"
+                aria-controls="reportsMenu" class="side-nav-link">
                 <span class="menu-icon"><i class="ti ti-chart-infographic"></i></span>
-                <span class="menu-text">Today's Performance</span>
+                <span class="menu-text">Reports</span>
+                <span class="menu-arrow"></span>
             </a>
+            <div class="collapse {{ request()->routeIs('reports.*') ? 'show' : '' }}" id="reportsMenu">
+                <ul class="sub-menu">
+                    <li class="side-nav-item {{ request()->routeIs('reports.today-performance') ? 'active' : '' }}">
+                        <a href="{{ route('reports.today-performance') }}" class="side-nav-link">
+                            <span class="menu-text">Today's Performance</span>
+                        </a>
+                    </li>
+                    <li class="side-nav-item {{ request()->routeIs('reports.stock-activity') ? 'active' : '' }}">
+                        <a href="{{ route('reports.stock-activity') }}" class="side-nav-link">
+                            <span class="menu-text">Stock Activity</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </li>
         <li class="side-nav-item {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') || request()->routeIs('country-origins.*') ? 'menuitem-active' : '' }}">
 
@@ -78,7 +95,7 @@
                 </span>
 
                 <span class="menu-text">
-                    Procurement
+                    Transaction
                 </span>
                 <span class="menu-arrow"></span>
             </a>
@@ -145,7 +162,7 @@
                     <li class="side-nav-item {{ request()->routeIs('sales.create') ? 'active' : '' }}">
                         <a href="{{ route('sales.create') }}" class="side-nav-link">
                             <span class="menu-text">
-                                <i class="ti ti-bolt fs-sm text-warning me-1"></i> Terminal
+                                <i class="ti ti-bolt fs-sm text-warning me-1"></i> New Invoice
                             </span>
                         </a>
                     </li>

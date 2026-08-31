@@ -79,19 +79,39 @@
         {{-- ── Main column: On Hand / Stock Movement ───────────────── --}}
         <div class="col-xl-8">
 
+            @php
+                // Each of the three ledger tabs is the exact same table
+                // shape, filtered server-side by a fixed `type` — the tab
+                // itself is the filter now, replacing the old single
+                // "Stock Movement" tab's pill-button row.
+                $ledgerTabs = [
+                    [
+                        'id' => 'stockIn', 'label' => 'Stock In', 'icon' => 'ti-arrow-down-circle', 'type' => 'in',
+                        'subtitle' => 'Everything added to inventory — purchases received, transfers in, returns, adjustments.',
+                        'qtyCols' => 'in', 'sourceLabel' => 'Source',
+                    ],
+                    [
+                        'id' => 'stockOut', 'label' => 'Stock Out', 'icon' => 'ti-arrow-up-circle', 'type' => 'out',
+                        'subtitle' => 'Everything removed from inventory — sales, transfers out, adjustments.',
+                        'qtyCols' => 'out', 'sourceLabel' => 'Destination',
+                    ],
+                    [
+                        'id' => 'transfer', 'label' => 'Transfer', 'icon' => 'ti-arrows-exchange', 'type' => 'transfer',
+                        'subtitle' => 'Stock moved between your locations.',
+                        'qtyCols' => 'both', 'sourceLabel' => 'Source / Destination',
+                    ],
+                ];
+            @endphp
+
             <ul class="nav nav-tabs mb-3 stock-tabs" id="stockReportTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="onHandTab" data-bs-toggle="tab" data-bs-target="#onHandPane"
-                        type="button" role="tab" aria-controls="onHandPane" aria-selected="false">
-                        <i class="ti ti-stack-2 fs-sm me-1"></i> Current Stock
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="movementTab" data-bs-toggle="tab" data-bs-target="#movementPane"
-                        type="button" role="tab" aria-controls="movementPane" aria-selected="true">
-                        <i class="ti ti-arrows-exchange fs-sm me-1"></i> Stock Movement
-                    </button>
-                </li>
+                @foreach ($ledgerTabs as $i => $t)
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @if($i === 0) active @endif" id="{{ $t['id'] }}Tab" data-bs-toggle="tab" data-bs-target="#{{ $t['id'] }}Pane"
+                            type="button" role="tab" aria-controls="{{ $t['id'] }}Pane" aria-selected="{{ $i === 0 ? 'true' : 'false' }}">
+                            <i class="ti {{ $t['icon'] }} fs-sm me-1"></i> {{ $t['label'] }}
+                        </button>
+                    </li>
+                @endforeach
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="byStoneTab" data-bs-toggle="tab" data-bs-target="#byStonePane"
                         type="button" role="tab" aria-controls="byStonePane" aria-selected="false">
@@ -100,43 +120,82 @@
                 </li>
             </ul>
 
+            {{-- Today's activity, at a glance — shown once above the tabs
+                 rather than duplicated on all three (it spans both
+                 directions and every category, so it doesn't belong to
+                 any single Stock In/Out/Transfer tab). --}}
+            <div class="movement-summary-strip mb-3">
+                <div class="movement-summary-tile">
+                    <span class="movement-summary-icon movement-summary-icon-success"><i class="ti ti-arrow-down"></i></span>
+                    <div>
+                        <div class="movement-summary-value">{{ number_format($todayReceivedQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-label">Stock Received <span class="text-muted">Today</span></div>
+                    </div>
+                </div>
+                <div class="movement-summary-tile">
+                    <span class="movement-summary-icon movement-summary-icon-danger"><i class="ti ti-arrow-up"></i></span>
+                    <div>
+                        <div class="movement-summary-value">{{ number_format($todayRemovedQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-label">Stock Removed <span class="text-muted">Today</span></div>
+                    </div>
+                </div>
+                <div class="movement-summary-tile">
+                    <span class="movement-summary-icon movement-summary-icon-info"><i class="ti ti-arrows-exchange"></i></span>
+                    <div>
+                        <div class="movement-summary-value">{{ number_format($todayTransfersQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-label">Transfers <span class="text-muted">Today</span></div>
+                    </div>
+                </div>
+                <div class="movement-summary-tile">
+                    <span class="movement-summary-icon movement-summary-icon-purple"><i class="ti ti-shopping-cart"></i></span>
+                    <div>
+                        <div class="movement-summary-value">{{ number_format($todaySalesQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-label">Sales (Impact) <span class="text-muted">Today</span></div>
+                    </div>
+                </div>
+                <div class="movement-summary-tile">
+                    <span class="movement-summary-icon movement-summary-icon-success"><i class="ti ti-arrow-back-up"></i></span>
+                    <div>
+                        <div class="movement-summary-value">{{ number_format($todayReturnsQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-label">Returns <span class="text-muted">Today</span></div>
+                    </div>
+                </div>
+                <div class="movement-summary-tile">
+                    <span class="movement-summary-icon movement-summary-icon-warning"><i class="ti ti-adjustments"></i></span>
+                    <div>
+                        <div class="movement-summary-value">{{ number_format($todayAdjustmentsQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-label">Adjustments <span class="text-muted">Today</span></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="tab-content" id="stockReportTabContent">
 
-                {{-- ═══════════════════════ STOCK MOVEMENT ═══════════════════════
-                     One unified ledger for every inventory change — purchases,
-                     sales, transfers, and adjustments all in one place, each with
-                     a clear reference number and an unmistakable In/Out label.
-                     Detailed sales analysis (revenue, margins, etc.) stays in the
-                     Sales module; a sale only ever appears here as a movement. ── --}}
-                <div class="tab-pane fade show active" id="movementPane" role="tabpanel" aria-labelledby="movementTab">
+                {{-- ═══════════════════════ STOCK IN / OUT / TRANSFER ═══════════════════════
+                     Three focused ledgers instead of one unified table with
+                     filter pills — each tab IS the filter (fixed `type` sent
+                     to the same stock.movements-data endpoint), so the table
+                     only ever shows columns relevant to that direction. ── --}}
+                @foreach ($ledgerTabs as $i => $t)
+                <div class="tab-pane fade @if($i === 0) show active @endif" id="{{ $t['id'] }}Pane" role="tabpanel" aria-labelledby="{{ $t['id'] }}Tab">
                     <div class="card">
                         <div class="card-body pb-0">
-                            <h5 class="card-title mb-0">Stock Movement</h5>
-                            <p class="text-muted fs-sm mb-3">Track every change made to your inventory in one place</p>
-
-                            <div class="movement-pills mb-3" id="movementPills">
-                                <button type="button" class="movement-pill active" data-type="">All Movements</button>
-                                <button type="button" class="movement-pill movement-pill-success" data-type="in"><i class="ti ti-arrow-down"></i> Received</button>
-                                <button type="button" class="movement-pill movement-pill-danger" data-type="out"><i class="ti ti-arrow-up"></i> Removed</button>
-                                <button type="button" class="movement-pill movement-pill-info" data-type="transfer"><i class="ti ti-arrows-exchange"></i> Transfer</button>
-                                <button type="button" class="movement-pill movement-pill-purple" data-type="sale"><i class="ti ti-shopping-cart"></i> Sale</button>
-                                <button type="button" class="movement-pill movement-pill-success" data-type="return"><i class="ti ti-arrow-back-up"></i> Return</button>
-                                <button type="button" class="movement-pill movement-pill-warning" data-type="adjustment"><i class="ti ti-adjustments"></i> Adjustment</button>
-                            </div>
+                            <h5 class="card-title mb-0">{{ $t['label'] }}</h5>
+                            <p class="text-muted fs-sm mb-3">{{ $t['subtitle'] }}</p>
                         </div>
 
                         <div class="card-header border-light movement-toolbar flex-wrap gap-2">
                             <div class="d-flex flex-wrap align-items-center gap-1">
-                                <input type="date" id="movementDateFrom" class="form-control form-control-sm" title="From date" style="width: 145px;">
+                                <input type="date" id="{{ $t['id'] }}DateFrom" class="form-control form-control-sm" title="From date" style="width: 145px;">
                                 <span class="text-muted small">to</span>
-                                <input type="date" id="movementDateTo" class="form-control form-control-sm" title="To date" style="width: 145px;">
+                                <input type="date" id="{{ $t['id'] }}DateTo" class="form-control form-control-sm" title="To date" style="width: 145px;">
 
-                                <select id="movementProductFilter" class="form-select" style="min-width: 180px;">
+                                <select id="{{ $t['id'] }}ProductFilter" class="form-select" style="min-width: 180px;">
                                     <option value="">All Products</option>
                                 </select>
 
                                 <div class="app-search">
-                                    <select id="movementLocationFilter" class="form-select form-control my-1 my-md-0">
+                                    <select id="{{ $t['id'] }}LocationFilter" class="form-select form-control my-1 my-md-0">
                                         <option value="">All Locations</option>
                                         @foreach ($locations as $l)
                                             <option value="{{ $l->id }}">{{ $l->name }}</option>
@@ -148,29 +207,40 @@
 
                             <div class="d-flex flex-wrap align-items-center gap-1 flex-grow-1 justify-content-end">
                                 <div class="app-search">
-                                    <input id="movementSearch" type="search" class="form-control" placeholder="Search product, SKU, or reference…" style="min-width: 200px;" />
+                                    <input id="{{ $t['id'] }}Search" type="search" class="form-control" placeholder="Search product, SKU, or reference…" style="min-width: 200px;" />
                                     <i class="ti ti-search app-search-icon text-muted"></i>
                                 </div>
-                                <button type="button" id="movementFilterReset" class="btn btn-outline-secondary btn-sm" title="Clear filters">
+                                <button type="button" id="{{ $t['id'] }}FilterReset" class="btn btn-outline-secondary btn-sm" title="Clear filters">
                                     <i class="ti ti-filter-x"></i>
                                 </button>
+                                @if ($t['id'] === 'transfer')
+                                    @permission('stock-transfers.create')
+                                    <a href="{{ route('stock-transfers.create') }}" class="add-btn ms-1">
+                                        <i class="ti ti-transfer fs-sm me-2"></i> New Transfer
+                                    </a>
+                                    @endpermission
+                                @endif
                             </div>
                         </div>
 
                         <div class="table-responsive">
-                            <table id="movementTable" class="table table-custom table-centered table-hover w-100 mb-0">
+                            <table id="{{ $t['id'] }}Table" class="table table-custom table-centered table-hover w-100 mb-0 stock-ledger-table">
                                 <thead class="bg-light align-middle bg-opacity-25 thead-sm">
                                     <tr class="text-uppercase fs-xxs">
                                         <th class="text-center" style="width: 1%;">S.No</th>
-                                        <th><i class="ti ti-calendar me-1"></i>Date &amp; Time</th>
-                                        <th><i class="ti ti-diamond me-1"></i>Product</th>
-                                        <th><i class="ti ti-arrows-exchange me-1"></i>Movement Type</th>
-                                        <th class="text-end"><i class="ti ti-arrow-down me-1"></i>Stock In</th>
-                                        <th class="text-end"><i class="ti ti-arrow-up me-1"></i>Stock Out</th>
-                                        <th><i class="ti ti-hash me-1"></i>Reference No.</th>
-                                        <th><i class="ti ti-building-warehouse me-1"></i>Source / Destination</th>
-                                        <th><i class="ti ti-map-pin me-1"></i>Location</th>
-                                        <th><i class="ti ti-user me-1"></i>User</th>
+                                        <th style="width: 12%;"><i class="ti ti-calendar me-1"></i>Date &amp; Time</th>
+                                        <th style="width: 20%;"><i class="ti ti-diamond me-1"></i>Product</th>
+                                        <th style="width: 12%;"><i class="ti ti-arrows-exchange me-1"></i>Movement Type</th>
+                                        @if ($t['qtyCols'] === 'in' || $t['qtyCols'] === 'both')
+                                            <th class="text-end" style="width: 8%;"><i class="ti ti-arrow-down me-1"></i>Stock In</th>
+                                        @endif
+                                        @if ($t['qtyCols'] === 'out' || $t['qtyCols'] === 'both')
+                                            <th class="text-end" style="width: 8%;"><i class="ti ti-arrow-up me-1"></i>Stock Out</th>
+                                        @endif
+                                        <th style="width: 13%;"><i class="ti ti-hash me-1"></i>Reference No.</th>
+                                        <th style="width: 13%;"><i class="ti ti-building-warehouse me-1"></i>{{ $t['sourceLabel'] }}</th>
+                                        <th style="width: 10%;"><i class="ti ti-map-pin me-1"></i>Location</th>
+                                        <th style="width: 10%;"><i class="ti ti-user me-1"></i>User</th>
                                     </tr>
                                 </thead>
                             </table>
@@ -178,158 +248,21 @@
 
                         <div class="card-footer border-0">
                             <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                <div id="movementInfoSlot" class="text-muted small"></div>
+                                <div id="{{ $t['id'] }}InfoSlot" class="text-muted small"></div>
                                 <div class="d-flex align-items-center gap-2 footer-pagination-group">
-                                    <select id="movementPerPage" class="form-select form-select-sm" style="width: auto;">
+                                    <select id="{{ $t['id'] }}PerPage" class="form-select form-select-sm" style="width: auto;">
                                         <option value="25" selected>25</option>
                                         <option value="50">50</option>
                                         <option value="100">100</option>
                                         <option value="200">200</option>
                                     </select>
-                                    <div id="movementPaginationSlot"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Bottom summary strip: today's activity by category --}}
-                        <div class="movement-summary-strip">
-                            <div class="movement-summary-tile">
-                                <span class="movement-summary-icon movement-summary-icon-success"><i class="ti ti-arrow-down"></i></span>
-                                <div>
-                                    <div class="movement-summary-value">{{ number_format($todayReceivedQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
-                                    <div class="movement-summary-label">Stock Received <span class="text-muted">Today</span></div>
-                                </div>
-                            </div>
-                            <div class="movement-summary-tile">
-                                <span class="movement-summary-icon movement-summary-icon-danger"><i class="ti ti-arrow-up"></i></span>
-                                <div>
-                                    <div class="movement-summary-value">{{ number_format($todayRemovedQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
-                                    <div class="movement-summary-label">Stock Removed <span class="text-muted">Today</span></div>
-                                </div>
-                            </div>
-                            <div class="movement-summary-tile">
-                                <span class="movement-summary-icon movement-summary-icon-info"><i class="ti ti-arrows-exchange"></i></span>
-                                <div>
-                                    <div class="movement-summary-value">{{ number_format($todayTransfersQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
-                                    <div class="movement-summary-label">Transfers <span class="text-muted">Today</span></div>
-                                </div>
-                            </div>
-                            <div class="movement-summary-tile">
-                                <span class="movement-summary-icon movement-summary-icon-purple"><i class="ti ti-shopping-cart"></i></span>
-                                <div>
-                                    <div class="movement-summary-value">{{ number_format($todaySalesQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
-                                    <div class="movement-summary-label">Sales (Impact) <span class="text-muted">Today</span></div>
-                                </div>
-                            </div>
-                            <div class="movement-summary-tile">
-                                <span class="movement-summary-icon movement-summary-icon-success"><i class="ti ti-arrow-back-up"></i></span>
-                                <div>
-                                    <div class="movement-summary-value">{{ number_format($todayReturnsQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
-                                    <div class="movement-summary-label">Returns <span class="text-muted">Today</span></div>
-                                </div>
-                            </div>
-                            <div class="movement-summary-tile">
-                                <span class="movement-summary-icon movement-summary-icon-warning"><i class="ti ti-adjustments"></i></span>
-                                <div>
-                                    <div class="movement-summary-value">{{ number_format($todayAdjustmentsQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
-                                    <div class="movement-summary-label">Adjustments <span class="text-muted">Today</span></div>
+                                    <div id="{{ $t['id'] }}PaginationSlot"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                {{-- ═══════════════════════ CURRENT STOCK (On Hand) ═══════════════════════ --}}
-                <div class="tab-pane fade" id="onHandPane" role="tabpanel" aria-labelledby="onHandTab">
-                    <div class="card" id="categoryRollupCard">
-                        <div class="card-header border-light d-flex align-items-center justify-content-between">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="ti ti-diamond fs-18 text-primary"></i>
-                                <h5 class="card-title mb-0">By Stone</h5>
-                            </div>
-                            <small class="text-muted">
-                                <span id="categoryRollupCount" class="fw-semibold text-primary me-2"></span>
-                                Click a stone to filter the table below
-                            </small>
-                        </div>
-                        <div class="card-body p-0">
-                            <ul class="stone-rollup-list" id="categoryRollup">
-                                <li class="text-muted small px-3 py-3">Loading…</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header border-light justify-content-between">
-                            <div class="d-flex gap-2">
-                                <div class="app-search">
-                                    <input id="stockSearch" type="search" class="form-control" placeholder="Search product / SKU…" />
-                                    <i class="ti ti-search app-search-icon text-muted"></i>
-                                </div>
-                            </div>
-
-                            <div class="d-flex align-items-center gap-1">
-                                <div class="app-search">
-                                    <select id="stockLocationFilter" class="form-select form-control my-1 my-md-0">
-                                        <option value="">All Locations</option>
-                                        @foreach ($locations as $l)
-                                            <option value="{{ $l->id }}" @if($l->is_default) selected @endif>
-                                                {{ $l->name }} ({{ $l->location_code }})
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <i class="ti ti-map-pin app-search-icon text-muted"></i>
-                                </div>
-
-                                <div class="app-search">
-                                    <select id="stockCategoryFilter" class="form-select form-control my-1 my-md-0">
-                                        <option value="">All Stones</option>
-                                        @foreach ($categories as $c)
-                                            <option value="{{ $c->id }}">{{ $c->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <i class="ti ti-tag app-search-icon text-muted"></i>
-                                </div>
-
-                                @permission('stock-transfers.create')
-                                <a href="{{ route('stock-transfers.create') }}" class="add-btn ms-1">
-                                    <i class="ti ti-transfer fs-sm me-2"></i> New Transfer
-                                </a>
-                                @endpermission
-                            </div>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table id="stockTable" class="table table-custom table-centered table-hover w-100 mb-0">
-                                <thead class="bg-light align-middle bg-opacity-25 thead-sm">
-                                    <tr class="text-uppercase fs-xxs">
-                                        <th class="text-center" style="width: 1%;">S.No</th>
-                                        <th><i class="ti ti-diamond me-1"></i>Product</th>
-                                        <th><i class="ti ti-map-pin me-1"></i>Location</th>
-                                        <th class="text-end"><i class="ti ti-stack-2 me-1"></i>On Hand</th>
-                                        <th class="text-end"><i class="ti ti-scale me-1"></i>Remaining Ct</th>
-                                        <th class="text-center" style="width: 1%;"><i class="ti ti-history me-1"></i>Ledger</th>
-                                    </tr>
-                                </thead>
-                            </table>
-                        </div>
-
-                        <div class="card-footer border-0">
-                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                <div id="stockInfoSlot" class="text-muted small"></div>
-                                <div class="d-flex align-items-center gap-2 footer-pagination-group">
-                                    <select id="stockPerPage" class="form-select form-select-sm" style="width: auto;">
-                                        <option value="10">10</option>
-                                        <option value="25" selected>25</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                    </select>
-                                    <div id="stockPaginationSlot"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                @endforeach
 
                 {{-- ═══════════════════════ STONES & CARAT ═══════════════════════
                      Stone-wise (category) rollup: how many pieces, how much
@@ -374,7 +307,7 @@
                         </div>
 
                         <div class="table-responsive">
-                            <table id="byStoneTable" class="table table-custom table-centered table-hover w-100 mb-0">
+                            <table id="byStoneTable" class="table table-custom table-centered table-hover w-100 mb-0 stock-ledger-table">
                                 <thead class="bg-light align-middle bg-opacity-25 thead-sm">
                                     <tr class="text-uppercase fs-xxs">
                                         <th class="text-center" style="width: 1%;">S.No</th>
@@ -384,7 +317,6 @@
                                         <th class="text-end">Rate / Ct (Avg.)</th>
                                         <th class="text-end">Stock Value</th>
                                         <th class="text-center">Status</th>
-                                        <th class="text-center" style="width: 1%;">Action</th>
                                     </tr>
                                 </thead>
                             </table>
@@ -438,7 +370,7 @@
             <div class="card" id="lowStockCard">
                 <div class="card-header border-light d-flex align-items-center justify-content-between">
                     <h5 class="card-title mb-0">Low Stock Items</h5>
-                    <a href="#" onclick="document.getElementById('onHandTab').click(); return false;" class="fs-sm">View All</a>
+                    <a href="#" onclick="document.getElementById('byStoneTab').click(); return false;" class="fs-sm">View All</a>
                 </div>
                 <div class="card-body p-0">
                     @if ($lowStockItems->isEmpty())
@@ -595,45 +527,21 @@
     }
     .stock-page .add-btn:hover { color: #fff; box-shadow: 0 4px 10px rgba(29, 78, 216, 0.25); }
 
-    /* Category rollup cards */
-    .stone-rollup-list { list-style: none; margin: 0; padding: 0; }
-    .stone-rollup-list .stone-rollup-row {
-        display: flex; align-items: center; gap: 10px; padding: 10px 16px;
-        border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: background .15s ease;
-    }
-    .stone-rollup-list .stone-rollup-row:last-child { border-bottom: none; }
-    .stone-rollup-list .stone-rollup-row:hover { background: #f8fafc; }
-    .stone-rollup-list .stone-rollup-row.active {
-        background: var(--stock-primary-light); border-left: 3px solid var(--stock-primary); padding-left: 13px;
-    }
-    .stock-page #categoryRollup.rollup-scroll { max-height: 340px; overflow-y: auto; }
-
-    /* Movement type pill filters */
-    .movement-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-    .movement-pill {
-        display: inline-flex; align-items: center; gap: 6px;
-        border: 1px solid var(--stock-border); background: #fff; color: #475569;
-        border-radius: 999px; padding: 7px 16px; font-size: 0.8125rem; font-weight: 600;
-        transition: all .15s ease;
-    }
-    .movement-pill:hover { border-color: var(--stock-primary); }
-    .movement-pill.active { background: var(--stock-primary); border-color: var(--stock-primary); color: #fff; }
-    .movement-pill.active i { color: #fff; }
-    .movement-pill-success i { color: var(--stock-success); }
-    .movement-pill-danger i { color: var(--stock-danger); }
-    .movement-pill-info i { color: var(--stock-teal); }
-    .movement-pill-purple i { color: var(--stock-purple); }
-    .movement-pill-warning i { color: var(--stock-warning); }
-
-    /* Tables */
-    .stock-page #stockTable thead th,
-    .stock-page #movementTable thead th {
+    /* Tables — shared by the Stock In / Stock Out / Transfer ledgers and
+       the Stones & Carat table, so all four read as one consistent system
+       rather than each having its own slightly-different styling. */
+    .stock-page .stock-ledger-table thead th {
         background: #f1f5f9; font-weight: 700; font-size: 0.6875rem; letter-spacing: 0.03em; padding: 8px 12px;
     }
-    .stock-page #stockTable tbody td,
-    .stock-page #movementTable tbody td { padding: 6px 12px; font-size: 0.8125rem; vertical-align: middle; }
-    .stock-page #stockTable tbody tr:hover,
-    .stock-page #movementTable tbody tr:hover { background: #f8fafc; }
+    .stock-page .stock-ledger-table tbody td {
+        padding: 6px 12px; font-size: 0.75rem; vertical-align: middle;
+        white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+    }
+    .stock-page .stock-ledger-table tbody tr:hover { background: #f8fafc; }
+    /* Product cell links to that product's full stock history — a subtle
+       underline-on-hover is the only cue since it deliberately keeps the
+       row's normal text color instead of looking like a typical blue link. */
+    .stock-page .stock-ledger-table td > a.text-reset:hover .fw-semibold { text-decoration: underline; }
     .stock-page span.dt-column-order:before,
     .stock-page span.dt-column-order:after { color: #475569; }
     .stock-page span.dt-column-order:before { opacity: .45; }
@@ -648,22 +556,34 @@
        two different sizes (0.6875rem vs. the browser's 80% default on
        small), which reads as visually "unaligned" next to each other in
        the same row. Both now match at 0.75rem. */
-    .stock-page #movementTable .badge,
-    .stock-page #movementTable small { font-size: 0.75rem; }
+    .stock-page .stock-ledger-table .badge,
+    .stock-page .stock-ledger-table small { font-size: 0.75rem; }
 
     /* Numeric/date columns: tabular figures so digits line up vertically
        from row to row instead of drifting with proportional widths. */
-    .stock-page #movementTable .movement-qty,
-    .stock-page #movementTable .movement-date,
-    .stock-page #movementTable .movement-time {
+    .stock-page .stock-ledger-table .movement-qty,
+    .stock-page .stock-ledger-table .movement-date,
+    .stock-page .stock-ledger-table .movement-time {
         font-variant-numeric: tabular-nums;
         font-feature-settings: "tnum";
     }
-    .stock-page #movementTable .movement-qty { display: inline-block; min-width: 2.5em; text-align: right; }
+    /* Date + time now sit on one line per row instead of stacking —
+       shrunk slightly further so both fit comfortably together. */
+    .stock-page .stock-ledger-table .movement-date,
+    .stock-page .stock-ledger-table .movement-time {
+        font-size: 0.6875rem;
+    }
+    .stock-page .stock-ledger-table .movement-qty { display: inline-block; min-width: 2.5em; text-align: right; }
     .badge-soft-purple { background: #ede9fe; color: var(--stock-purple); }
 
-    /* Stock Movement — sticky toolbar/header while scrolling long results */
+    /* Stock In / Out / Transfer — sticky toolbar while scrolling long results */
     .stock-page .movement-toolbar { position: sticky; top: 65px; z-index: 5; background: #fff; display: flex; align-items: center; }
+    /* The theme's global Select2 CSS stretches every instance to 100% of
+       its flex parent regardless of the JS `width` option passed at
+       init — without this override the product filter swallows the
+       whole toolbar row and pushes location/search/reset onto their own
+       wrapped lines instead of sitting inline. */
+    .stock-page .movement-toolbar .select2-container { width: 180px !important; flex: 0 0 auto; }
     /* Sticky table headers (both plain <thead> and per-<th>) rendered a
        ghost/duplicate header row mid-scroll in real testing — dropped in
        favor of just the sticky filter toolbar above, which is a plain
@@ -722,10 +642,16 @@
     }
     .stock-page .stock-loading .spinner-border { width: 1rem; height: 1rem; color: var(--stock-primary); border-width: 0.15em; }
 
-    #stockTable_wrapper .dataTables_length, #stockTable_wrapper .dataTables_filter { display: none !important; }
-    #stockInfoSlot .dataTables_info { padding: 0; font-size: 0.875rem; }
-    #movementTable_wrapper .dataTables_length, #movementTable_wrapper .dataTables_filter { display: none !important; }
-    #movementInfoSlot .dataTables_info { padding: 0; font-size: 0.875rem; }
+    #stockInTable_wrapper .dataTables_length, #stockInTable_wrapper .dataTables_filter,
+    #stockOutTable_wrapper .dataTables_length, #stockOutTable_wrapper .dataTables_filter,
+    #transferTable_wrapper .dataTables_length, #transferTable_wrapper .dataTables_filter,
+    #byStoneTable_wrapper .dataTables_length, #byStoneTable_wrapper .dataTables_filter {
+        display: none !important;
+    }
+    #stockInInfoSlot .dataTables_info, #stockOutInfoSlot .dataTables_info,
+    #transferInfoSlot .dataTables_info, #byStoneInfoSlot .dataTables_info {
+        padding: 0; font-size: 0.875rem;
+    }
 </style>
 @endpush
 
@@ -746,124 +672,6 @@ $(function () {
         }).render();
     }
 
-    // ═══════════════════ Current Stock (On Hand) tab ═══════════════════
-    // Lazy-init on first show — this tab is no longer the default active
-    // one (Stock Movement is), so initializing DataTables against a
-    // hidden .tab-pane here would render it with zero column widths.
-    let onHandDt = null;
-
-    function initOnHandTable() {
-        if (onHandDt) return;
-
-        onHandDt = $('#stockTable').DataTable({
-            processing: true,
-            serverSide: true,
-            responsive: false,
-            order: [[3, 'desc']],
-            ajax: {
-                url: '{{ route('stock.data') }}',
-                data: function (d) {
-                    d.location_id = $('#stockLocationFilter').val();
-                    d.category_id = $('#stockCategoryFilter').val();
-                },
-            },
-            dom: 'rt<"stock-tail"ip>',
-            pageLength: 25,
-            columns: [
-                { data: 'DT_RowIndex',    name: 'DT_RowIndex',     orderable: false, searchable: false, className: 'text-center' },
-                { data: 'product_label',  name: 'product_label',  orderable: false },
-                { data: 'location_label', name: 'locations.name',  orderable: false, searchable: false },
-                { data: 'on_hand',        name: 'on_hand',         orderable: true,  searchable: false, className: 'text-end' },
-                { data: 'remaining_ct',   name: 'remaining_ct',    orderable: false, searchable: false, className: 'text-end' },
-                { data: 'action',         name: 'action',          orderable: false, searchable: false, className: 'text-center' },
-            ],
-            language: {
-                info: 'Showing _START_ to _END_ of _TOTAL_ rows',
-                emptyTable: 'No stock recorded yet.',
-                processing: '<div class="stock-loading"><span class="spinner-border spinner-border-sm"></span>Loading stock&hellip;</div>',
-                paginate: { previous: '<i class="ti ti-chevron-left"></i>', next: '<i class="ti ti-chevron-right"></i>' },
-            },
-            initComplete: function () {
-                $('#stockInfoSlot').append($('#stockTable_info'));
-                $('#stockPaginationSlot').append($('.stock-tail'));
-            },
-        });
-
-        let timer;
-        $('#stockSearch').on('keyup', function () {
-            clearTimeout(timer);
-            const v = this.value;
-            timer = setTimeout(() => onHandDt.search(v).draw(), 250);
-        });
-        $('#stockPerPage').on('change', function () { onHandDt.page.len(parseInt(this.value, 10)).draw(); });
-        $('#stockLocationFilter').on('change', function () {
-            onHandDt.draw();
-            loadCategoryRollup();
-        });
-        $('#stockCategoryFilter').on('change', function () {
-            onHandDt.draw();
-            highlightActiveCategory();
-        });
-
-        loadCategoryRollup();
-    }
-
-    function highlightActiveCategory() {
-        const active = $('#stockCategoryFilter').val();
-        $('#categoryRollup .stone-rollup-row').each(function () {
-            $(this).toggleClass('active', String($(this).data('categoryId')) === String(active) && active !== '');
-        });
-    }
-
-    function loadCategoryRollup() {
-        const params = new URLSearchParams();
-        const loc = $('#stockLocationFilter').val();
-        if (loc) params.set('location_id', loc);
-
-        fetch(`{{ route('stock.category-data') }}?${params.toString()}`, { headers: { 'Accept': 'application/json' } })
-            .then((r) => r.json())
-            .then((data) => {
-                const wrap = $('#categoryRollup').empty();
-                if (!data.ok || !data.categories || data.categories.length === 0) {
-                    wrap.append('<li class="text-muted small px-3 py-3">No stock recorded yet.</li>');
-                    $('#categoryRollupCount').text('');
-                    wrap.removeClass('rollup-scroll');
-                    return;
-                }
-
-                const isLarge = data.categories.length > 12;
-                wrap.toggleClass('rollup-scroll', isLarge);
-                $('#categoryRollupCount').text(`${data.categories.length} stone${data.categories.length === 1 ? '' : 's'}`);
-
-                data.categories.forEach((c) => {
-                    const safeName = $('<div>').text(c.category_name).html();
-                    const ct = Number(c.on_hand_carats);
-                    const row = $(`
-                        <li class="stone-rollup-row" role="button" data-category-id="${c.category_id}">
-                            <span class="movement-thumb movement-thumb-sm"><i class="ti ti-diamond"></i></span>
-                            <div class="flex-grow-1 min-w-0">
-                                <div class="fw-semibold fs-sm text-truncate" title="${safeName}">${safeName}</div>
-                                <small class="text-muted">${c.product_count} item${c.product_count == 1 ? '' : 's'}${ct > 0 ? ' &middot; ' + ct.toFixed(3).replace(/\.?0+$/, '') + ' ct' : ''}</small>
-                            </div>
-                            <div class="text-end flex-shrink-0">
-                                <div class="fw-semibold movement-qty">${c.on_hand}</div>
-                                <small class="text-muted">Pcs</small>
-                            </div>
-                        </li>
-                    `);
-                    row.on('click', function () {
-                        $('#stockCategoryFilter').val(c.category_id).trigger('change');
-                    });
-                    wrap.append(row);
-                });
-                highlightActiveCategory();
-            })
-            .catch(() => {
-                $('#categoryRollup').html('<li class="text-muted small px-3 py-3">Could not load category totals.</li>');
-            });
-    }
-
-    document.getElementById('onHandTab').addEventListener('shown.bs.tab', initOnHandTable);
 
     // ═══════════════════ Stones & Carat tab ═══════════════════
     let byStoneDt = null;
@@ -893,7 +701,6 @@ $(function () {
                 { data: 'rate_label',    name: 'rate_label',     orderable: false, searchable: false, className: 'text-end' },
                 { data: 'value_label',   name: 'stock_value',    orderable: true,  searchable: false, className: 'text-end' },
                 { data: 'status_label',  name: 'status_label',   orderable: false, searchable: false, className: 'text-center' },
-                { data: 'action',        name: 'action',         orderable: false, searchable: false, className: 'text-center' },
             ],
             language: {
                 info: 'Showing _START_ to _END_ of _TOTAL_ rows',
@@ -902,8 +709,9 @@ $(function () {
                 paginate: { previous: '<i class="ti ti-chevron-left"></i>', next: '<i class="ti ti-chevron-right"></i>' },
             },
             initComplete: function () {
-                $('#byStoneInfoSlot').append($('#byStoneTable_info'));
-                $('#byStonePaginationSlot').append($('.stock-tail'));
+                const container = $(this.api().table().container());
+                $('#byStoneInfoSlot').append(container.find('#byStoneTable_info'));
+                $('#byStonePaginationSlot').append(container.find('.stock-tail'));
             },
         });
 
@@ -916,105 +724,118 @@ $(function () {
         $('#byStonePerPage').on('change', function () { byStoneDt.page.len(parseInt(this.value, 10)).draw(); });
         $('#byStoneLocationFilter').on('change', () => byStoneDt.draw());
         $('#byStoneCategoryFilter').on('change', () => byStoneDt.draw());
-
-        $('#byStoneTable').on('click', '.js-view-stone', function () {
-            const categoryId = $(this).data('category-id');
-            document.getElementById('onHandTab').click();
-            setTimeout(() => {
-                $('#stockCategoryFilter').val(categoryId).trigger('change');
-            }, 150);
-        });
     }
 
     document.getElementById('byStoneTab').addEventListener('shown.bs.tab', initByStoneTable);
 
-    // ═══════════════════ Stock Movement tab ═══════════════════
-    let movementType = '';
+    // ═══════════════════ Stock In / Stock Out / Transfer tabs ═══════════════════
+    // Each tab is the same ledger table with a FIXED `type` sent to
+    // stock.movements-data — no pill row needed since the tab itself is
+    // the filter. `columns` differs only in which of Stock In / Stock Out
+    // is present (Transfer keeps both, since a transfer produces one leg
+    // of each direction).
+    const ledgerTabs = [
+        { id: 'stockIn',  type: 'in',       qtyCols: 'in'   },
+        { id: 'stockOut', type: 'out',      qtyCols: 'out'  },
+        { id: 'transfer', type: 'transfer', qtyCols: 'both' },
+    ];
+    const ledgerInstances = {};
 
-    $('#movementProductFilter').select2({
-        placeholder: 'All Products',
-        allowClear: true,
-        width: '180px',
-        ajax: {
-            url: '{{ route('stock.search-products') }}',
-            dataType: 'json',
-            delay: 250,
-            data: (params) => ({ q: params.term || '' }),
-            processResults: (data) => ({
-                results: (data.items || []).map((p) => ({ id: p.id, text: `${p.title} (${p.sku})` })),
-            }),
-        },
-    });
+    function initLedgerTable(cfg) {
+        if (ledgerInstances[cfg.id]) return;
 
-    const movementDt = $('#movementTable').DataTable({
-        processing: true,
-        serverSide: true,
-        responsive: false,
-        ordering: false,
-        ajax: {
-            url: '{{ route('stock.movements-data') }}',
-            data: function (d) {
-                d.product_id  = $('#movementProductFilter').val();
-                d.location_id = $('#movementLocationFilter').val();
-                d.type        = movementType;
-                d.date_from   = $('#movementDateFrom').val();
-                d.date_to     = $('#movementDateTo').val();
+        $(`#${cfg.id}ProductFilter`).select2({
+            placeholder: 'All Products',
+            allowClear: true,
+            width: '180px',
+            ajax: {
+                url: '{{ route('stock.search-products') }}',
+                dataType: 'json',
+                delay: 250,
+                data: (params) => ({ q: params.term || '' }),
+                processResults: (data) => ({
+                    results: (data.items || []).map((p) => ({ id: p.id, text: `${p.title} (${p.sku})` })),
+                }),
             },
-        },
-        dom: 'rt<"movement-tail"ip>',
-        pageLength: 25,
-        columns: [
-            { data: 'DT_RowIndex',      name: 'DT_RowIndex',      orderable: false, searchable: false, className: 'text-center' },
-            { data: 'when_label',       name: 'when_label',       orderable: false, searchable: false },
-            { data: 'product_label',    name: 'product_label',    orderable: false },
-            { data: 'movement_label',   name: 'movement_label',   orderable: false, searchable: false },
-            { data: 'stock_in_label',   name: 'stock_in_label',   orderable: false, searchable: false, className: 'text-end' },
-            { data: 'stock_out_label',  name: 'stock_out_label',  orderable: false, searchable: false, className: 'text-end' },
-            { data: 'reference_label',  name: 'reference_label',  orderable: false, searchable: false },
-            { data: 'source_label',     name: 'source_label',     orderable: false, searchable: false },
-            { data: 'location_label',   name: 'location_label',   orderable: false, searchable: false },
-            { data: 'by_label',         name: 'by_label',         orderable: false, searchable: false },
-        ],
-        language: {
-            info: 'Showing _START_ to _END_ of _TOTAL_ movements',
-            emptyTable: 'No stock movements recorded yet.',
-            zeroRecords: 'No movements match your filters.',
-            processing: '<div class="stock-loading"><span class="spinner-border spinner-border-sm"></span>Loading movements&hellip;</div>',
-            paginate: { previous: '<i class="ti ti-chevron-left"></i>', next: '<i class="ti ti-chevron-right"></i>' },
-        },
-        initComplete: function () {
-            $('#movementInfoSlot').append($('#movementTable_info'));
-            $('#movementPaginationSlot').append($('.movement-tail'));
-        },
-    });
+        });
 
-    $('#movementPills').on('click', '.movement-pill', function () {
-        $('.movement-pill').removeClass('active');
-        $(this).addClass('active');
-        movementType = $(this).data('type') || '';
-        movementDt.draw();
-    });
+        const columns = [
+            { data: 'DT_RowIndex',   name: 'DT_RowIndex',   orderable: false, searchable: false, className: 'text-center' },
+            { data: 'when_label',    name: 'when_label',    orderable: false, searchable: false },
+            { data: 'product_label', name: 'product_label', orderable: false },
+            { data: 'movement_label', name: 'movement_label', orderable: false, searchable: false },
+        ];
+        if (cfg.qtyCols === 'in' || cfg.qtyCols === 'both') {
+            columns.push({ data: 'stock_in_label', name: 'stock_in_label', orderable: false, searchable: false, className: 'text-end' });
+        }
+        if (cfg.qtyCols === 'out' || cfg.qtyCols === 'both') {
+            columns.push({ data: 'stock_out_label', name: 'stock_out_label', orderable: false, searchable: false, className: 'text-end' });
+        }
+        columns.push(
+            { data: 'reference_label', name: 'reference_label', orderable: false, searchable: false },
+            { data: 'source_label',    name: 'source_label',    orderable: false, searchable: false },
+            { data: 'location_label',  name: 'location_label',  orderable: false, searchable: false },
+            { data: 'by_label',        name: 'by_label',        orderable: false, searchable: false },
+        );
 
-    let moveTimer;
-    $('#movementSearch').on('keyup', function () {
-        clearTimeout(moveTimer);
-        const v = this.value;
-        moveTimer = setTimeout(() => movementDt.search(v).draw(), 250);
-    });
-    $('#movementPerPage').on('change', function () { movementDt.page.len(parseInt(this.value, 10)).draw(); });
-    $('#movementProductFilter').on('change', () => movementDt.draw());
-    $('#movementLocationFilter, #movementDateFrom, #movementDateTo').on('change', () => movementDt.draw());
+        const dt = $(`#${cfg.id}Table`).DataTable({
+            processing: true,
+            serverSide: true,
+            responsive: false,
+            ordering: false,
+            ajax: {
+                url: '{{ route('stock.movements-data') }}',
+                data: function (d) {
+                    d.product_id  = $(`#${cfg.id}ProductFilter`).val();
+                    d.location_id = $(`#${cfg.id}LocationFilter`).val();
+                    d.type        = cfg.type;
+                    d.date_from   = $(`#${cfg.id}DateFrom`).val();
+                    d.date_to     = $(`#${cfg.id}DateTo`).val();
+                },
+            },
+            dom: `rt<"${cfg.id}-tail"ip>`,
+            pageLength: 25,
+            columns,
+            language: {
+                info: 'Showing _START_ to _END_ of _TOTAL_ movements',
+                emptyTable: 'No stock movements recorded yet.',
+                zeroRecords: 'No movements match your filters.',
+                processing: '<div class="stock-loading"><span class="spinner-border spinner-border-sm"></span>Loading movements&hellip;</div>',
+                paginate: { previous: '<i class="ti ti-chevron-left"></i>', next: '<i class="ti ti-chevron-right"></i>' },
+            },
+            initComplete: function () {
+                const container = $(this.api().table().container());
+                $(`#${cfg.id}InfoSlot`).append(container.find(`#${cfg.id}Table_info`));
+                $(`#${cfg.id}PaginationSlot`).append(container.find(`.${cfg.id}-tail`));
+            },
+        });
+        ledgerInstances[cfg.id] = dt;
 
-    $('#movementFilterReset').on('click', function () {
-        $('#movementSearch').val('');
-        $('#movementLocationFilter').val('');
-        $('#movementDateFrom, #movementDateTo').val('');
-        $('#movementProductFilter').val(null).trigger('change');
-        $('.movement-pill').removeClass('active');
-        $('.movement-pill[data-type=""]').addClass('active');
-        movementType = '';
-        movementDt.search('').draw();
-    });
+        let searchTimer;
+        $(`#${cfg.id}Search`).on('keyup', function () {
+            clearTimeout(searchTimer);
+            const v = this.value;
+            searchTimer = setTimeout(() => dt.search(v).draw(), 250);
+        });
+        $(`#${cfg.id}PerPage`).on('change', function () { dt.page.len(parseInt(this.value, 10)).draw(); });
+        $(`#${cfg.id}ProductFilter`).on('change', () => dt.draw());
+        $(`#${cfg.id}LocationFilter, #${cfg.id}DateFrom, #${cfg.id}DateTo`).on('change', () => dt.draw());
+
+        $(`#${cfg.id}FilterReset`).on('click', function () {
+            $(`#${cfg.id}Search`).val('');
+            $(`#${cfg.id}LocationFilter`).val('');
+            $(`#${cfg.id}DateFrom, #${cfg.id}DateTo`).val('');
+            $(`#${cfg.id}ProductFilter`).val(null).trigger('change');
+            dt.search('').draw();
+        });
+    }
+
+    // Stock In is the default active tab — init immediately. The other
+    // two lazy-init on first show (the known hidden-tab-pane DataTables
+    // zero-width-column bug).
+    initLedgerTable(ledgerTabs[0]);
+    document.getElementById('stockOutTab').addEventListener('shown.bs.tab', () => initLedgerTable(ledgerTabs[1]));
+    document.getElementById('transferTab').addEventListener('shown.bs.tab', () => initLedgerTable(ledgerTabs[2]));
 });
 </script>
 @endpush

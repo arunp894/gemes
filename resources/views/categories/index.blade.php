@@ -597,7 +597,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[2, 'asc']], // name asc
+            order: [[5, 'desc']], // most recently updated first
             ajax: {
                 url: '{{ route('categories.data') }}',
                 type: 'GET',

@@ -72,6 +72,31 @@
                                 <div class="invalid-feedback" id="err-audit_date"></div>
                             </div>
 
+                            <div class="col-12" id="previewCountWrap" style="display: none;">
+                                <div class="d-flex align-items-center gap-3 flex-wrap p-3 rounded" style="background: #f1f5f9;">
+                                    <span class="text-muted small flex-shrink-0">
+                                        <i class="ti ti-scan me-1"></i>This audit will start with:
+                                    </span>
+                                    <span id="previewLoading" class="text-muted small" style="display: none;">
+                                        <span class="spinner-border spinner-border-sm me-1"></span>Calculating…
+                                    </span>
+                                    <div id="previewCounts" class="d-flex gap-4 flex-wrap">
+                                        <div>
+                                            <span class="fw-bold fs-16" id="previewPieces">0</span>
+                                            <span class="text-muted small">Pieces</span>
+                                        </div>
+                                        <div>
+                                            <span class="fw-bold fs-16" id="previewCarat">0</span>
+                                            <span class="text-muted small">Carat</span>
+                                        </div>
+                                        <div>
+                                            <span class="fw-bold fs-16" id="previewProducts">0</span>
+                                            <span class="text-muted small">Products</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="col-12">
                                 <label class="form-label">Note</label>
                                 <textarea name="note" id="note" rows="3" class="form-control"
@@ -145,6 +170,46 @@ $(function () {
     const $submitBtn = $('#submitBtn');
     const $formError = $('#formError');
     const resetLabel = '<i class="ti ti-scan me-1"></i> Start Audit &amp; Begin Scanning';
+
+    // ── Live pieces / carat preview — updates as soon as a location (and
+    // optionally a stone) is picked, before the audit is actually started,
+    // via the same on-hand query start() itself snapshots from. ─────────
+    let previewTimer;
+    function refreshPreview() {
+        clearTimeout(previewTimer);
+        const locationId = $('#location_id').val();
+
+        if (!locationId) {
+            $('#previewCountWrap').hide();
+            return;
+        }
+
+        $('#previewCountWrap').show();
+        $('#previewLoading').show();
+        $('#previewCounts').css('opacity', 0.4);
+
+        previewTimer = setTimeout(() => {
+            const params = new URLSearchParams({ location_id: locationId });
+            const categoryId = $('#category_id').val();
+            if (categoryId) params.set('category_id', categoryId);
+
+            fetch(`{{ route('stock-audits.preview-count') }}?${params.toString()}`, { headers: { 'Accept': 'application/json' } })
+                .then((r) => r.json())
+                .then((data) => {
+                    if (!data.ok) return;
+                    $('#previewPieces').text(data.pieces.toLocaleString());
+                    $('#previewCarat').text((Math.round(data.carat * 1000) / 1000).toString().replace(/\.?0+$/, '') || '0');
+                    $('#previewProducts').text(data.products.toLocaleString());
+                })
+                .catch(() => {})
+                .finally(() => {
+                    $('#previewLoading').hide();
+                    $('#previewCounts').css('opacity', 1);
+                });
+        }, 250);
+    }
+
+    $('#location_id, #category_id').on('change', refreshPreview);
 
     $form.on('submit', async function (e) {
         e.preventDefault();

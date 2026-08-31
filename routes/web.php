@@ -10,6 +10,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TodayPerformanceController;
+use App\Http\Controllers\StockActivityReportController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChannelController;
 use App\Http\Controllers\CountryOfOriginController;
@@ -53,6 +54,9 @@ Route::name('website.')->group(function () {
 
     Route::get('/pages/{page:slug}', [WebsiteController::class, 'pageShow'])->name('pages.show');
 
+    Route::get('/contact', [WebsiteController::class, 'contact'])->name('contact');
+    Route::post('/contact', [WebsiteController::class, 'submitContact'])->name('contact.submit');
+
     Route::prefix('cart')->name('cart.')->group(function () {
         Route::get('/',             [CartController::class, 'index'])->name('index');
         Route::get('/data',         [CartController::class, 'data'])->name('data');
@@ -84,6 +88,11 @@ Route::name('website.')->group(function () {
         Route::post('/logout',   [CustomerAuthController::class, 'logout'])
             ->middleware('customer.auth')
             ->name('logout');
+
+        Route::get('/forgot-password',  [CustomerAuthController::class, 'showForgotPassword'])->name('forgot-password');
+        Route::post('/forgot-password', [CustomerAuthController::class, 'sendResetLink'])->name('forgot-password.send');
+        Route::get('/reset-password/{token}', [CustomerAuthController::class, 'showResetPassword'])->name('reset-password.show');
+        Route::post('/reset-password',        [CustomerAuthController::class, 'resetPassword'])->name('reset-password.update');
     });
 
     Route::prefix('account')->name('account.')
@@ -129,6 +138,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/', fn() => redirect()->route('dashboard'));
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/reports/today-performance', [TodayPerformanceController::class, 'index'])->name('reports.today-performance');
+    Route::get('/reports/stock-activity', [StockActivityReportController::class, 'index'])
+        ->middleware('permission:stock.view')->name('reports.stock-activity');
 
     Route::middleware('role:admin')->prefix('settings')->name('settings.')->group(function () {
         Route::get('/',             [SettingController::class, 'index'])->name('index');
@@ -148,6 +159,8 @@ Route::middleware('auth')->group(function () {
         ->middlewareFor(['create', 'store'], 'permission:pages.create')
         ->middlewareFor(['edit', 'update'], 'permission:pages.edit')
         ->middlewareFor('destroy', 'permission:pages.delete');
+    Route::post('/pages/upload-image', [PageController::class, 'uploadImage'])
+        ->middleware('permission:pages.create,pages.edit')->name('pages.upload-image');
 
     /*
     |--------------------------------------------------------------------------
@@ -419,6 +432,8 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:stock.view')->name('search-products');
         Route::get('/product/{product}', [StockController::class, 'product'])
             ->whereNumber('product')->middleware('permission:stock.view')->name('product');
+        Route::get('/stones/{category}', [StockController::class, 'stone'])
+            ->whereNumber('category')->middleware('permission:stock.view')->name('stone');
         Route::get('/piece/{purchaseProduct}', [StockController::class, 'piece'])
             ->whereNumber('purchaseProduct')->middleware('permission:stock.view')->name('piece');
     });
@@ -458,6 +473,8 @@ Route::middleware('auth')->group(function () {
     Route::prefix('stock-audits')->name('stock-audits.')->group(function () {
         Route::get('/data', [StockAuditController::class, 'data'])
             ->middleware('permission:stock-audits.view')->name('data');
+        Route::get('/preview-count', [StockAuditController::class, 'previewCount'])
+            ->middleware('permission:stock-audits.create')->name('preview-count');
         Route::get('/{stockAudit}/scan', [StockAuditController::class, 'scanScreen'])
             ->whereNumber('stockAudit')->middleware('permission:stock-audits.scan')->name('scan');
         Route::post('/{stockAudit}/scan', [StockAuditController::class, 'scan'])
@@ -521,6 +538,8 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:blogs.view')->name('data');
         Route::patch('/{blog}/toggle-status', [BlogController::class, 'toggleStatus'])
             ->whereNumber('blog')->middleware('permission:blogs.edit')->name('toggle-status');
+        Route::post('/upload-image', [BlogController::class, 'uploadImage'])
+            ->middleware('permission:blogs.create,blogs.edit')->name('upload-image');
     });
     Route::resource('blogs', BlogController::class)->whereNumber('blog')
         ->middlewareFor(['index', 'show'], 'permission:blogs.view')

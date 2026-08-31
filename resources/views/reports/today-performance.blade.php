@@ -69,6 +69,28 @@
             </div>
         </div>
         @endpermission
+
+        @permission('purchases.view')
+        <div class="col-6 col-xl-3">
+            <div class="tp-card tp-card-purple">
+                <div class="tp-card-icon"><i class="ti ti-cash-banknote"></i></div>
+                <div class="tp-card-value">₹{{ number_format($payoutToday->amount) }}</div>
+                <div class="tp-card-label">Payout Today</div>
+                <div class="tp-card-sub">{{ $payoutToday->count }} payment{{ $payoutToday->count == 1 ? '' : 's' }} to suppliers</div>
+            </div>
+        </div>
+        @endpermission
+
+        @permission('sales.view')
+        <div class="col-6 col-xl-3">
+            <div class="tp-card tp-card-teal">
+                <div class="tp-card-icon"><i class="ti ti-world"></i></div>
+                <div class="tp-card-value">₹{{ number_format($websitePaymentsToday->amount) }}</div>
+                <div class="tp-card-label">Website Payments Today</div>
+                <div class="tp-card-sub">{{ $websitePaymentsToday->count }} payment{{ $websitePaymentsToday->count == 1 ? '' : 's' }} via storefront</div>
+            </div>
+        </div>
+        @endpermission
     </div>
 
     <div class="row g-3">
@@ -87,21 +109,31 @@
         </div>
         @endpermission
 
-        {{-- ── Payment methods donut ───────────────────────── --}}
-        @permission('sales.view')
+        {{-- ── Supplier-wise payment today ─────────────────── --}}
+        @permission('purchases.view')
         <div class="col-xl-4">
             <div class="tp-panel h-100">
                 <div class="tp-panel-header">
-                    <h5 class="tp-panel-title"><i class="ti ti-credit-card me-2 text-success"></i>Payment Methods Today</h5>
+                    <h5 class="tp-panel-title"><i class="ti ti-building-store me-2 text-purple"></i>Supplier Payments Today</h5>
                 </div>
-                <div class="tp-panel-body d-flex align-items-center justify-content-center">
-                    @if (count($paymentMethodLabels) > 0)
-                        <div id="paymentMethodsChart" class="w-100"></div>
-                    @else
-                        <div class="text-center text-muted py-4">
-                            <i class="ti ti-inbox d-block fs-2xl mb-2"></i>
-                            No payments recorded yet today.
+                <div class="tp-panel-body p-0">
+                    @if ($supplierPaymentsToday->isEmpty())
+                        <div class="text-center text-muted py-5">
+                            <i class="ti ti-cash-banknote-off d-block fs-2xl mb-2"></i>
+                            No supplier payments recorded yet today.
                         </div>
+                    @else
+                        <ul class="tp-rank-list">
+                            @foreach ($supplierPaymentsToday as $sp)
+                                <li>
+                                    <div class="tp-rank-body">
+                                        <div class="tp-rank-title">{{ $sp->company_name ?: $sp->name }}</div>
+                                        <div class="tp-rank-sub">{{ $sp->count }} payment{{ $sp->count == 1 ? '' : 's' }}</div>
+                                    </div>
+                                    <div class="tp-rank-amount">₹{{ number_format($sp->amount) }}</div>
+                                </li>
+                            @endforeach
+                        </ul>
                     @endif
                 </div>
             </div>
@@ -225,6 +257,8 @@
         --tp-warning: #d97706;
         --tp-info: #0891b2;
         --tp-danger: #dc2626;
+        --tp-purple: #9333ea;
+        --tp-teal: #0d9488;
         --tp-border: #e2e8f0;
         --tp-text: #1e293b;
         --tp-text-muted: #64748b;
@@ -270,6 +304,9 @@
     .tp-card-primary .tp-card-icon { background: #eff6ff; color: var(--tp-primary); }
     .tp-card-warning .tp-card-icon { background: #fffbeb; color: var(--tp-warning); }
     .tp-card-info    .tp-card-icon { background: #ecfeff; color: var(--tp-info); }
+    .tp-card-purple  .tp-card-icon { background: #f5f3ff; color: var(--tp-purple); }
+    .tp-card-teal    .tp-card-icon { background: #f0fdfa; color: var(--tp-teal); }
+    .text-purple { color: var(--tp-purple) !important; }
     .tp-card-value { font-size: 1.5rem; font-weight: 800; color: var(--tp-text); line-height: 1.15; }
     .tp-card-label { font-size: 0.8125rem; font-weight: 600; color: var(--tp-text); margin-top: 4px; }
     .tp-card-sub { font-size: 0.75rem; color: var(--tp-text-muted); margin-top: 2px; }
@@ -353,21 +390,6 @@
             grid: { borderColor: gridCol, strokeDashArray: 4 },
             tooltip: { y: { formatter: function (v) { return '₹' + new Intl.NumberFormat('en-IN').format(v); } } },
             legend: { position: 'top', horizontalAlign: 'right', labels: { colors: textCol } },
-        }).render();
-    }
-    @endif
-
-    @if($canSales)
-    var pmEl = document.querySelector('#paymentMethodsChart');
-    if (pmEl) {
-        new ApexCharts(pmEl, {
-            series: @json($paymentMethodTotals),
-            labels: @json($paymentMethodLabels),
-            chart: { type: 'donut', height: 220, fontFamily: 'inherit' },
-            colors: ['#0acf97', '#3d7cc9', '#fa5c7c', '#ffbc00', '#39afd1'],
-            dataLabels: { enabled: false },
-            legend: { position: 'bottom', labels: { colors: textCol } },
-            tooltip: { y: { formatter: function (v) { return '₹' + new Intl.NumberFormat('en-IN').format(v); } } },
         }).render();
     }
     @endif

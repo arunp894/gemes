@@ -20,7 +20,13 @@
 
     <div class="toast-container position-fixed top-0 end-0 p-3" id="purchaseToastContainer" style="z-index: 1080;"></div>
 
-    <form id="purchaseForm" novalidate @submit.prevent="submit(false)" :class="{ 'was-validated': wasValidated }">
+    {{-- No 'was-validated' class here on purpose: this form's validation is
+         entirely manual (.is-invalid bindings driven by `errors`), and
+         Bootstrap's was-validated turns on native :valid/:invalid styling
+         for every control including ones with no `required` attribute —
+         which painted a false-positive green checkmark on genuinely
+         optional, still-empty fields (Barcode, S.Price, Notes). --}}
+    <form id="purchaseForm" novalidate @submit.prevent="submit(false)">
 
         <div class="row g-3">
 

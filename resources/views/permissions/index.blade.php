@@ -461,7 +461,7 @@
             processing: true,
             serverSide: true,
             responsive: false,
-            order: [[3, 'asc'], [1, 'asc']],
+            order: [[5, 'desc']], // most recently updated first
             ajax: {
                 url: '{{ route('permissions.data') }}',
                 type: 'GET',

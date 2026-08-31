@@ -197,8 +197,11 @@
                     </div>
 
                     <div class="d-flex justify-content-end align-items-center gap-2 mb-2">
-                        <span class="text-muted small" id="labelSelectedCount">0 selected</span>
-                        <button type="button" class="btn btn-soft-primary btn-sm" id="printLabelsBtn" disabled>
+                        <span class="text-muted small fw-bold" id="labelSelectedCount">
+                            <i class="ti ti-info-circle me-1"></i>Please select the checkbox next to a row to print its label
+                        </span>
+                        <button type="button" class="btn btn-soft-primary btn-sm" id="printLabelsBtn" disabled
+                                title="Please select the checkbox next to at least one row to print its label">
                             <i class="ti ti-tag me-1"></i> Print Labels
                         </button>
                     </div>
@@ -259,6 +262,8 @@
                                             <td class="ps-4 text-muted small">
                                                 <i class="ti ti-corner-down-right me-1"></i>
                                                 Pcs #{{ $ri + 1 }}
+                                                <i class="ti fs-14 ms-1 {{ $row->product?->website_enabled ? 'ti-world text-info' : 'ti-world-off text-muted' }}"
+                                                   title="{{ $row->product?->website_enabled ? 'Listed on website' : 'Not listed on website' }}"></i>
                                                 @if ($row->product)
                                                     <br><code class="fs-xxs">{{ $row->product->sku }}</code>
                                                 @endif
@@ -270,7 +275,9 @@
                                             <td><code class="small">{{ $row->lot_code ?: '—' }}</code></td>
                                             {{-- Rack column hidden --}}
                                             <td class="text-end">{{ number_format((float) $row->price, 2) }}</td>
-                                            <td class="text-end">{{ $row->website_price !== null ? number_format((float) $row->website_price, 2) : '—' }}</td>
+                                            <td class="text-end {{ $row->product?->website_enabled ? 'text-info fw-semibold' : '' }}">
+                                                {{ $row->website_price !== null ? number_format((float) $row->website_price, 2) : '—' }}
+                                            </td>
                                             {{-- Tax and Disc columns hidden --}}
                                             <td class="text-end">{{ number_format($row->net(), 2) }}</td>
                                             <td>
@@ -601,8 +608,15 @@
 
     function refreshLabelUI() {
         const checked = rowChecks().filter(cb => cb.checked);
-        countLabel.textContent = checked.length + ' selected';
         printBtn.disabled = checked.length === 0;
+
+        if (checked.length === 0) {
+            countLabel.innerHTML = '<i class="ti ti-info-circle me-1"></i>Please select the checkbox next to a row to print its label';
+            printBtn.title = 'Please select the checkbox next to at least one row to print its label';
+        } else {
+            countLabel.textContent = checked.length + ' selected';
+            printBtn.title = '';
+        }
     }
 
     if (selectAll) {
