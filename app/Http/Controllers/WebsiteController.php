@@ -37,7 +37,9 @@ class WebsiteController extends Controller
             ->forPosition('home')
             ->ordered()
             ->limit(5)
-            ->get();
+            ->get()
+            ->filter->hasImage()
+            ->values();
 
         // Gemstone categories for "Shop by Collection" strip
         $categories = Category::where('is_gemstone', true)

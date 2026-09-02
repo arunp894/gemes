@@ -19,12 +19,12 @@
 <div class="sg-filter-bar sg-sec-px" style="display:flex;align-items:center;gap:12px;padding:16px 0;background:var(--dark-800);border-bottom:1px solid rgba(214,48,140,.07);flex-wrap:wrap">
   {{-- Category chips --}}
   <a class="sg-chip" href="{{ route('website.collections', array_merge(request()->except('category','page'), ['sort' => $sort])) }}"
-     style="border-radius:20px;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:1px solid rgba(214,48,140,.25);text-decoration:none;transition:all .3s;{{ !$categorySlug ? 'background:rgba(214,48,140,.1);border-color:var(--teal-400);color:var(--teal-300)' : 'color:rgba(36,23,53,.35)' }}">All</a>
+     style="border-radius:20px;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:1px solid rgba(214,48,140,.25);text-decoration:none;transition:all .3s;{{ !$categorySlug ? 'background:rgba(214,48,140,.1);border-color:var(--teal-400);color:var(--teal-300)' : 'color:rgba(36,23,53,.35)' }}">All</a>
 
   @foreach($categories as $cat)
   @php $catCode = strtolower($cat->code); @endphp
   <a class="sg-chip" href="{{ route('website.collections', array_merge(request()->except('category','page'), ['category' => $catCode, 'sort' => $sort])) }}"
-     style="border-radius:20px;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:1px solid rgba(214,48,140,.25);text-decoration:none;transition:all .3s;{{ $categorySlug === $catCode ? 'background:rgba(214,48,140,.1);border-color:var(--teal-400);color:var(--teal-300)' : 'color:rgba(36,23,53,.35)' }}">
+     style="border-radius:20px;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border:1px solid rgba(214,48,140,.25);text-decoration:none;transition:all .3s;{{ $categorySlug === $catCode ? 'background:rgba(214,48,140,.1);border-color:var(--teal-400);color:var(--teal-300)' : 'color:rgba(36,23,53,.35)' }}">
     {{ $cat->name }}
     <span style="opacity:.5;font-size:10px">({{ $cat->products_count }})</span>
   </a>
