@@ -234,6 +234,8 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('product')->middleware('permission:products.edit')->name('toggle-status');
         Route::patch('/{product}/toggle-website', [ProductController::class, 'toggleWebsite'])
             ->whereNumber('product')->middleware('permission:products.toggle-website')->name('toggle-website');
+        Route::patch('/{product}/toggle-featured', [ProductController::class, 'toggleFeatured'])
+            ->whereNumber('product')->middleware('permission:products.toggle-website')->name('toggle-featured');
     });
     Route::resource('products', ProductController::class)->whereNumber('product')
         ->middlewareFor(['index', 'show'], 'permission:products.view')

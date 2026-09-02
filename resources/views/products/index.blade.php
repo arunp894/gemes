@@ -10,6 +10,7 @@
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
             <h4 class="page-main-title m-0">Products</h4>
+            <p class="text-muted fs-xxs mb-0">Showing website-enabled products only.</p>
         </div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
@@ -102,11 +103,8 @@
                                 <span id="bulkCount" class="badge bg-primary ms-1">0</span>
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="bulkActionsBtn">
-                                <li>
-                                    <button class="dropdown-item js-bulk-action" data-action="enable" type="button">
-                                        <i class="ti ti-world me-2 text-success"></i>Enable for Website
-                                    </button>
-                                </li>
+                                {{-- "Enable for Website" removed — every product on this list is
+                                     already website-enabled by definition (see ProductController::data()). --}}
                                 <li>
                                     <button class="dropdown-item js-bulk-action" data-action="disable" type="button">
                                         <i class="ti ti-world-off me-2 text-secondary"></i>Disable for Website
@@ -136,7 +134,6 @@
                                 <th><i class="ti ti-hash me-1"></i>SKU</th>
                                 <th><i class="ti ti-barcode me-1"></i>Primary Barcode</th>
                                 <th><i class="ti ti-toggle-right me-1"></i>Status</th>
-                                <th><i class="ti ti-world me-1"></i>Website</th>
                                 <th><i class="ti ti-calendar-time me-1"></i>Last Modified</th>
                                 <th class="text-center" style="width: 1%;"><i class="ti ti-settings me-1"></i>Actions</th>
                             </tr>
@@ -630,7 +627,6 @@
                 { data: 'sku',             name: 'products.sku' },
                 { data: 'primary_barcode', name: 'primary_barcode',   orderable: false, searchable: false },
                 { data: 'status_badge',    name: 'products.status',   searchable: false },
-                { data: 'website_badge',   name: 'products.website_enabled', searchable: false },
                 { data: 'updated_at',      name: 'products.updated_at' },
                 { data: 'action',          name: 'action',            orderable: false, searchable: false, className: 'text-center' },
             ],
@@ -762,6 +758,29 @@
                     const msg = (xhr.responseJSON && xhr.responseJSON.message)
                         ? xhr.responseJSON.message
                         : 'Failed to update status.';
+                    showToast('error', msg);
+                },
+            });
+        });
+
+        $('#productsTable tbody').on('click', '.js-toggle-featured', function () {
+            const url = $(this).data('url');
+            $.ajax({
+                url: url,
+                type: 'PATCH',
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                success: function (res) {
+                    if (res.success) {
+                        dt.ajax.reload(null, false);
+                        showToast('success', res.message || 'Featured status updated.');
+                    } else {
+                        showToast('error', res.message || 'Failed to update featured status.');
+                    }
+                },
+                error: function (xhr) {
+                    const msg = (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'Failed to update featured status.';
                     showToast('error', msg);
                 },
             });

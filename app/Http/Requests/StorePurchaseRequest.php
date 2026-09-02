@@ -110,12 +110,34 @@ class StorePurchaseRequest extends FormRequest
 
             foreach ($lines as $i => $line) {
                 $categoryId = $line['category_id'] ?? null;
-                if (! $categoryId) {
-                    continue;
+                if ($categoryId && $supplierCategoryIds && ! in_array((int) $categoryId, $supplierCategoryIds, true)) {
+                    $v->errors()->add("lines.{$i}.category_id", 'This category is not mapped to the selected supplier.');
                 }
 
-                if ($supplierCategoryIds && ! in_array((int) $categoryId, $supplierCategoryIds, true)) {
-                    $v->errors()->add("lines.{$i}.category_id", 'This category is not mapped to the selected supplier.');
+                // Website Price is required per row once that row is
+                // listed for sale online — mirrors the exact line->row
+                // fallback PurchaseService::syncLines() uses to resolve
+                // each row's effective website_enabled/website_price, so
+                // this check can never disagree with what actually gets
+                // saved to the Product.
+                $lineWebsiteEnabled = (bool) ($line['website_enabled'] ?? false);
+                $lineWebsitePrice   = $line['website_price'] ?? null;
+
+                foreach (($line['rows'] ?? []) as $j => $row) {
+                    $rowWebsiteEnabled = array_key_exists('website_enabled', $row) && $row['website_enabled'] !== null
+                        ? (bool) $row['website_enabled']
+                        : $lineWebsiteEnabled;
+
+                    $rowWebsitePrice = isset($row['website_price']) && $row['website_price'] !== ''
+                        ? $row['website_price']
+                        : $lineWebsitePrice;
+
+                    if ($rowWebsiteEnabled && (! is_numeric($rowWebsitePrice) || (float) $rowWebsitePrice <= 0)) {
+                        $v->errors()->add(
+                            "lines.{$i}.rows.{$j}.website_price",
+                            'Selling Price is required when this row is enabled for the website.'
+                        );
+                    }
                 }
             }
         });

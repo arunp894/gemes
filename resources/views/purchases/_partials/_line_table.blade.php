@@ -188,7 +188,11 @@
                             </td>
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
-                                       v-model.number="line.rows[0].website_price" placeholder="optional">
+                                       :class="{ 'is-invalid': rowError(li, 0, 'website_price') }"
+                                       :required="line.rows[0].website_enabled"
+                                       v-model.number="line.rows[0].website_price"
+                                       :placeholder="line.rows[0].website_enabled ? 'required' : 'optional'">
+                                <div class="invalid-feedback d-block" v-if="rowError(li, 0, 'website_price')">@{{ rowError(li, 0, 'website_price') }}</div>
                             </td>
                             {{-- Tax % and Disc % inputs hidden --}}
                             <td class="text-end fw-semibold">@{{ formatMoney(rowNet(line.rows[0])) }}</td>
@@ -287,7 +291,11 @@
                             </td>
                             <td>
                                 <input type="number" step="0.01" min="0" class="form-control form-control-sm"
-                                       v-model.number="row.website_price" placeholder="optional">
+                                       :class="{ 'is-invalid': rowError(li, ri, 'website_price') }"
+                                       :required="row.website_enabled"
+                                       v-model.number="row.website_price"
+                                       :placeholder="row.website_enabled ? 'required' : 'optional'">
+                                <div class="invalid-feedback d-block" v-if="rowError(li, ri, 'website_price')">@{{ rowError(li, ri, 'website_price') }}</div>
                             </td>
                             {{-- Tax % and Disc % inputs hidden --}}
                             <td class="text-end small fw-semibold">@{{ formatMoney(rowNet(row)) }}</td>

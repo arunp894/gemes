@@ -35,8 +35,11 @@ class ProductController extends Controller
     {
         $categories = Category::active()->ordered()->get(['id', 'name']);
 
-        // Single aggregate query instead of separate COUNT() round-trips per card.
-        $counts = Product::selectRaw('COUNT(*) as total, SUM(status = 1) as active, SUM(status = 0) as draft')
+        // This listing only ever shows website-enabled products (see
+        // data() below) — the summary cards are scoped the same way so
+        // they describe what's actually in the table beneath them.
+        $counts = Product::where('website_enabled', true)
+            ->selectRaw('COUNT(*) as total, SUM(status = 1) as active, SUM(status = 0) as draft')
             ->first();
 
         $stats = [
@@ -55,7 +58,11 @@ class ProductController extends Controller
      */
     public function data(Request $request): JsonResponse
     {
+        // This listing only ever shows website-enabled products — see
+        // the class-level note on index(). Not a togglable filter: every
+        // row here is already website_enabled = true by definition.
         $query = Product::query()
+            ->where('website_enabled', true)
             ->with(['category', 'primaryBarcode', 'media']);
 
         // Filter: category (direct match).
@@ -66,11 +73,6 @@ class ProductController extends Controller
         // Filter: product status.
         if ($request->filled('status') && in_array($request->input('status'), ['0', '1'], true)) {
             $query->where('status', (int) $request->input('status'));
-        }
-
-        // Filter: website enabled.
-        if ($request->filled('website_enabled') && in_array($request->input('website_enabled'), ['0', '1'], true)) {
-            $query->where('website_enabled', (int) $request->input('website_enabled'));
         }
 
         // Filter: featured products.
@@ -120,14 +122,6 @@ class ProductController extends Controller
                 $class = $product->isActive() ? 'badge-soft-success' : 'badge-soft-warning';
                 return '<span class="badge ' . $class . ' fs-xxs">' . $product->statusLabel() . '</span>';
             })
-            ->addColumn('website_badge', function (Product $product) {
-                $class = $product->isWebsiteEnabled() ? 'badge-soft-info' : 'badge-soft-secondary';
-                $label = $product->websiteVisibilityLabel();
-                $featured = $product->featured_product
-                    ? ' <i class="ti ti-star-filled text-warning" title="Featured"></i>'
-                    : '';
-                return '<span class="badge ' . $class . ' fs-xxs">' . $label . '</span>' . $featured;
-            })
             ->editColumn('updated_at', function (Product $product) {
                 $dt = $product->updated_at;
                 if (! $dt) {
@@ -136,28 +130,42 @@ class ProductController extends Controller
                 return $dt->format('d M, Y') . ' <small class="text-muted">' . $dt->format('h:i A') . '</small>';
             })
             ->addColumn('action', function (Product $product) {
-                $show         = route('products.show', $product);
-                $frontend     = route('website.product', $product);
-                $edit         = route('products.edit', $product);
-                $toggleStatus = route('products.toggle-status', $product);
-                $destroy      = route('products.destroy', $product);
+                $show           = route('products.show', $product);
+                $frontend       = route('website.product', $product);
+                $edit           = route('products.edit', $product);
+                $toggleStatus   = route('products.toggle-status', $product);
+                $toggleFeatured = route('products.toggle-featured', $product);
+                $destroy        = route('products.destroy', $product);
 
                 $statusIcon = $product->isActive() ? 'ti-toggle-right' : 'ti-toggle-left';
+
+                // A draft product isn't actually purchasable/visible on the
+                // live site (Product::isPurchasableOnline() also requires
+                // isActive()), so the link would just lead to a dead page.
+                $frontendLink = $product->isActive()
+                    ? '<a href="' . $frontend . '" class="action-btn action-frontend" target="_blank" rel="noopener" title="View on Website">
+                            <i class="ti ti-world"></i>
+                        </a>'
+                    : '';
+
+                $featuredIcon = $product->featured_product ? 'ti-star-filled text-warning' : 'ti-star';
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
                         <a href="' . $show . '" class="action-btn action-view" title="View">
                             <i class="ti ti-eye"></i>
                         </a>
-                        <a href="' . $frontend . '" class="action-btn action-frontend" target="_blank" rel="noopener" title="View on Website">
-                            <i class="ti ti-world"></i>
-                        </a>
+                        ' . $frontendLink . '
                         <a href="' . $edit . '" class="action-btn action-edit" title="Edit">
                             <i class="ti ti-edit"></i>
                         </a>
                         <button type="button" class="action-btn action-toggle js-toggle-status"
                             data-url="' . $toggleStatus . '" title="Toggle Status">
                             <i class="ti ' . $statusIcon . '"></i>
+                        </button>
+                        <button type="button" class="action-btn action-toggle js-toggle-featured"
+                            data-url="' . $toggleFeatured . '" title="Toggle Featured">
+                            <i class="ti ' . $featuredIcon . '"></i>
                         </button>
                         <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($product->title) . '" title="Delete">
@@ -166,7 +174,7 @@ class ProductController extends Controller
                     </div>
                 ';
             })
-            ->rawColumns(['checkbox', 'title', 'sku', 'primary_barcode', 'status_badge', 'website_badge', 'updated_at', 'action'])
+            ->rawColumns(['checkbox', 'title', 'sku', 'primary_barcode', 'status_badge', 'updated_at', 'action'])
             ->make(true);
     }
 
@@ -353,6 +361,32 @@ class ProductController extends Controller
             'enabled' => (bool) $product->website_enabled,
             'label'   => $product->websiteVisibilityLabel(),
             'message' => 'Website visibility updated.',
+        ]);
+    }
+
+    /**
+     * Toggle featured_product. Only meaningful for website-enabled
+     * products — mirrors the invariant Product::booted() already enforces
+     * (featured_product is force-cleared whenever website_enabled turns
+     * off), so a product reaching this endpoint via a non-website-enabled
+     * path is rejected rather than silently accepted.
+     */
+    public function toggleFeatured(Product $product): JsonResponse
+    {
+        if (! $product->website_enabled) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only website-enabled products can be featured.',
+            ], 422);
+        }
+
+        $product->featured_product = ! $product->featured_product;
+        $product->save();
+
+        return response()->json([
+            'success'  => true,
+            'featured' => (bool) $product->featured_product,
+            'message'  => $product->featured_product ? 'Marked as featured.' : 'Removed from featured.',
         ]);
     }
 
