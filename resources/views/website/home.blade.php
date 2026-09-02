@@ -8,17 +8,33 @@
 {{-- ════════════════════════════════════════
     HERO
 ════════════════════════════════════════ --}}
+@if($heroBanners->isNotEmpty())
+<section class="sg-hero-section sg-hero-slideshow" style="position:relative;overflow:hidden">
+  @foreach($heroBanners as $banner)
+    @if($banner->link_url)
+    <a href="{{ $banner->link_url }}" class="sg-hero-slide {{ $loop->first ? 'active' : '' }}" style="background-image:url('{{ $banner->image_url }}')"></a>
+    @else
+    <div class="sg-hero-slide {{ $loop->first ? 'active' : '' }}" style="background-image:url('{{ $banner->image_url }}')"></div>
+    @endif
+  @endforeach
+
+  @if($heroBanners->count() > 1)
+  <button type="button" class="sg-hero-arrow prev" onclick="sgHeroPrev()" aria-label="Previous slide">‹</button>
+  <button type="button" class="sg-hero-arrow next" onclick="sgHeroNext()" aria-label="Next slide">›</button>
+  <div class="sg-hero-dots">
+    @foreach($heroBanners as $banner)
+      <button type="button" class="sg-hero-dot {{ $loop->first ? 'active' : '' }}" onclick="sgHeroGoto({{ $loop->index }})" aria-label="Go to slide {{ $loop->index + 1 }}"></button>
+    @endforeach
+  </div>
+  @endif
+</section>
+@else
 <section class="sg-hero-section" style="position:relative;display:flex;align-items:center;overflow:hidden">
   {{-- Background --}}
   <div style="position:absolute;inset:0;background:linear-gradient(135deg,#fdf6fb 0%,#f6ecf8 45%,#eef0fb 75%,#fdf6fb 100%)"></div>
 
   {{-- Grid lines --}}
   <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(214,48,140,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(214,48,140,.05) 1px,transparent 1px);background-size:80px 80px"></div>
-
-  {{-- Active hero banner background if exists --}}
-  @if($heroBanners->isNotEmpty() && $heroBanners->first()->image_url)
-  <div style="position:absolute;inset:0;background:url('{{ $heroBanners->first()->image_url }}') center/cover no-repeat;opacity:.18"></div>
-  @endif
 
   {{-- Animated glow orbs --}}
   <div id="heroOrbs" class="sg-hero-decor" style="position:absolute;inset:0;pointer-events:none">
@@ -74,6 +90,7 @@
     </div>
   </div>
 </section>
+@endif
 
 {{-- ════════════════════════════════════════
     MARQUEE STRIP
@@ -243,6 +260,19 @@
 @keyframes sg-spin-rev{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
 .sg-orb{position:absolute}
 
+/* ── Hero banner slideshow ─────────────────────────────────────── */
+.sg-hero-slideshow{background:var(--dark-950)}
+.sg-hero-section.sg-hero-slideshow{min-height:55vh}
+.sg-hero-slide{position:absolute;inset:0;display:block;background-position:center;background-size:cover;background-repeat:no-repeat;opacity:0;transition:opacity 1s ease;text-decoration:none}
+.sg-hero-slide.active{opacity:1;z-index:1}
+.sg-hero-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.75);backdrop-filter:blur(6px);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1;color:#241735;transition:all .3s}
+.sg-hero-arrow:hover{background:#fff;transform:translateY(-50%) scale(1.08)}
+.sg-hero-arrow.prev{left:24px}
+.sg-hero-arrow.next{right:24px}
+.sg-hero-dots{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:3;display:flex;gap:8px}
+.sg-hero-dot{width:8px;height:8px;padding:0;border-radius:50%;border:none;cursor:pointer;background:rgba(255,255,255,.55);transition:all .3s}
+.sg-hero-dot.active{background:#fff;width:22px;border-radius:4px}
+
 /* ── Mobile responsiveness ─────────────────────────────────────── */
 .sg-sec-px{padding-left:60px;padding-right:60px}
 .sg-hero-section{min-height:100vh}
@@ -261,6 +291,8 @@
 }
 @media(max-width:768px){
   .sg-hero-section{min-height:auto}
+  .sg-hero-section.sg-hero-slideshow{min-height:45vh}
+  .sg-hero-arrow{width:36px;height:36px;font-size:16px}
   .sg-hero-decor{display:none}
   .sg-hero-content{padding:96px 24px 56px}
   .sg-hero-title{font-size:52px}
@@ -275,6 +307,7 @@
 }
 @media(max-width:480px){
   .sg-sec-px{padding-left:16px;padding-right:16px}
+  .sg-hero-section.sg-hero-slideshow{min-height:38vh}
   .sg-hero-content{padding:88px 16px 48px}
   .sg-hero-title{font-size:38px}
   .sg-hero-stats{gap:22px;flex-wrap:wrap}
@@ -286,4 +319,35 @@
   .sg-trust-item:last-child{border-bottom:none}
 }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+(function () {
+  var slides = document.querySelectorAll('.sg-hero-slide');
+  var dots   = document.querySelectorAll('.sg-hero-dot');
+  if (slides.length < 2) return;
+
+  var idx = 0, timer;
+
+  function show(n) {
+    slides[idx].classList.remove('active');
+    if (dots[idx]) dots[idx].classList.remove('active');
+    idx = (n + slides.length) % slides.length;
+    slides[idx].classList.add('active');
+    if (dots[idx]) dots[idx].classList.add('active');
+  }
+
+  function resetTimer() {
+    clearInterval(timer);
+    timer = setInterval(function () { show(idx + 1); }, 6000);
+  }
+
+  window.sgHeroNext = function () { show(idx + 1); resetTimer(); };
+  window.sgHeroPrev = function () { show(idx - 1); resetTimer(); };
+  window.sgHeroGoto = function (n) { show(n); resetTimer(); };
+
+  resetTimer();
+})();
+</script>
 @endpush
