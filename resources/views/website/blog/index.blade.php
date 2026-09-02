@@ -7,9 +7,9 @@
 <style>
 .sg-blog-hero{padding:150px 0 50px}
 .sg-blog-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:20px}
-.sg-blog-card{background:var(--dark-800);border:1px solid rgba(0,191,176,.06);border-radius:2px;overflow:hidden;text-decoration:none;color:inherit;display:block;transition:all .3s}
-.sg-blog-card:hover{border-color:rgba(0,191,176,.22);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
-.sg-blog-card-img{aspect-ratio:16/10;background:radial-gradient(circle at 40% 50%,rgba(0,191,176,.18),var(--dark-750));overflow:hidden}
+.sg-blog-card{background:var(--dark-800);border:1px solid rgba(214,48,140,.06);border-radius:2px;overflow:hidden;text-decoration:none;color:inherit;display:block;transition:all .3s}
+.sg-blog-card:hover{border-color:rgba(214,48,140,.22);transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.sg-blog-card-img{aspect-ratio:16/10;background:radial-gradient(circle at 40% 50%,rgba(214,48,140,.18),var(--dark-750));overflow:hidden}
 .sg-blog-card-img img{width:100%;height:100%;object-fit:cover}
 .sg-blog-card-body{padding:22px}
 .sg-blog-date{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal-400);margin-bottom:8px}

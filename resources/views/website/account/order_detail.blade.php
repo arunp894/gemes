@@ -16,7 +16,7 @@
         @php
           $sc = match($sale->status) {
             'completed' => ['bg'=>'rgba(80,200,130,.12)','b'=>'rgba(80,200,130,.25)','c'=>'#7ec87e'],
-            'posted'    => ['bg'=>'rgba(0,191,176,.12)',  'b'=>'rgba(0,191,176,.25)',  'c'=>'var(--teal-300)'],
+            'posted'    => ['bg'=>'rgba(214,48,140,.12)',  'b'=>'rgba(214,48,140,.25)',  'c'=>'var(--teal-300)'],
             default     => ['bg'=>'rgba(200,160,80,.12)','b'=>'rgba(200,160,80,.25)','c'=>'var(--gold-light)'],
           };
         @endphp
@@ -27,12 +27,12 @@
     </div>
 
     {{-- Line items --}}
-    <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;margin-bottom:24px;overflow:hidden">
-      <div style="padding:18px 22px;border-bottom:1px solid rgba(0,191,176,.08)">
+    <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:6px;margin-bottom:24px;overflow:hidden">
+      <div style="padding:18px 22px;border-bottom:1px solid rgba(214,48,140,.08)">
         <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600">Items Ordered</div>
       </div>
       @foreach($sale->lines as $line)
-        <div class="sg-orderdetail-line" style="display:flex;align-items:center;gap:18px;padding:18px 22px;border-top:1px solid rgba(0,191,176,.06);flex-wrap:wrap">
+        <div class="sg-orderdetail-line" style="display:flex;align-items:center;gap:18px;padding:18px 22px;border-top:1px solid rgba(214,48,140,.06);flex-wrap:wrap">
           {{-- Product image --}}
           <div style="width:64px;height:64px;flex-shrink:0;background:var(--dark-750);border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center">
             @if($line->product && $line->product->primary_thumb_url)
@@ -64,18 +64,18 @@
     <div class="sg-orderdetail-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
 
       {{-- Order summary --}}
-      <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:22px">
-        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(0,191,176,.08)">Order Summary</div>
+      <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:6px;padding:22px">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(214,48,140,.08)">Order Summary</div>
         <div style="font-size:13px;color:var(--white-dim)">
           @php $rows = [['Subtotal', $sale->subtotal],['Shipping','0'],['Tax',$sale->tax_total],['Grand Total',$sale->grand_total]]; @endphp
           @foreach($rows as [$label, $val])
-            <div style="display:flex;justify-content:space-between;margin-bottom:10px;{{ $label === 'Grand Total' ? 'padding-top:12px;border-top:1px solid rgba(0,191,176,.1);margin-top:4px;font-weight:500;font-size:15px' : '' }}">
+            <div style="display:flex;justify-content:space-between;margin-bottom:10px;{{ $label === 'Grand Total' ? 'padding-top:12px;border-top:1px solid rgba(214,48,140,.1);margin-top:4px;font-weight:500;font-size:15px' : '' }}">
               <span style="{{ $label === 'Grand Total' ? 'color:var(--white)' : 'color:var(--white-faint)' }}">{{ $label }}</span>
               <span style="{{ $label === 'Grand Total' ? 'font-family:Cormorant Garamond,serif;font-size:20px;font-weight:700;color:var(--teal-300)' : '' }}">{{ $settings->formatPrice($val) }}</span>
             </div>
           @endforeach
         </div>
-        <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(0,191,176,.08);display:flex;align-items:center;justify-content:space-between">
+        <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(214,48,140,.08);display:flex;align-items:center;justify-content:space-between">
           <span style="font-size:12px;color:var(--white-faint)">Payment Status</span>
           @php
             $pc = match($sale->payment_status) {
@@ -91,8 +91,8 @@
       </div>
 
       {{-- Delivery / notes --}}
-      <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:22px">
-        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(0,191,176,.08)">Details</div>
+      <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:6px;padding:22px">
+        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid rgba(214,48,140,.08)">Details</div>
         <div style="font-size:13px;color:var(--white-dim)">
           <div style="margin-bottom:12px">
             <span style="color:var(--white-faint)">Order Date</span><br>
@@ -108,7 +108,7 @@
             @php
               $shc = match($sale->shipping_status) {
                 'delivered'  => ['c'=>'#7ec87e','b'=>'rgba(80,200,130,.25)','bg'=>'rgba(80,200,130,.12)'],
-                'shipped'    => ['c'=>'var(--teal-300)','b'=>'rgba(0,191,176,.25)','bg'=>'rgba(0,191,176,.12)'],
+                'shipped'    => ['c'=>'var(--teal-300)','b'=>'rgba(214,48,140,.25)','bg'=>'rgba(214,48,140,.12)'],
                 'processing' => ['c'=>'var(--gold-light)','b'=>'rgba(200,160,80,.25)','bg'=>'rgba(200,160,80,.12)'],
                 default      => ['c'=>'var(--white-faint)','b'=>'rgba(255,255,255,.15)','bg'=>'rgba(255,255,255,.06)'],
               };

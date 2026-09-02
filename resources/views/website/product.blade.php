@@ -6,15 +6,15 @@
 @section('content')
 
 {{-- BREADCRUMB --}}
-<div class="sg-sec-px" style="display:flex;align-items:center;gap:10px;padding:20px 0;font-size:12px;color:var(--white-faint);border-bottom:1px solid rgba(0,191,176,.06);background:var(--dark-800);flex-wrap:wrap">
+<div class="sg-sec-px" style="display:flex;align-items:center;gap:10px;padding:20px 0;font-size:12px;color:var(--white-faint);border-bottom:1px solid rgba(214,48,140,.06);background:var(--dark-800);flex-wrap:wrap">
   <a href="{{ route('website.home') }}" style="text-decoration:none;color:var(--white-faint);transition:color .3s" onmouseenter="this.style.color='var(--teal-300)'" onmouseleave="this.style.color='var(--white-faint)'">Home</a>
-  <span style="color:rgba(0,191,176,.3)">›</span>
+  <span style="color:rgba(214,48,140,.3)">›</span>
   <a href="{{ route('website.collections') }}" style="text-decoration:none;color:var(--white-faint);transition:color .3s" onmouseenter="this.style.color='var(--teal-300)'" onmouseleave="this.style.color='var(--white-faint)'">Collections</a>
   @if($product->category)
-  <span style="color:rgba(0,191,176,.3)">›</span>
+  <span style="color:rgba(214,48,140,.3)">›</span>
   <a href="{{ route('website.collections', ['category' => strtolower($product->category->code ?? '')]) }}" style="text-decoration:none;color:var(--white-faint);transition:color .3s" onmouseenter="this.style.color='var(--teal-300)'" onmouseleave="this.style.color='var(--white-faint)'">{{ $product->category->name }}</a>
   @endif
-  <span style="color:rgba(0,191,176,.3)">›</span>
+  <span style="color:rgba(214,48,140,.3)">›</span>
   <span style="color:var(--teal-300)">{{ Str::limit($product->title, 50) }}</span>
 </div>
 
@@ -23,19 +23,19 @@
 
   {{-- LEFT: Gallery --}}
   <div style="background:var(--dark-800);position:relative">
-    <div id="mainImgWrap" class="sg-main-img-wrap" style="width:100%;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:radial-gradient(circle at 40% 40%,rgba(0,191,176,.15),rgba(4,14,13,.98))">
+    <div id="mainImgWrap" class="sg-main-img-wrap" style="width:100%;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:radial-gradient(circle at 40% 40%,rgba(214,48,140,.15),rgba(10,7,22,.98))">
       @if($product->primary_image_url)
         <img id="mainImg" src="{{ $product->primary_image_url }}" alt="{{ $product->title }}"
-          style="max-width:90%;max-height:480px;object-fit:contain;transition:all .5s;filter:drop-shadow(0 0 32px rgba(0,191,176,.3))">
+          style="max-width:90%;max-height:480px;object-fit:contain;transition:all .5s;filter:drop-shadow(0 0 32px rgba(214,48,140,.3))">
       @else
-        <div id="mainImg" style="width:200px;height:200px;clip-path:polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient(135deg,rgba(0,220,200,.9),rgba(0,150,140,.7));box-shadow:0 0 80px rgba(0,191,176,.65),inset 0 0 60px rgba(255,255,255,.1);animation:sg-detail-shimmer 3s ease infinite alternate"></div>
+        <div id="mainImg" style="width:200px;height:200px;clip-path:polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient(135deg,rgba(0,220,200,.9),rgba(0,150,140,.7));box-shadow:0 0 80px rgba(214,48,140,.65),inset 0 0 60px rgba(255,255,255,.1);animation:sg-detail-shimmer 3s ease infinite alternate"></div>
       @endif
       @if($product->certificate_number)
-      <div style="position:absolute;top:18px;left:18px;display:flex;align-items:center;gap:7px;background:rgba(4,14,13,.85);border:1px solid rgba(0,191,176,.28);padding:7px 13px;border-radius:2px;font-size:12px;color:var(--teal-300);font-weight:500;backdrop-filter:blur(8px)">
+      <div style="position:absolute;top:18px;left:18px;display:flex;align-items:center;gap:7px;background:rgba(10,7,22,.85);border:1px solid rgba(214,48,140,.28);padding:7px 13px;border-radius:2px;font-size:12px;color:var(--teal-300);font-weight:500;backdrop-filter:blur(8px)">
         <span>✓</span> Certified
       </div>
       @endif
-      <div style="position:absolute;bottom:18px;right:18px;display:flex;align-items:center;gap:7px;background:rgba(4,14,13,.8);border:1px solid rgba(0,191,176,.2);padding:7px 13px;border-radius:20px;font-size:11px;color:var(--teal-400);font-weight:500;letter-spacing:1px">
+      <div style="position:absolute;bottom:18px;right:18px;display:flex;align-items:center;gap:7px;background:rgba(10,7,22,.8);border:1px solid rgba(214,48,140,.2);padding:7px 13px;border-radius:20px;font-size:11px;color:var(--teal-400);font-weight:500;letter-spacing:1px">
         <span style="animation:sg-spin-sm 3s linear infinite;font-size:15px">↻</span> 360° View
       </div>
     </div>
@@ -55,7 +55,7 @@
       @empty
       @foreach(range(0,3) as $i)
       <div style="aspect-ratio:1;background:var(--dark-750);display:flex;align-items:center;justify-content:center;border:2px solid {{ $i===0 ? 'var(--teal-400)' : 'transparent' }}">
-        <div style="width:36px;height:36px;clip-path:polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient({{ $i*30 }}deg,rgba(0,191,176,.6),rgba(0,120,110,.4));opacity:{{ 1 - $i*0.2 }}"></div>
+        <div style="width:36px;height:36px;clip-path:polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient({{ $i*30 }}deg,rgba(214,48,140,.6),rgba(0,120,110,.4));opacity:{{ 1 - $i*0.2 }}"></div>
       </div>
       @endforeach
       @endforelse
@@ -89,8 +89,8 @@
     </div>
 
     {{-- Specs Table --}}
-    <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:4px;margin-bottom:28px;overflow:hidden">
-      <div style="padding:12px 18px;background:rgba(0,191,176,.055);border-bottom:1px solid rgba(0,191,176,.1);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--teal-400)">
+    <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:4px;margin-bottom:28px;overflow:hidden">
+      <div style="padding:12px 18px;background:rgba(214,48,140,.055);border-bottom:1px solid rgba(214,48,140,.1);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--teal-400)">
         Gem Specifications
       </div>
       @php
@@ -108,9 +108,9 @@
       @endphp
       @foreach($specs as $spec)
       @if($spec['value'])
-      <div style="display:grid;grid-template-columns:1fr 1fr;padding:12px 18px;border-bottom:1px solid rgba(0,191,176,.055);transition:background .2s" onmouseenter="this.style.background='rgba(0,191,176,.03)'" onmouseleave="this.style.background=''">
+      <div style="display:grid;grid-template-columns:1fr 1fr;padding:12px 18px;border-bottom:1px solid rgba(214,48,140,.055);transition:background .2s" onmouseenter="this.style.background='rgba(214,48,140,.03)'" onmouseleave="this.style.background=''">
         <span style="font-size:13px;color:var(--white-faint)">{{ $spec['label'] }}</span>
-        <span style="font-size:13px;font-weight:500;{{ $spec['highlight'] ? 'color:var(--teal-300)' : 'color:#f0faf8' }}">{{ $spec['value'] }}</span>
+        <span style="font-size:13px;font-weight:500;{{ $spec['highlight'] ? 'color:var(--teal-300)' : 'color:#241735' }}">{{ $spec['value'] }}</span>
       </div>
       @endif
       @endforeach
@@ -118,8 +118,8 @@
 
     {{-- Stone Description --}}
     @if($product->stone_description)
-    <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:4px;margin-bottom:28px;overflow:hidden">
-      <div style="padding:12px 18px;background:rgba(0,191,176,.055);border-bottom:1px solid rgba(0,191,176,.1);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--teal-400)">
+    <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:4px;margin-bottom:28px;overflow:hidden">
+      <div style="padding:12px 18px;background:rgba(214,48,140,.055);border-bottom:1px solid rgba(214,48,140,.1);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--teal-400)">
         Stone Description
       </div>
       <div style="padding:16px 18px;font-size:13px;line-height:1.8;color:var(--white-dim)">
@@ -131,13 +131,13 @@
     {{-- Cert Badges --}}
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:28px">
       @if($product->certificate_number)
-      <div style="display:flex;align-items:center;gap:7px;border:1px solid rgba(0,191,176,.22);background:rgba(0,191,176,.05);padding:8px 14px;border-radius:2px;font-size:12px;color:var(--teal-300);font-weight:500">✓ Certified</div>
+      <div style="display:flex;align-items:center;gap:7px;border:1px solid rgba(214,48,140,.22);background:rgba(214,48,140,.05);padding:8px 14px;border-radius:2px;font-size:12px;color:var(--teal-300);font-weight:500">✓ Certified</div>
       @endif
       @if($product->treatment === 'None' || $product->treatment === null)
-      <div style="display:flex;align-items:center;gap:7px;border:1px solid rgba(0,191,176,.22);background:rgba(0,191,176,.05);padding:8px 14px;border-radius:2px;font-size:12px;color:var(--teal-300);font-weight:500">✦ Unheated</div>
+      <div style="display:flex;align-items:center;gap:7px;border:1px solid rgba(214,48,140,.22);background:rgba(214,48,140,.05);padding:8px 14px;border-radius:2px;font-size:12px;color:var(--teal-300);font-weight:500">✦ Unheated</div>
       @endif
-      <div style="display:flex;align-items:center;gap:7px;border:1px solid rgba(0,191,176,.22);background:rgba(0,191,176,.05);padding:8px 14px;border-radius:2px;font-size:12px;color:var(--teal-300);font-weight:500">🌿 Ethically Sourced</div>
-      <div style="display:flex;align-items:center;gap:7px;border:1px solid rgba(0,191,176,.22);background:rgba(0,191,176,.05);padding:8px 14px;border-radius:2px;font-size:12px;color:var(--teal-300);font-weight:500">📦 Insured Shipping</div>
+      <div style="display:flex;align-items:center;gap:7px;border:1px solid rgba(214,48,140,.22);background:rgba(214,48,140,.05);padding:8px 14px;border-radius:2px;font-size:12px;color:var(--teal-300);font-weight:500">🌿 Ethically Sourced</div>
+      <div style="display:flex;align-items:center;gap:7px;border:1px solid rgba(214,48,140,.22);background:rgba(214,48,140,.05);padding:8px 14px;border-radius:2px;font-size:12px;color:var(--teal-300);font-weight:500">📦 Insured Shipping</div>
     </div>
 
     {{-- CTA --}}
@@ -151,8 +151,8 @@
         </button>
         @if($settings->bool('checkout_enabled', true))
         <a href="{{ route('website.checkout.index') }}"
-          style="padding:16px 20px;background:transparent;border:1px solid rgba(0,191,176,.3);color:var(--teal-300);font-family:'Jost',sans-serif;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;border-radius:2px;text-decoration:none;display:inline-flex;align-items:center;transition:all .3s"
-          onmouseenter="this.style.background='rgba(0,191,176,.08)';this.style.borderColor='var(--teal-400)'" onmouseleave="this.style.background='';this.style.borderColor='rgba(0,191,176,.3)'">
+          style="padding:16px 20px;background:transparent;border:1px solid rgba(214,48,140,.3);color:var(--teal-300);font-family:'Jost',sans-serif;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;border-radius:2px;text-decoration:none;display:inline-flex;align-items:center;transition:all .3s"
+          onmouseenter="this.style.background='rgba(214,48,140,.08)';this.style.borderColor='var(--teal-400)'" onmouseleave="this.style.background='';this.style.borderColor='rgba(214,48,140,.3)'">
           Checkout
         </a>
         @endif
@@ -164,12 +164,12 @@
         </button>
       @endif
       <button title="Save to wishlist" class="sg-wishlist-btn"
-        style="background:transparent;border:1px solid rgba(0,191,176,.3);color:var(--teal-300);font-size:20px;cursor:pointer;border-radius:2px;transition:all .3s"
-        onmouseenter="this.style.background='rgba(0,191,176,.08)';this.style.borderColor='var(--teal-400)'" onmouseleave="this.style.background='';this.style.borderColor='rgba(0,191,176,.3)'">♡</button>
+        style="background:transparent;border:1px solid rgba(214,48,140,.3);color:var(--teal-300);font-size:20px;cursor:pointer;border-radius:2px;transition:all .3s"
+        onmouseenter="this.style.background='rgba(214,48,140,.08)';this.style.borderColor='var(--teal-400)'" onmouseleave="this.style.background='';this.style.borderColor='rgba(214,48,140,.3)'">♡</button>
     </div>
 
     {{-- Tabs --}}
-    <div style="display:flex;gap:0;border-bottom:1px solid rgba(0,191,176,.14);margin-bottom:20px">
+    <div style="display:flex;gap:0;border-bottom:1px solid rgba(214,48,140,.14);margin-bottom:20px">
       @foreach(['story' => 'Story', 'shipping' => 'Shipping', 'returns' => 'Returns'] as $key => $label)
       <button onclick="switchTab('{{ $key }}', this)"
         id="tab-btn-{{ $key }}" class="sg-tab-btn"
@@ -214,8 +214,8 @@
 @push('head_styles')
 <style>
 @keyframes sg-detail-shimmer {
-  from { box-shadow: 0 0 60px rgba(0,191,176,.6), inset 0 0 40px rgba(255,255,255,.1); }
-  to   { box-shadow: 0 0 100px rgba(0,191,176,.9), inset 0 0 60px rgba(255,255,255,.2); }
+  from { box-shadow: 0 0 60px rgba(214,48,140,.6), inset 0 0 40px rgba(255,255,255,.1); }
+  to   { box-shadow: 0 0 100px rgba(214,48,140,.9), inset 0 0 60px rgba(255,255,255,.2); }
 }
 @keyframes sg-spin-sm {
   from { display:inline-block; transform: rotate(0deg); }

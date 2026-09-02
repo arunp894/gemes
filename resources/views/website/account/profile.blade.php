@@ -5,8 +5,8 @@
 @section('content')
 
 {{-- Hero band --}}
-<div style="height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--dark-900),var(--dark-750));border-bottom:1px solid rgba(0,191,176,.1);position:relative;overflow:hidden">
-  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(0,191,176,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,191,176,.025) 1px,transparent 1px);background-size:60px 60px"></div>
+<div style="height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--dark-900),var(--dark-750));border-bottom:1px solid rgba(214,48,140,.1);position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(214,48,140,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(214,48,140,.025) 1px,transparent 1px);background-size:60px 60px"></div>
   <div style="position:relative;z-index:1;text-align:center">
     <div class="sg-eyebrow" style="margin-bottom:6px">My Account</div>
     <h1 class="sg-acct-hero-title" style="font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:700">{{ $customer->name }}</h1>
@@ -19,13 +19,13 @@
 
     {{-- Sidebar nav --}}
     <div>
-      <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;overflow:hidden">
-        <div style="padding:20px 22px;border-bottom:1px solid rgba(0,191,176,.08)">
+      <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:6px;overflow:hidden">
+        <div style="padding:20px 22px;border-bottom:1px solid rgba(214,48,140,.08)">
           <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;color:var(--white)">{{ $customer->name }}</div>
           <div style="font-size:12px;color:var(--teal-300);margin-top:2px">{{ $customer->email }}</div>
           @if($customer->customer_type)
             <div style="margin-top:8px">
-              <span style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:3px 9px;background:rgba(0,191,176,.1);border:1px solid rgba(0,191,176,.2);border-radius:2px;color:var(--teal-300)">
+              <span style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:3px 9px;background:rgba(214,48,140,.1);border:1px solid rgba(214,48,140,.2);border-radius:2px;color:var(--teal-300)">
                 {{ $customer->typeLabel() }}
               </span>
             </div>
@@ -43,13 +43,13 @@
           @foreach($navItems as $item)
             @php $isActive = request()->routeIs($item['route']); @endphp
             <a href="{{ route($item['route']) }}"
-               style="display:flex;align-items:center;gap:12px;padding:12px 22px;font-size:13px;font-weight:{{ $isActive ? '500' : '400' }};color:{{ $isActive ? 'var(--teal-300)' : 'var(--white-dim)' }};text-decoration:none;background:{{ $isActive ? 'rgba(0,191,176,.07)' : 'transparent' }};border-left:2px solid {{ $isActive ? 'var(--teal-400)' : 'transparent' }};transition:all .2s">
+               style="display:flex;align-items:center;gap:12px;padding:12px 22px;font-size:13px;font-weight:{{ $isActive ? '500' : '400' }};color:{{ $isActive ? 'var(--teal-300)' : 'var(--white-dim)' }};text-decoration:none;background:{{ $isActive ? 'rgba(214,48,140,.07)' : 'transparent' }};border-left:2px solid {{ $isActive ? 'var(--teal-400)' : 'transparent' }};transition:all .2s">
               <span style="font-size:15px;opacity:.7">{{ $item['icon'] }}</span>
               {{ $item['label'] }}
             </a>
           @endforeach
         </nav>
-        <div style="padding:16px 22px;border-top:1px solid rgba(0,191,176,.08)">
+        <div style="padding:16px 22px;border-top:1px solid rgba(214,48,140,.08)">
           <form method="POST" action="{{ route('website.auth.logout') }}">
             @csrf
             <button type="submit" style="background:none;border:none;cursor:pointer;font-size:13px;color:rgba(220,80,80,.7);padding:0;font-family:'Jost',sans-serif;transition:color .2s" onmouseover="this.style.color='#e07070'" onmouseout="this.style.color='rgba(220,80,80,.7)'">
@@ -74,23 +74,23 @@
           $totalSpent  = $customer->sales()->where('status','!=','cancelled')->sum('grand_total');
           $lastOrder   = $customer->sales()->orderByDesc('created_at')->first();
         @endphp
-        <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:20px 22px">
+        <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:6px;padding:20px 22px">
           <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-faint);margin-bottom:6px">Total Orders</div>
           <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:700;color:var(--teal-300)">{{ $totalOrders }}</div>
         </div>
-        <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:20px 22px">
+        <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:6px;padding:20px 22px">
           <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-faint);margin-bottom:6px">Total Spent</div>
           <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:700;color:var(--teal-300)">{{ $settings->formatPrice($totalSpent) }}</div>
         </div>
-        <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:20px 22px">
+        <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:6px;padding:20px 22px">
           <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-faint);margin-bottom:6px">Member Since</div>
           <div style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--teal-300)">{{ $customer->created_at->format('M Y') }}</div>
         </div>
       </div>
 
       {{-- Recent orders --}}
-      <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid rgba(0,191,176,.08)">
+      <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:6px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid rgba(214,48,140,.08)">
           <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600">Recent Orders</div>
           <a href="{{ route('website.account.orders') }}" style="font-size:12px;color:var(--teal-300);text-decoration:none;letter-spacing:1px;text-transform:uppercase">View all →</a>
         </div>
@@ -114,7 +114,7 @@
             </thead>
             <tbody>
               @foreach($recentOrders as $order)
-                <tr style="border-top:1px solid rgba(0,191,176,.06);transition:background .2s" onmouseover="this.style.background='rgba(0,191,176,.04)'" onmouseout="this.style.background='transparent'">
+                <tr style="border-top:1px solid rgba(214,48,140,.06);transition:background .2s" onmouseover="this.style.background='rgba(214,48,140,.04)'" onmouseout="this.style.background='transparent'">
                   <td style="padding:14px 22px">
                     <a href="{{ route('website.account.order-detail', $order->id) }}" style="color:var(--teal-300);text-decoration:none;font-size:13px;font-weight:500">{{ $order->sale_number }}</a>
                   </td>
@@ -123,9 +123,9 @@
                   <td style="padding:14px 22px;text-align:right;font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:var(--teal-300)">{{ $settings->formatPrice($order->grand_total) }}</td>
                   <td style="padding:14px 22px;text-align:center">
                     <span style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border-radius:2px;
-                      background:{{ $order->status === 'completed' ? 'rgba(80,200,130,.12)' : ($order->status === 'posted' ? 'rgba(0,191,176,.12)' : 'rgba(200,160,80,.12)') }};
+                      background:{{ $order->status === 'completed' ? 'rgba(80,200,130,.12)' : ($order->status === 'posted' ? 'rgba(214,48,140,.12)' : 'rgba(200,160,80,.12)') }};
                       color:{{ $order->status === 'completed' ? '#7ec87e' : ($order->status === 'posted' ? 'var(--teal-300)' : 'var(--gold-light)') }};
-                      border:1px solid {{ $order->status === 'completed' ? 'rgba(80,200,130,.25)' : ($order->status === 'posted' ? 'rgba(0,191,176,.25)' : 'rgba(200,160,80,.25)') }}">
+                      border:1px solid {{ $order->status === 'completed' ? 'rgba(80,200,130,.25)' : ($order->status === 'posted' ? 'rgba(214,48,140,.25)' : 'rgba(200,160,80,.25)') }}">
                       {{ $order->statusLabel() }}
                     </span>
                   </td>
@@ -138,7 +138,7 @@
       </div>
 
       {{-- Contact info --}}
-      <div style="margin-top:24px;background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:22px">
+      <div style="margin-top:24px;background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:6px;padding:22px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
           <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600">Contact Details</div>
           <a href="{{ route('website.account.edit') }}" style="font-size:12px;color:var(--teal-300);text-decoration:none;letter-spacing:1px;text-transform:uppercase">Edit →</a>

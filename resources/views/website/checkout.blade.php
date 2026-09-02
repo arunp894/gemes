@@ -6,8 +6,8 @@
 @section('content')
 
 {{-- HERO BAND --}}
-<div class="sg-checkout-hero" style="height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--dark-900),var(--dark-750));border-bottom:1px solid rgba(0,191,176,.1);text-align:center;position:relative;overflow:hidden">
-  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(0,191,176,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,191,176,.025) 1px,transparent 1px);background-size:60px 60px"></div>
+<div class="sg-checkout-hero" style="height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--dark-900),var(--dark-750));border-bottom:1px solid rgba(214,48,140,.1);text-align:center;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(214,48,140,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(214,48,140,.025) 1px,transparent 1px);background-size:60px 60px"></div>
   <div style="position:relative;z-index:1">
     <div class="sg-eyebrow" style="text-align:center;margin-bottom:8px">Secure Payment</div>
     <h1 class="sg-checkout-hero-title" style="font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:700">Check<em style="color:var(--teal-300);font-style:italic">out</em></h1>
@@ -30,7 +30,7 @@
 
       {{-- Customer info card --}}
       @if(isset($customer))
-      <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between">
+      <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.12);border-radius:4px;padding:20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between">
         <div style="display:flex;align-items:center;gap:14px">
           <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--teal-600),var(--teal-800));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👤</div>
           <div>
@@ -47,9 +47,9 @@
         <div id="paypalMsg" style="display:none;padding:16px;border-radius:4px;margin-bottom:20px;font-size:14px"></div>
 
         {{-- PayPal button container --}}
-        <div style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:28px">
+        <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.12);border-radius:4px;padding:28px">
           <div style="font-size:13px;color:var(--white-faint);margin-bottom:18px;display:flex;align-items:center;gap:8px">
-            <span style="width:20px;height:20px;border-radius:50%;background:rgba(0,191,176,.12);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--teal-300)">🔒</span>
+            <span style="width:20px;height:20px;border-radius:50%;background:rgba(214,48,140,.12);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--teal-300)">🔒</span>
             Your payment is securely processed by PayPal. We never store your card details.
           </div>
 
@@ -68,7 +68,7 @@
         </div>
 
       @else
-        <div style="padding:24px;background:rgba(0,191,176,.06);border:1px solid rgba(0,191,176,.15);border-radius:4px">
+        <div style="padding:24px;background:rgba(214,48,140,.06);border:1px solid rgba(214,48,140,.15);border-radius:4px">
           <p style="font-size:15px;color:var(--white-dim);margin-bottom:16px">
             Online payment is not yet enabled. Please contact us to complete your purchase.
           </p>
@@ -97,13 +97,13 @@
     </div>
 
     {{-- RIGHT: Order Summary --}}
-    <div class="sg-checkout-summary" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:28px;position:sticky;top:80px">
+    <div class="sg-checkout-summary" style="background:var(--dark-800);border:1px solid rgba(214,48,140,.12);border-radius:4px;padding:28px;position:sticky;top:80px">
       <h4 style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:20px">Order Summary</h4>
 
       {{-- Items --}}
       <div style="max-height:320px;overflow-y:auto;margin-bottom:16px;padding-right:4px">
         @foreach($cart as $item)
-        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(0,191,176,.06)">
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(214,48,140,.06)">
           <div style="width:44px;height:44px;flex-shrink:0;border-radius:2px;overflow:hidden;background:var(--dark-750)">
             @if($item['thumb'])
               <img src="{{ $item['thumb'] }}" alt="" style="width:100%;height:100%;object-fit:cover">
@@ -131,7 +131,7 @@
       <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--white-faint);margin-bottom:16px">
         <span>Shipping</span><span style="color:var(--teal-300)">Calculated</span>
       </div>
-      <div style="height:1px;background:rgba(0,191,176,.1);margin-bottom:16px"></div>
+      <div style="height:1px;background:rgba(214,48,140,.1);margin-bottom:16px"></div>
       <div style="display:flex;justify-content:space-between;margin-bottom:20px">
         <span style="font-size:15px;font-weight:500">Total</span>
         <span style="font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:700;color:var(--teal-300)">
