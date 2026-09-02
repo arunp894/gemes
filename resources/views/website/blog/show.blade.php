@@ -16,7 +16,7 @@
 .sg-post-body a{color:var(--teal-300)}
 .sg-post-body h2,.sg-post-body h3{font-family:'Cormorant Garamond',serif;color:var(--white);margin:1.4em 0 .6em;scroll-margin-top:88px}
 .sg-post-back{display:inline-block;margin-bottom:24px}
-.sg-post-toc{max-width:820px;margin:0 auto 40px;background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:20px 24px}
+.sg-post-toc{max-width:820px;margin:0 auto 40px;background:var(--dark-800);border:1px solid rgba(214,48,140,.12);border-radius:4px;padding:20px 24px}
 .sg-post-toc-title{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--teal-400);margin-bottom:12px}
 .sg-post-toc ol{list-style:none;margin:0;padding:0;counter-reset:toc}
 .sg-post-toc li{counter-increment:toc;margin-bottom:8px}
@@ -81,8 +81,8 @@
             <div class="sg-eyebrow sg-reveal">Keep Reading</div>
             <div class="sg-related-grid">
                 @foreach ($relatedPosts as $post)
-                    <a href="{{ route('website.blog.show', $post) }}" class="sg-blog-card sg-reveal" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.06);border-radius:2px;overflow:hidden;text-decoration:none;color:inherit;display:block">
-                        <div style="aspect-ratio:16/10;background:radial-gradient(circle at 40% 50%,rgba(0,191,176,.18),var(--dark-750));overflow:hidden">
+                    <a href="{{ route('website.blog.show', $post) }}" class="sg-blog-card sg-reveal" style="background:var(--dark-800);border:1px solid rgba(214,48,140,.06);border-radius:2px;overflow:hidden;text-decoration:none;color:inherit;display:block">
+                        <div style="aspect-ratio:16/10;background:radial-gradient(circle at 40% 50%,rgba(214,48,140,.18),var(--dark-750));overflow:hidden">
                             @if ($post->image_thumb_url)
                                 <img src="{{ $post->image_thumb_url }}" alt="{{ $post->title }}" style="width:100%;height:100%;object-fit:cover">
                             @endif

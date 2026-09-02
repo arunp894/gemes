@@ -10,10 +10,10 @@
 ════════════════════════════════════════ --}}
 <section class="sg-hero-section" style="position:relative;display:flex;align-items:center;overflow:hidden">
   {{-- Background --}}
-  <div style="position:absolute;inset:0;background:linear-gradient(135deg,#040e0d 0%,#071a14 45%,#0a2020 75%,#050f0c 100%)"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(135deg,#fdf6fb 0%,#f6ecf8 45%,#eef0fb 75%,#fdf6fb 100%)"></div>
 
   {{-- Grid lines --}}
-  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(0,191,176,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(0,191,176,.035) 1px,transparent 1px);background-size:80px 80px"></div>
+  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(214,48,140,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(214,48,140,.05) 1px,transparent 1px);background-size:80px 80px"></div>
 
   {{-- Active hero banner background if exists --}}
   @if($heroBanners->isNotEmpty() && $heroBanners->first()->image_url)
@@ -22,17 +22,17 @@
 
   {{-- Animated glow orbs --}}
   <div id="heroOrbs" class="sg-hero-decor" style="position:absolute;inset:0;pointer-events:none">
-    <div class="sg-orb" style="width:500px;height:500px;right:4%;top:50%;transform:translateY(-50%);border-radius:50%;background:radial-gradient(circle at 35% 40%,rgba(0,191,176,.16),transparent 70%)"></div>
-    <div class="sg-orb" style="width:360px;height:360px;right:8%;top:50%;transform:translateY(-50%);border:1px solid rgba(0,191,176,.12);border-radius:50%"></div>
-    <div class="sg-orb" style="width:220px;height:220px;right:14%;top:50%;transform:translateY(-50%);border:1px solid rgba(0,191,176,.22);border-radius:50%"></div>
+    <div class="sg-orb" style="width:500px;height:500px;right:4%;top:50%;transform:translateY(-50%);border-radius:50%;background:radial-gradient(circle at 35% 40%,rgba(214,48,140,.16),transparent 70%)"></div>
+    <div class="sg-orb" style="width:360px;height:360px;right:8%;top:50%;transform:translateY(-50%);border:1px solid rgba(214,48,140,.12);border-radius:50%"></div>
+    <div class="sg-orb" style="width:220px;height:220px;right:14%;top:50%;transform:translateY(-50%);border:1px solid rgba(214,48,140,.22);border-radius:50%"></div>
   </div>
 
   {{-- Animated hex gem --}}
   <div class="sg-hero-decor" style="position:absolute;right:10%;top:50%;transform:translateY(-50%);width:200px;height:200px;pointer-events:none">
-    <div id="heroGem" style="width:200px;height:200px;clip-path:polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient(135deg,rgba(0,220,200,.88),rgba(0,150,140,.7));box-shadow:0 0 80px rgba(0,191,176,.6),inset 0 0 60px rgba(255,255,255,.1);animation:sg-spin 14s linear infinite"></div>
+    <div id="heroGem" style="width:200px;height:200px;clip-path:polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient(135deg,rgba(0,120,190,.85),rgba(70,30,140,.75));box-shadow:0 0 80px rgba(214,48,140,.55),inset 0 0 60px rgba(255,255,255,.1);animation:sg-spin 14s linear infinite"></div>
   </div>
   <div class="sg-hero-decor" style="position:absolute;right:12%;top:50%;transform:translateY(-50%);width:110px;height:110px;pointer-events:none;margin-top:-45px;margin-right:-45px">
-    <div style="width:110px;height:110px;clip-path:polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient(135deg,rgba(0,240,220,.7),rgba(0,191,176,.5));animation:sg-spin-rev 9s linear infinite"></div>
+    <div style="width:110px;height:110px;clip-path:polygon(50% 0%,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient(135deg,rgba(230,50,130,.75),rgba(70,30,140,.55));animation:sg-spin-rev 9s linear infinite"></div>
   </div>
 
   {{-- Content --}}
@@ -58,7 +58,7 @@
     </div>
 
     {{-- Stats from live DB --}}
-    <div class="sg-hero-stats" style="display:flex;padding-top:28px;border-top:1px solid rgba(0,191,176,.12)">
+    <div class="sg-hero-stats" style="display:flex;padding-top:28px;border-top:1px solid rgba(214,48,140,.12)">
       <div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;color:var(--teal-300);line-height:1" id="stat-gems">{{ $totalGems }}</div>
         <div style="font-size:11px;color:var(--white-faint);text-transform:uppercase;letter-spacing:1px;margin-top:4px">Live Gems</div>
@@ -78,7 +78,7 @@
 {{-- ════════════════════════════════════════
     MARQUEE STRIP
 ════════════════════════════════════════ --}}
-<div style="background:var(--teal-700);padding:12px 0;overflow:hidden;border-top:1px solid rgba(0,191,176,.2);border-bottom:1px solid rgba(0,191,176,.2)">
+<div style="background:var(--teal-700);padding:12px 0;overflow:hidden;border-top:1px solid rgba(214,48,140,.2);border-bottom:1px solid rgba(214,48,140,.2)">
   <div class="sg-marquee-track">
     @php $items = ['Paraiba Tourmaline','Blue Tanzanite','GIA Certified','Natural Zircon','Unheated Gems','Free Insured Shipping','Ethically Sourced','Fine Quality Gems']; @endphp
     @foreach(array_merge($items,$items) as $item)
@@ -92,14 +92,14 @@
 {{-- ════════════════════════════════════════
     VALUES
 ════════════════════════════════════════ --}}
-<div class="sg-reveal sg-values-grid" style="background:var(--dark-800);border-bottom:1px solid rgba(0,191,176,.07)">
+<div class="sg-reveal sg-values-grid" style="background:var(--dark-800);border-bottom:1px solid rgba(214,48,140,.07)">
   @foreach([
     ['icon'=>'♡','title'=>'Crafted With Care','desc'=>'Every gem tells a story, we are here to share yours with the world.'],
     ['icon'=>'✦','title'=>'Beauty With Integrity','desc'=>'Ethically sourced gemstones, crafted with care for people and planet.'],
     ['icon'=>'☆','title'=>'Built On Trust','desc'=>'We hand-select every stone to ensure authenticity, elegance, and meaning.'],
   ] as $v)
-  <div class="sg-value-item" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;transition:background .3s" onmouseenter="this.style.background='rgba(0,191,176,.03)'" onmouseleave="this.style.background=''">
-    <div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:50%;border:1px solid rgba(0,191,176,.22);color:var(--teal-300)">{{ $v['icon'] }}</div>
+  <div class="sg-value-item" style="display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;transition:background .3s" onmouseenter="this.style.background='rgba(214,48,140,.03)'" onmouseleave="this.style.background=''">
+    <div style="width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:22px;border-radius:50%;border:1px solid rgba(214,48,140,.22);color:var(--teal-300)">{{ $v['icon'] }}</div>
     <div style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;text-transform:uppercase;letter-spacing:2px">{{ $v['title'] }}</div>
     <div style="font-size:14px;line-height:1.8;color:var(--white-faint);max-width:260px">{{ $v['desc'] }}</div>
   </div>
@@ -121,14 +121,14 @@
   <div class="sg-reveal sg-collections-grid" style="display:grid;grid-template-columns:repeat({{ min($categories->count(), 5) }},1fr);gap:16px">
     @foreach($categories as $cat)
     @php
-      $gemColors = ['#00c4c0','#7080e0','#50c87a','#c9a84c','#e07070','#e08050'];
+      $gemColors = ['#0078be','#e63282','#7a2f9c','#c9a84c','#fa6e82','#321e8c'];
       $gc = $gemColors[$loop->index % count($gemColors)];
     @endphp
     <a href="{{ route('website.collections', ['category' => strtolower($cat->code)]) }}"
-       style="position:relative;overflow:hidden;border-radius:4px;cursor:pointer;border:1px solid rgba(0,191,176,.1);transition:all .4s;aspect-ratio:3/4;display:flex;flex-direction:column;justify-content:flex-end;text-decoration:none;background:radial-gradient(circle at 40% 40%,{{ $gc }}44,rgba(4,14,13,.95))"
-       onmouseenter="this.style.borderColor='rgba(0,191,176,.4)';this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,0,0,.4)'"
-       onmouseleave="this.style.borderColor='rgba(0,191,176,.1)';this.style.transform='';this.style.boxShadow=''">
-      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(4,14,13,.92) 0%,rgba(4,14,13,.25) 50%,transparent 100%)"></div>
+       style="position:relative;overflow:hidden;border-radius:4px;cursor:pointer;border:1px solid rgba(214,48,140,.1);transition:all .4s;aspect-ratio:3/4;display:flex;flex-direction:column;justify-content:flex-end;text-decoration:none;background:radial-gradient(circle at 40% 40%,{{ $gc }}44,rgba(10,7,22,.95))"
+       onmouseenter="this.style.borderColor='rgba(214,48,140,.4)';this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,0,0,.4)'"
+       onmouseleave="this.style.borderColor='rgba(214,48,140,.1)';this.style.transform='';this.style.boxShadow=''">
+      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,7,22,.92) 0%,rgba(10,7,22,.25) 50%,transparent 100%)"></div>
       <div style="position:relative;z-index:2;padding:18px">
         <div style="width:10px;height:10px;border-radius:50%;background:{{ $gc }};box-shadow:0 0 10px {{ $gc }};margin-bottom:8px"></div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:#f0faf8;margin-bottom:3px">{{ $cat->name }}</div>
@@ -192,7 +192,7 @@
 {{-- ════════════════════════════════════════
     TRUST BADGES
 ════════════════════════════════════════ --}}
-<div style="background:linear-gradient(90deg,var(--dark-750),var(--dark-700),var(--dark-750));border-top:1px solid rgba(0,191,176,.14);border-bottom:1px solid rgba(0,191,176,.14)" class="sg-reveal">
+<div style="background:linear-gradient(90deg,var(--dark-750),var(--dark-700),var(--dark-750));border-top:1px solid rgba(214,48,140,.14);border-bottom:1px solid rgba(214,48,140,.14)" class="sg-reveal">
   <div class="sg-trust-grid">
     @foreach([
       ['icon'=>'🏆','title'=>'GIA Certified','desc'=>'Full gem lab certification on all stones'],
@@ -200,7 +200,7 @@
       ['icon'=>'📦','title'=>'Secure Delivery','desc'=>'Fully insured worldwide shipping'],
       ['icon'=>'💎','title'=>'Expert Appraisal','desc'=>'5+ years of gemological expertise'],
     ] as $t)
-    <div class="sg-trust-item" style="display:flex;align-items:center;gap:18px;transition:background .3s" onmouseenter="this.style.background='rgba(0,191,176,.03)'" onmouseleave="this.style.background=''">
+    <div class="sg-trust-item" style="display:flex;align-items:center;gap:18px;transition:background .3s" onmouseenter="this.style.background='rgba(214,48,140,.03)'" onmouseleave="this.style.background=''">
       <div style="font-size:26px;flex-shrink:0">{{ $t['icon'] }}</div>
       <div>
         <div style="font-size:15px;font-weight:500;margin-bottom:3px">{{ $t['title'] }}</div>
@@ -214,13 +214,13 @@
 {{-- ════════════════════════════════════════
     NEWSLETTER
 ════════════════════════════════════════ --}}
-<section class="sg-reveal sg-sec-px" style="padding:72px 0;background:linear-gradient(135deg,var(--dark-750),var(--dark-800));border-bottom:1px solid rgba(0,191,176,.08)">
+<section class="sg-reveal sg-sec-px" style="padding:72px 0;background:linear-gradient(135deg,var(--dark-750),var(--dark-800));border-bottom:1px solid rgba(214,48,140,.08)">
   <div style="max-width:640px;margin:0 auto;text-align:center">
     <div class="sg-eyebrow" style="text-align:center;margin-bottom:10px">Stay Updated</div>
     <h2 class="sg-section-title" style="margin-bottom:10px">Newsletter</h2>
     <p style="font-size:15px;color:var(--white-dim);margin-bottom:28px">New arrivals, rare finds, trade fair dates — delivered to your inbox.</p>
-    <div style="display:flex;max-width:420px;margin:0 auto;border:1px solid rgba(0,191,176,.28);border-radius:2px;overflow:hidden">
-      <input style="flex:1;background:rgba(7,20,16,.8);border:none;color:#f0faf8;font-family:'Jost',sans-serif;font-size:14px;padding:14px 18px;outline:none" type="email" placeholder="your@email.com">
+    <div style="display:flex;max-width:420px;margin:0 auto;border:1px solid rgba(214,48,140,.28);border-radius:2px;overflow:hidden">
+      <input style="flex:1;background:rgba(36,23,53,.05);border:none;color:#241735;font-family:'Jost',sans-serif;font-size:14px;padding:14px 18px;outline:none" type="email" placeholder="your@email.com">
       <button style="background:var(--teal-500);color:#fff;border:none;cursor:pointer;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;letter-spacing:2px;text-transform:uppercase;padding:14px 22px;transition:background .3s" onmouseenter="this.style.background='var(--teal-400)'" onmouseleave="this.style.background='var(--teal-500)'">→</button>
     </div>
   </div>
@@ -230,7 +230,7 @@
 
 @push('head_styles')
 <style>
-.sg-hero-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(0,191,176,.28);background:rgba(0,191,176,.05);padding:6px 16px;border-radius:20px;font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--teal-300);margin-bottom:24px;animation:sg-fade-up .8s ease .2s both}
+.sg-hero-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(214,48,140,.28);background:rgba(214,48,140,.05);padding:6px 16px;border-radius:20px;font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--teal-300);margin-bottom:24px;animation:sg-fade-up .8s ease .2s both}
 .sg-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--teal-400);animation:sg-blink 2s ease infinite;flex-shrink:0}
 .sg-hero-title{font-family:'Cormorant Garamond',serif;font-size:80px;line-height:1;font-weight:700;margin-bottom:22px;animation:sg-fade-up .8s ease .4s both}
 .sg-hero-title span{color:var(--teal-300);font-style:italic}
@@ -250,10 +250,10 @@
 .sg-hero-stats{gap:48px}
 .sg-sec-header{display:flex;align-items:flex-end;justify-content:space-between}
 .sg-values-grid{display:grid;grid-template-columns:repeat(3,1fr)}
-.sg-value-item{padding:48px 40px;border-right:1px solid rgba(0,191,176,.07)}
+.sg-value-item{padding:48px 40px;border-right:1px solid rgba(214,48,140,.07)}
 .sg-featured-more-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:2px}
 .sg-trust-grid{display:grid;grid-template-columns:repeat(4,1fr);padding:0 60px}
-.sg-trust-item{padding:32px 28px;border-right:1px solid rgba(0,191,176,.08)}
+.sg-trust-item{padding:32px 28px;border-right:1px solid rgba(214,48,140,.08)}
 
 @media(max-width:1024px){
   .sg-sec-px{padding-left:24px;padding-right:24px}
@@ -265,7 +265,7 @@
   .sg-hero-content{padding:96px 24px 56px}
   .sg-hero-title{font-size:52px}
   .sg-values-grid{grid-template-columns:1fr}
-  .sg-value-item{border-right:none;border-bottom:1px solid rgba(0,191,176,.07);padding:32px 24px}
+  .sg-value-item{border-right:none;border-bottom:1px solid rgba(214,48,140,.07);padding:32px 24px}
   .sg-value-item:last-child{border-bottom:none}
   .sg-collections-grid{grid-template-columns:repeat(2,1fr)!important}
   .sg-featured-more-grid{grid-template-columns:repeat(2,1fr)}
@@ -282,7 +282,7 @@
   .sg-collections-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
   .sg-featured-more-grid{grid-template-columns:1fr}
   .sg-trust-grid{grid-template-columns:1fr;padding:0 16px}
-  .sg-trust-item{border-right:none;border-bottom:1px solid rgba(0,191,176,.08)}
+  .sg-trust-item{border-right:none;border-bottom:1px solid rgba(214,48,140,.08)}
   .sg-trust-item:last-child{border-bottom:none}
 }
 </style>

@@ -3,7 +3,7 @@
 @section('title', 'Create Account — Sukaina Gems')
 
 @section('content')
-<div style="min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;padding:60px 20px;background:radial-gradient(ellipse at 50% 0%,rgba(0,191,176,.07),transparent 60%)">
+<div style="min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;padding:60px 20px;background:radial-gradient(ellipse at 50% 0%,rgba(214,48,140,.07),transparent 60%)">
   <div style="width:100%;max-width:480px">
 
     <div style="text-align:center;margin-bottom:32px">
@@ -11,7 +11,7 @@
         <img src="{{ $settings->logoUrl() }}" alt="{{ $settings->get('site_name', 'Sukaina Gems') }}"
              style="height:52px;width:auto;max-width:220px;object-fit:contain;margin-bottom:16px">
       @else
-        <div style="width:52px;height:52px;background:linear-gradient(135deg,var(--teal-400),var(--teal-700));border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;margin-bottom:16px;box-shadow:0 0 28px rgba(0,191,176,.3)">SG</div>
+        <div style="width:52px;height:52px;background:linear-gradient(135deg,var(--teal-400),var(--teal-700));border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;margin-bottom:16px;box-shadow:0 0 28px rgba(214,48,140,.3)">SG</div>
       @endif
       <h1 style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--white)">Create your account</h1>
       <p style="font-size:14px;color:var(--white-faint);margin-top:6px">Join Sukaina Gems to track orders and checkout faster</p>
@@ -23,7 +23,7 @@
       </div>
     @endif
 
-    <div class="sg-auth-card" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:6px;padding:36px">
+    <div class="sg-auth-card" style="background:var(--dark-800);border:1px solid rgba(214,48,140,.12);border-radius:6px;padding:36px">
       <form method="POST" action="{{ route('website.auth.register.post') }}">
         @csrf
 
@@ -69,7 +69,7 @@
 @push('head_styles')
 <style>
 .sg-label{display:block;font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-dim);margin-bottom:8px}
-.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(0,191,176,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:12px 16px;outline:none;transition:border .3s;display:block;min-height:44px}
+.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(214,48,140,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:12px 16px;outline:none;transition:border .3s;display:block;min-height:44px}
 .sg-input:focus{border-color:var(--teal-400)}
 @media(max-width:480px){
   .sg-auth-card{padding:24px !important}

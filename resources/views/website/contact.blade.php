@@ -12,15 +12,15 @@
 .sg-contact-lead{font-size:16px;line-height:1.8;color:var(--white-dim);max-width:620px}
 .sg-contact-wrap{max-width:1000px;margin:0 auto 100px}
 .sg-contact-grid{display:grid;grid-template-columns:0.85fr 1.15fr;gap:28px;align-items:start}
-.sg-contact-card{background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:8px}
-.sg-contact-row{display:flex;align-items:flex-start;gap:16px;padding:20px 24px;border-bottom:1px solid rgba(0,191,176,.08)}
+.sg-contact-card{background:var(--dark-800);border:1px solid rgba(214,48,140,.12);border-radius:4px;padding:8px}
+.sg-contact-row{display:flex;align-items:flex-start;gap:16px;padding:20px 24px;border-bottom:1px solid rgba(214,48,140,.08)}
 .sg-contact-row:last-child{border-bottom:none}
 .sg-contact-icon{font-size:22px;flex-shrink:0;width:32px;text-align:center;margin-top:2px}
 .sg-contact-label{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--teal-400);margin-bottom:4px}
 .sg-contact-value{font-size:16px;color:var(--white);text-decoration:none}
 .sg-contact-value:hover{color:var(--teal-300)}
 .sg-contact-empty{padding:32px 24px;text-align:center;color:var(--white-faint);font-size:14px}
-.sg-contact-form-card{background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:32px}
+.sg-contact-form-card{background:var(--dark-800);border:1px solid rgba(214,48,140,.12);border-radius:4px;padding:32px}
 .sg-contact-form-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;color:var(--white);margin:0 0 20px}
 .sg-contact-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
 .sg-contact-alert{padding:14px 18px;border-radius:4px;font-size:13px;margin-bottom:24px}
@@ -29,7 +29,7 @@
 @media(max-width:768px){.sg-contact-title{font-size:30px}.sg-contact-hero{padding:120px 0 24px}.sg-contact-grid{grid-template-columns:1fr}}
 @media(max-width:480px){.sg-contact-hero{padding:104px 0 20px}.sg-contact-title{font-size:26px}.sg-contact-form-card{padding:22px}.sg-contact-form-grid{grid-template-columns:1fr;margin-bottom:0}}
 .sg-label{display:block;font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-dim);margin-bottom:8px}
-.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(0,191,176,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:12px 16px;outline:none;transition:border .3s;display:block;min-height:44px}
+.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(214,48,140,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:12px 16px;outline:none;transition:border .3s;display:block;min-height:44px}
 .sg-input:focus{border-color:var(--teal-400)}
 textarea.sg-input{min-height:auto;resize:vertical}
 </style>

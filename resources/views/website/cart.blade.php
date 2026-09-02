@@ -6,8 +6,8 @@
 @section('content')
 
 {{-- HERO BAND --}}
-<div class="sg-cart-hero" style="height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--dark-900),var(--dark-750));border-bottom:1px solid rgba(0,191,176,.1);text-align:center;position:relative;overflow:hidden">
-  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(0,191,176,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,191,176,.025) 1px,transparent 1px);background-size:60px 60px"></div>
+<div class="sg-cart-hero" style="height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--dark-900),var(--dark-750));border-bottom:1px solid rgba(214,48,140,.1);text-align:center;position:relative;overflow:hidden">
+  <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(214,48,140,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(214,48,140,.025) 1px,transparent 1px);background-size:60px 60px"></div>
   <div style="position:relative;z-index:1">
     <div class="sg-eyebrow" style="text-align:center;margin-bottom:10px">Your Selection</div>
     <h1 class="sg-cart-hero-title" style="font-family:'Cormorant Garamond',serif;font-size:52px;font-weight:700">Shopping <em style="color:var(--teal-300);font-style:italic">Cart</em></h1>
@@ -46,8 +46,8 @@
 
         @foreach($cart as $item)
         <div class="sg-cart-item" data-id="{{ $item['id'] }}"
-          style="display:flex;align-items:center;gap:20px;padding:20px;background:var(--dark-800);border:1px solid rgba(0,191,176,.08);border-radius:4px;margin-bottom:10px;transition:border-color .3s;flex-wrap:wrap"
-          onmouseenter="this.style.borderColor='rgba(0,191,176,.2)'" onmouseleave="this.style.borderColor='rgba(0,191,176,.08)'">
+          style="display:flex;align-items:center;gap:20px;padding:20px;background:var(--dark-800);border:1px solid rgba(214,48,140,.08);border-radius:4px;margin-bottom:10px;transition:border-color .3s;flex-wrap:wrap"
+          onmouseenter="this.style.borderColor='rgba(214,48,140,.2)'" onmouseleave="this.style.borderColor='rgba(214,48,140,.08)'">
 
           {{-- Thumb --}}
           <div style="width:80px;height:80px;flex-shrink:0;border-radius:3px;overflow:hidden;background:var(--dark-750);display:flex;align-items:center;justify-content:center">
@@ -63,7 +63,7 @@
             <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--white);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ $item['title'] }}</div>
             <div style="font-size:12px;color:var(--white-faint);display:flex;gap:12px">
               @if(!empty($item['carat']))<span>{{ $item['carat'] }} ct</span>@endif
-              @if(!empty($item['sku']))<span style="color:rgba(0,191,176,.4)">·</span><span>{{ $item['sku'] }}</span>@endif
+              @if(!empty($item['sku']))<span style="color:rgba(214,48,140,.4)">·</span><span>{{ $item['sku'] }}</span>@endif
             </div>
           </div>
 
@@ -77,14 +77,14 @@
             <div style="display:flex;align-items:center;gap:6px; display:none">
               <button type="button"
                 onclick="changeQty({{ $item['id'] }}, -1, this)"
-                style="width:28px;height:28px;background:none;border:1px solid rgba(0,191,176,.25);color:var(--teal-300);cursor:pointer;border-radius:2px;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .3s"
-                onmouseenter="this.style.background='rgba(0,191,176,.1)'"
+                style="width:28px;height:28px;background:none;border:1px solid rgba(214,48,140,.25);color:var(--teal-300);cursor:pointer;border-radius:2px;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .3s"
+                onmouseenter="this.style.background='rgba(214,48,140,.1)'"
                 onmouseleave="this.style.background=''">−</button>
               <span class="qty-display" style="min-width:26px;text-align:center;font-size:14px;font-weight:600;color:var(--white)">{{ $item['qty'] ?? 1 }}</span>
               <button type="button"
                 onclick="changeQty({{ $item['id'] }}, +1, this)"
-                style="width:28px;height:28px;background:none;border:1px solid rgba(0,191,176,.25);color:var(--teal-300);cursor:pointer;border-radius:2px;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .3s"
-                onmouseenter="this.style.background='rgba(0,191,176,.1)'"
+                style="width:28px;height:28px;background:none;border:1px solid rgba(214,48,140,.25);color:var(--teal-300);cursor:pointer;border-radius:2px;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;transition:all .3s"
+                onmouseenter="this.style.background='rgba(214,48,140,.1)'"
                 onmouseleave="this.style.background=''">+</button>
               <div style="width:1px;height:20px;background:rgba(255,255,255,.1);margin:0 2px"></div>
               <button type="button" onclick="removeItem({{ $item['id'] }}, this)"
@@ -100,7 +100,7 @@
       </div>
 
       {{-- Order Summary --}}
-      <div class="sg-order-summary" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.12);border-radius:4px;padding:28px;position:sticky;top:80px">
+      <div class="sg-order-summary" style="background:var(--dark-800);border:1px solid rgba(214,48,140,.12);border-radius:4px;padding:28px;position:sticky;top:80px">
         <h4 style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:20px">Order Summary</h4>
 
         <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:14px;color:var(--white-dim)">
@@ -112,7 +112,7 @@
           <span style="color:var(--teal-300)">Calculated at checkout</span>
         </div>
 
-        <div style="height:1px;background:rgba(0,191,176,.1);margin:16px 0"></div>
+        <div style="height:1px;background:rgba(214,48,140,.1);margin:16px 0"></div>
 
         <div style="display:flex;justify-content:space-between;margin-bottom:24px">
           <span style="font-size:16px;font-weight:500">Total</span>
@@ -129,7 +129,7 @@
           ← Continue Shopping
         </a>
 
-        <div style="margin-top:20px;padding:14px;background:rgba(0,191,176,.05);border:1px solid rgba(0,191,176,.1);border-radius:3px">
+        <div style="margin-top:20px;padding:14px;background:rgba(214,48,140,.05);border:1px solid rgba(214,48,140,.1);border-radius:3px">
           <div style="font-size:11px;color:var(--white-faint);text-align:center;line-height:1.6">
             🔒 Secure checkout &nbsp;·&nbsp; 📦 Insured shipping &nbsp;·&nbsp; 7-day returns
           </div>

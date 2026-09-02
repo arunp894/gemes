@@ -22,8 +22,8 @@
     @endif
 
     {{-- Profile form --}}
-    <div class="sg-editprofile-card" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:32px;margin-bottom:24px">
-      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(0,191,176,.08)">Personal Information</div>
+    <div class="sg-editprofile-card" style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:6px;padding:32px;margin-bottom:24px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(214,48,140,.08)">Personal Information</div>
 
       <form method="POST" action="{{ route('website.account.update') }}">
         @csrf
@@ -44,7 +44,7 @@
           </div>
         </div>
 
-        <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;margin:28px 0 20px;padding-top:20px;border-top:1px solid rgba(0,191,176,.08)">Shipping Address</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;margin:28px 0 20px;padding-top:20px;border-top:1px solid rgba(214,48,140,.08)">Shipping Address</div>
 
         <div style="margin-bottom:16px">
           <label class="sg-label">Address Line 1</label>
@@ -78,8 +78,8 @@
     </div>
 
     {{-- Change password --}}
-    <div class="sg-editprofile-card" style="background:var(--dark-800);border:1px solid rgba(0,191,176,.1);border-radius:6px;padding:32px">
-      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(0,191,176,.08)">Change Password</div>
+    <div class="sg-editprofile-card" style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:6px;padding:32px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid rgba(214,48,140,.08)">Change Password</div>
 
       <form method="POST" action="{{ route('website.account.change-password') }}">
         @csrf
@@ -110,7 +110,7 @@
 @push('head_styles')
 <style>
 .sg-label{display:block;font-size:11px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:var(--white-dim);margin-bottom:8px}
-.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(0,191,176,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border .3s;display:block;min-height:44px}
+.sg-input{width:100%;background:var(--dark-750);border:1px solid rgba(214,48,140,.2);border-radius:3px;color:var(--white);font-family:'Jost',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border .3s;display:block;min-height:44px}
 .sg-input:focus{border-color:var(--teal-400)}
 @media(max-width:1024px){
   .sg-editprofile-wrap{padding:40px 24px !important}
