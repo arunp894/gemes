@@ -140,9 +140,12 @@
     @php
       $gemColors = ['#0078be','#e63282','#7a2f9c','#c9a84c','#fa6e82','#321e8c'];
       $gc = $gemColors[$loop->index % count($gemColors)];
+      $tileBg = $cat->image_url
+        ? "background-image:url('{$cat->image_url}');background-size:cover;background-position:center"
+        : "background:radial-gradient(circle at 40% 40%,{$gc}44,rgba(10,7,22,.95))";
     @endphp
     <a href="{{ route('website.collections', ['category' => strtolower($cat->code)]) }}"
-       style="position:relative;overflow:hidden;border-radius:4px;cursor:pointer;border:1px solid rgba(214,48,140,.1);transition:all .4s;aspect-ratio:3/4;display:flex;flex-direction:column;justify-content:flex-end;text-decoration:none;background:radial-gradient(circle at 40% 40%,{{ $gc }}44,rgba(10,7,22,.95))"
+       style="position:relative;overflow:hidden;border-radius:4px;cursor:pointer;border:1px solid rgba(214,48,140,.1);transition:all .4s;aspect-ratio:3/4;display:flex;flex-direction:column;justify-content:flex-end;text-decoration:none;{{ $tileBg }}"
        onmouseenter="this.style.borderColor='rgba(214,48,140,.4)';this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,0,0,.4)'"
        onmouseleave="this.style.borderColor='rgba(214,48,140,.1)';this.style.transform='';this.style.boxShadow=''">
       <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,7,22,.92) 0%,rgba(10,7,22,.25) 50%,transparent 100%)"></div>
