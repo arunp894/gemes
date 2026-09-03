@@ -7,7 +7,7 @@
     $settings   — App\Services\SettingService (injected via View composer)
 --}}
 @php
-  $imgUrl     = $product->primary_thumb_url ?? $product->primary_image_url;
+  $imgUrl     = $product->primary_image_url;
   $badge      = $badge      ?? ($product->featured_product ? 'gia' : 'new');
   $badgeText  = $badgeText  ?? ($product->featured_product ? 'Featured' : 'New');
   $badgeClass = ['gia' => 'sg-badge-gia', 'rare' => 'sg-badge-rare', 'new' => 'sg-badge-new', 'hot' => 'sg-badge-hot'][$badge] ?? 'sg-badge-gia';

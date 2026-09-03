@@ -24,7 +24,12 @@ class CategorySeeder extends Seeder
     public function run(): void
     {
         $categories = [
-            ['code' => 'GEMS-TNZ', 'name' => 'Tanzanite',      'is_gemstone' => true, 'display_order' => 1],
+            // Code 'TANZANITE' (not 'GEMS-TNZ') deliberately — this stone
+            // already has an established category row under that code
+            // (with real AA/AAA-grade subcategories hanging off it, see
+            // WebsiteDataSeeder), so this targets that existing row
+            // instead of forking a second identity for the same stone.
+            ['code' => 'TANZANITE', 'name' => 'Tanzanite',     'is_gemstone' => true, 'display_order' => 1],
             ['code' => 'GEMS-PRB', 'name' => 'Paraiba',        'is_gemstone' => true, 'display_order' => 2],
             ['code' => 'GEMS-TRM', 'name' => 'Tourmaline',     'is_gemstone' => true, 'display_order' => 3],
             ['code' => 'GEMS-TSV', 'name' => 'Tsavorite',      'is_gemstone' => true, 'display_order' => 4],
@@ -36,7 +41,9 @@ class CategorySeeder extends Seeder
             ['code' => 'GEMS-MRG', 'name' => 'Morganite',      'is_gemstone' => true, 'display_order' => 10],
             ['code' => 'GEMS-ZRC', 'name' => 'Zircon',         'is_gemstone' => true, 'display_order' => 11],
             ['code' => 'GEMS-GRD', 'name' => 'Grandidierite',  'is_gemstone' => true, 'display_order' => 12],
-            ['code' => 'GEMS-PRD', 'name' => 'Peridot',        'is_gemstone' => true, 'display_order' => 13],
+            // Code 'PERIDOT' for the same reason as Tanzanite above — an
+            // existing row with a real subcategory (Pakistan Peridot).
+            ['code' => 'PERIDOT',  'name' => 'Peridot',        'is_gemstone' => true, 'display_order' => 13],
             ['code' => 'GEMS-SSP', 'name' => 'Star Sapphire',  'is_gemstone' => true, 'display_order' => 14],
             ['code' => 'GEMS-SRB', 'name' => 'Star Ruby',      'is_gemstone' => true, 'display_order' => 15],
             ['code' => 'GEMS-SPE', 'name' => 'Sphene',         'is_gemstone' => true, 'display_order' => 16],

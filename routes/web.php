@@ -146,6 +146,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/',             [SettingController::class, 'index'])->name('index');
         Route::post('/save',        [SettingController::class, 'save'])->name('save');
         Route::post('/paypal-test', [SettingController::class, 'testPaypal'])->name('paypal-test');
+        Route::post('/smtp-test',   [SettingController::class, 'testSmtp'])->name('smtp-test');
     });
 
     /*

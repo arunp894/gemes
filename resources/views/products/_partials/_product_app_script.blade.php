@@ -352,12 +352,6 @@
                         if (!this.form.carat_weight) {
                             this.$set(this.errors, 'carat_weight', 'Carat weight is required for gemstones.');
                         }
-                        if (!this.form.stone_type) {
-                            this.$set(this.errors, 'stone_type', 'Stone type is required for gemstones.');
-                        }
-                        if (!this.form.treatment) {
-                            this.$set(this.errors, 'treatment', 'Treatment is required for gemstones.');
-                        }
                     }
 
                     // Barcodes are optional -- a product created directly

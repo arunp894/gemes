@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 /**
@@ -61,6 +62,18 @@ class SettingController extends Controller
             'paypal_secret'     => $data['paypal_secret']    ?? '',
             'paypal_webhook_id' => $data['paypal_webhook_id'] ?? '',
         ], 'paypal');
+
+        // Save smtp group
+        $this->settings->save([
+            'smtp_enabled'      => isset($data['smtp_enabled']) ? '1' : '0',
+            'smtp_host'         => $data['smtp_host']         ?? '',
+            'smtp_port'         => $data['smtp_port']         ?? 587,
+            'smtp_encryption'   => $data['smtp_encryption']   ?? 'tls',
+            'smtp_username'     => $data['smtp_username']     ?? '',
+            'smtp_password'     => $data['smtp_password']     ?? '',
+            'smtp_from_address' => $data['smtp_from_address'] ?? '',
+            'smtp_from_name'    => $data['smtp_from_name']    ?? '',
+        ], 'smtp');
 
         // Save purchases group
         $this->settings->save([
@@ -129,6 +142,58 @@ class SettingController extends Controller
 
         } catch (\Throwable $e) {
             return response()->json(['success' => false, 'error' => 'Could not reach PayPal: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Send a live test email using the posted (not yet saved) SMTP
+     * credentials — same "test before you save" pattern as testPaypal().
+     * Overrides the runtime mail config for this request only; nothing
+     * persists unless the admin also hits Save Settings.
+     */
+    public function testSmtp(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'smtp_host'         => ['required', 'string'],
+            'smtp_port'         => ['required', 'integer', 'min:1', 'max:65535'],
+            'smtp_encryption'   => ['nullable', 'in:tls,ssl'],
+            'smtp_username'     => ['nullable', 'string'],
+            'smtp_password'     => ['nullable', 'string'],
+            'smtp_from_address' => ['required', 'email'],
+            'smtp_from_name'    => ['nullable', 'string'],
+            'test_email'        => ['required', 'email'],
+        ]);
+
+        config([
+            'mail.mailers.smtp.host'     => $data['smtp_host'],
+            'mail.mailers.smtp.port'     => (int) $data['smtp_port'],
+            'mail.mailers.smtp.username' => $data['smtp_username'] ?? null,
+            'mail.mailers.smtp.password' => $data['smtp_password'] ?? null,
+            // Symfony Mailer picks STARTTLS automatically on the default
+            // 'smtp' scheme when the server offers it (the common port-587
+            // case); 'smtps' forces implicit TLS from connect (port 465).
+            'mail.mailers.smtp.scheme'   => ($data['smtp_encryption'] ?? 'tls') === 'ssl' ? 'smtps' : null,
+            'mail.from.address'          => $data['smtp_from_address'],
+            'mail.from.name'             => $data['smtp_from_name'] ?? $data['smtp_from_address'],
+        ]);
+
+        try {
+            $siteName = $this->settings->get('site_name', 'Sukaina Gems');
+
+            Mail::mailer('smtp')->raw(
+                "This is a test email from {$siteName} confirming your SMTP settings are working correctly.",
+                function ($message) use ($data, $siteName) {
+                    $message->to($data['test_email'])->subject("{$siteName} — SMTP Test Email");
+                }
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test email sent to ' . $data['test_email'] . '. Check the inbox (and spam folder).',
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'error' => 'Could not send test email: ' . $e->getMessage()]);
         }
     }
 }

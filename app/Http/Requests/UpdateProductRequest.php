@@ -127,6 +127,11 @@ class UpdateProductRequest extends FormRequest
         });
     }
 
+    /**
+     * Conditional gemstone field requirements.
+     * If the chosen category has `is_gemstone = true`, carat_weight
+     * becomes required. Stone Type and Treatment are optional.
+     */
     protected function validateGemstoneFields(Validator $v): void
     {
         $categoryId = $this->input('category_id');
@@ -141,12 +146,6 @@ class UpdateProductRequest extends FormRequest
 
         if (! $this->filled('carat_weight')) {
             $v->errors()->add('carat_weight', 'Carat weight is required for gemstone products.');
-        }
-        if (! $this->filled('stone_type')) {
-            $v->errors()->add('stone_type', 'Stone type is required for gemstone products.');
-        }
-        if (! $this->filled('treatment')) {
-            $v->errors()->add('treatment', 'Treatment is required for gemstone products.');
         }
     }
 

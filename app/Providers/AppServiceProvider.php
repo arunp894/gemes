@@ -82,6 +82,38 @@ class AppServiceProvider extends ServiceProvider
                 ]);
         });
 
+        // ----- Apply DB-stored SMTP settings (Settings -> Mail) at runtime -----
+        // Lets admins configure outgoing mail through the Settings UI
+        // instead of editing .env. Mail is different from PayPal's
+        // "read live at point of use" pattern (see PaypalService): Laravel's
+        // MailManager resolves its transport from config('mail...') when a
+        // mailer is first built, so the override has to land in the config
+        // repository itself here at boot, before any Mail::send() call
+        // downstream (OrderConfirmationMail, CustomerWelcomeMail,
+        // ContactFormMail all go through this automatically once set).
+        $settings = app(SettingService::class);
+        if ($settings->bool('smtp_enabled') && $settings->get('smtp_host')) {
+            config([
+                'mail.default'                => 'smtp',
+                'mail.mailers.smtp.host'      => $settings->get('smtp_host'),
+                'mail.mailers.smtp.port'      => (int) $settings->get('smtp_port', 587),
+                'mail.mailers.smtp.username'  => $settings->get('smtp_username') ?: null,
+                'mail.mailers.smtp.password'  => $settings->get('smtp_password') ?: null,
+                // Symfony Mailer picks STARTTLS automatically on the default
+                // 'smtp' scheme when the server offers it (the common
+                // port-587 case); 'smtps' forces implicit TLS from connect
+                // (port 465) — see testSmtp() for the same mapping.
+                'mail.mailers.smtp.scheme'    => $settings->get('smtp_encryption', 'tls') === 'ssl' ? 'smtps' : null,
+            ]);
+
+            if ($settings->get('smtp_from_address')) {
+                config([
+                    'mail.from.address' => $settings->get('smtp_from_address'),
+                    'mail.from.name'    => $settings->get('smtp_from_name') ?: $settings->get('site_name', 'Sukaina Gems'),
+                ]);
+            }
+        }
+
         // ----- Share $settings with ALL website.* views -----
         View::composer('website.*', function ($view) {
             $settings = app(SettingService::class);

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CaratMovement;
 use App\Models\Location;
+use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseProduct;
 use App\Models\Sale;
@@ -952,7 +953,10 @@ class StockService
             throw new RuntimeException('Cannot post sale: ' . implode(' ', $errors));
         }
 
-        DB::transaction(fn () => $this->bookSaleLinesOut($sale));
+        DB::transaction(function () use ($sale) {
+            $this->bookSaleLinesOut($sale);
+            $this->autoDisableSoldOutProducts($sale);
+        });
     }
 
     /**
@@ -971,7 +975,10 @@ class StockService
             throw new RuntimeException('Cannot save sale: ' . implode(' ', $errors));
         }
 
-        DB::transaction(fn () => $this->bookSaleLinesOut($sale));
+        DB::transaction(function () use ($sale) {
+            $this->bookSaleLinesOut($sale);
+            $this->autoDisableSoldOutProducts($sale);
+        });
     }
 
     /**
@@ -1174,6 +1181,52 @@ class StockService
 
         if ($remaining > 0) {
             throw new RuntimeException("Stock booking underflow for piece #{$ppId}: {$remaining} unfilled.");
+        }
+    }
+
+    /**
+     * Auto-unlist a product from the website once a sale has fully
+     * depleted it. Checked against the GLOBAL on-hand figure (all
+     * locations, all pieces) after the sale's own lines are booked, so
+     * this fires the same way regardless of which channel sold the
+     * piece -- POS terminal, eBay/Catawiki import (both via SaleService::
+     * post()), or the storefront itself (CheckoutService also funnels
+     * through recordSalePosting()).
+     *
+     * Deliberately scoped to sales only, not folded into record()/
+     * adjust(): a Stock Transfer's OUT leg can legitimately zero the
+     * global balance for as long as a piece is "in transit" between
+     * locations (see StockTransfer's draft/in_transit/received
+     * lifecycle) even though nothing was sold, and the matching IN leg
+     * on receipt would need a symmetric re-enable this method doesn't
+     * attempt. Scoping to sales avoids that false positive entirely.
+     *
+     * One-directional by design -- only ever flips website_enabled
+     * true -> false. A later refund/cancel/edit that restores stock
+     * does NOT automatically re-list the product; that's left as a
+     * deliberate human call (price/condition/listing copy may need
+     * review first).
+     *
+     * Loads real Eloquent model instances and saves via update() (not a
+     * mass query-builder update) so Product's own booted() `updating`
+     * hook still fires and stamps website_disabled_at / clears
+     * featured_product exactly as it does for a manual admin toggle.
+     */
+    private function autoDisableSoldOutProducts(Sale $sale): void
+    {
+        $productIds = $sale->lines()->pluck('product_id')->filter()->unique();
+        if ($productIds->isEmpty()) {
+            return;
+        }
+
+        $products = Product::whereIn('id', $productIds)
+            ->where('website_enabled', true)
+            ->get();
+
+        foreach ($products as $product) {
+            if ($this->onHandForProductGlobal($product->id) <= 0) {
+                $product->update(['website_enabled' => false]);
+            }
         }
     }
 

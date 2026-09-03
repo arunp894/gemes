@@ -5,13 +5,13 @@
 <div class="card mb-3" v-show="isGemstone">
     <div class="card-header d-flex align-items-center justify-content-between">
         <h5 class="card-title mb-0"><i class="ti ti-diamond me-1"></i>Gemstone Details</h5>
-        <span class="badge badge-soft-info">Required for gemstone products</span>
+        <span class="badge badge-soft-info">Carat Weight required for gemstone products</span>
     </div>
     <div class="card-body">
         <div class="row g-3">
 
             {{-- Carat Weight --}}
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label for="carat_weight" class="form-label">Carat Weight <span class="text-danger">*</span></label>
                 <div class="input-group">
                     <input type="number" step="0.001" min="0.001" class="form-control" id="carat_weight"
@@ -22,22 +22,14 @@
                 </div>
             </div>
 
-            {{-- Stone Type --}}
-            <div class="col-md-3">
-                <label for="stone_type" class="form-label">Stone Type <span class="text-danger">*</span></label>
-                <select class="form-select" id="stone_type" name="stone_type"
-                    v-model="form.stone_type" :class="{ 'is-invalid': errors.stone_type }">
-                    <option :value="null">— Select —</option>
-                    @foreach (\App\Models\Product::STONE_TYPES as $type)
-                        <option value="{{ $type }}">{{ $type }}</option>
-                    @endforeach
-                </select>
-                <div class="invalid-feedback">@{{ errors.stone_type }}</div>
-            </div>
+            {{-- Stone Type is hidden on this form — still set via the Purchase
+                 intake flow (see PurchaseService::syncLines()), just not
+                 editable here. form.stone_type is left untouched so an
+                 existing value round-trips unchanged on save. --}}
 
             {{-- Treatment --}}
-            <div class="col-md-3">
-                <label for="treatment" class="form-label">Treatment <span class="text-danger">*</span></label>
+            <div class="col-md-4">
+                <label for="treatment" class="form-label">Treatment</label>
                 <select class="form-select" id="treatment" name="treatment"
                     v-model="form.treatment" :class="{ 'is-invalid': errors.treatment }">
                     <option :value="null">— Select —</option>
@@ -49,7 +41,7 @@
             </div>
 
             {{-- Cut / Shape --}}
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label for="cut_shape" class="form-label">Cut / Shape</label>
                 <select class="form-select" id="cut_shape" name="cut_shape" v-model="form.cut_shape">
                     <option :value="null">— Select —</option>

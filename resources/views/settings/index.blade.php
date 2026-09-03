@@ -50,6 +50,9 @@
               <button class="nav-link text-start" id="paypal-tab" data-bs-toggle="pill" data-bs-target="#paypal" type="button">
                 <i class="ti ti-brand-paypal me-2"></i> PayPal
               </button>
+              <button class="nav-link text-start" id="smtp-tab" data-bs-toggle="pill" data-bs-target="#smtp" type="button">
+                <i class="ti ti-mail me-2"></i> Mail (SMTP)
+              </button>
             </div>
           </div>
         </div>
@@ -375,6 +378,109 @@
             </div>
           </div>
 
+          {{-- ==================== SMTP / Mail Tab ==================== --}}
+          <div class="tab-pane fade" id="smtp" role="tabpanel">
+            <div class="card">
+              <div class="card-header">
+                <h5 class="card-title mb-0"><i class="ti ti-mail me-2 text-muted"></i>Outgoing Mail (SMTP)</h5>
+              </div>
+              <div class="card-body">
+
+                <div class="alert alert-info border-0 d-flex gap-2 align-items-start">
+                  <i class="ti ti-info-circle fs-xl mt-1 flex-shrink-0"></i>
+                  <div>
+                    <strong>What this is for:</strong> order confirmation, welcome, and contact-form emails are sent
+                    through these settings once enabled. Leave disabled to keep using the server's default mail
+                    configuration (<code>.env</code>).
+                  </div>
+                </div>
+
+                <div class="mb-4">
+                  <div class="card border">
+                    <div class="card-body d-flex align-items-center justify-content-between py-3">
+                      <div>
+                        <div class="fw-semibold"><i class="ti ti-mail me-2 text-muted"></i>Use these SMTP settings</div>
+                        <small class="text-muted">Route all outgoing application email through the server below.</small>
+                      </div>
+                      <div class="form-check form-switch form-switch-lg mb-0">
+                        <input class="form-check-input" type="checkbox" name="smtp_enabled" value="1"
+                          {{ (old('smtp_enabled', $all['smtp_enabled'] ?? '0')) === '1' ? 'checked' : '' }}>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">SMTP Host</label>
+                    <input type="text" name="smtp_host" class="form-control font-monospace"
+                      value="{{ old('smtp_host', $all['smtp_host'] ?? '') }}" placeholder="smtp.example.com" autocomplete="off">
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label class="form-label fw-semibold">Port</label>
+                    <input type="number" name="smtp_port" class="form-control"
+                      value="{{ old('smtp_port', $all['smtp_port'] ?? 587) }}" min="1" max="65535">
+                  </div>
+                  <div class="col-md-3 mb-3">
+                    <label class="form-label fw-semibold">Encryption</label>
+                    <select name="smtp_encryption" class="form-select">
+                      <option value="tls" {{ (old('smtp_encryption', $all['smtp_encryption'] ?? 'tls')) === 'tls' ? 'selected' : '' }}>TLS (STARTTLS, port 587)</option>
+                      <option value="ssl" {{ (old('smtp_encryption', $all['smtp_encryption'] ?? 'tls')) === 'ssl' ? 'selected' : '' }}>SSL (implicit, port 465)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Username</label>
+                    <input type="text" name="smtp_username" class="form-control font-monospace"
+                      value="{{ old('smtp_username', $all['smtp_username'] ?? '') }}" autocomplete="off">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Password</label>
+                    <div class="input-group">
+                      <input type="password" name="smtp_password" id="smtpPasswordField" class="form-control font-monospace"
+                        value="{{ old('smtp_password', $all['smtp_password'] ?? '') }}" autocomplete="new-password">
+                      <button type="button" class="btn btn-outline-secondary" id="toggleSmtpPassword">
+                        <i class="ti ti-eye" id="toggleSmtpPasswordIcon"></i>
+                      </button>
+                    </div>
+                    <div class="form-text text-danger"><i class="ti ti-lock me-1"></i>Server-side only — never exposed to browsers.</div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">From Address</label>
+                    <input type="email" name="smtp_from_address" class="form-control"
+                      value="{{ old('smtp_from_address', $all['smtp_from_address'] ?? '') }}" placeholder="orders@yourstore.com">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">From Name <span class="text-muted fw-normal">(optional)</span></label>
+                    <input type="text" name="smtp_from_name" class="form-control"
+                      value="{{ old('smtp_from_name', $all['smtp_from_name'] ?? '') }}" placeholder="{{ $all['site_name'] ?? 'Sukaina Gems' }}">
+                  </div>
+                </div>
+
+                <hr class="my-4">
+                <div class="row align-items-end">
+                  <div class="col-md-5 mb-3">
+                    <label class="form-label fw-semibold">Send a test email to</label>
+                    <input type="email" id="smtpTestEmail" class="form-control"
+                      value="{{ $all['contact_email'] ?? '' }}" placeholder="you@example.com">
+                  </div>
+                  <div class="col-md-7 mb-3 d-flex align-items-center gap-3">
+                    <button type="button" id="testSmtpBtn" class="btn btn-outline-secondary btn-sm">
+                      <i class="ti ti-send me-1"></i> Send Test Email
+                    </button>
+                    <span id="testSmtpResult" class="small"></span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
         </div>{{-- /tab-content --}}
 
         {{-- Save Row --}}
@@ -479,6 +585,18 @@ $(function () {
     }
   });
 
+  $('#toggleSmtpPassword').on('click', function () {
+    var f   = $('#smtpPasswordField');
+    var ico = $('#toggleSmtpPasswordIcon');
+    if (f.attr('type') === 'password') {
+      f.attr('type', 'text');
+      ico.removeClass('ti-eye').addClass('ti-eye-off');
+    } else {
+      f.attr('type', 'password');
+      ico.removeClass('ti-eye-off').addClass('ti-eye');
+    }
+  });
+
   // ── AJAX form save ────────────────────────────────────────────
   $('#settingsForm').on('submit', function (e) {
     e.preventDefault();
@@ -537,6 +655,48 @@ $(function () {
     })
     .catch(function () { $res.addClass('text-danger').text('Request failed.'); })
     .finally(function () { $btn.prop('disabled', false).html('<i class="ti ti-plug me-1"></i> Test Connection'); });
+  });
+
+  // ── SMTP test email ─────────────────────────────────────────────
+  $('#testSmtpBtn').on('click', function () {
+    var testEmail = $('#smtpTestEmail').val();
+    if (!testEmail) {
+      $('#smtpTestEmail').addClass('is-invalid').focus();
+      return;
+    }
+    $('#smtpTestEmail').removeClass('is-invalid');
+
+    var $btn = $(this).prop('disabled', true).html('<i class="ti ti-loader me-1"></i> Sending…');
+    var $res = $('#testSmtpResult').text('').removeClass('text-success text-danger');
+
+    fetch('{{ route("settings.smtp-test") }}', {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content'),
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        smtp_host:         $('input[name=smtp_host]').val(),
+        smtp_port:         $('input[name=smtp_port]').val(),
+        smtp_encryption:   $('select[name=smtp_encryption]').val(),
+        smtp_username:     $('input[name=smtp_username]').val(),
+        smtp_password:     $('#smtpPasswordField').val(),
+        smtp_from_address: $('input[name=smtp_from_address]').val(),
+        smtp_from_name:    $('input[name=smtp_from_name]').val(),
+        test_email:        testEmail,
+      }),
+    })
+    .then(r => r.json())
+    .then(function (d) {
+      if (d.success) {
+        $res.addClass('text-success').html('<i class="ti ti-check me-1"></i>' + d.message);
+      } else {
+        $res.addClass('text-danger').html('<i class="ti ti-x me-1"></i>' + (d.error || 'Could not send test email.'));
+      }
+    })
+    .catch(function () { $res.addClass('text-danger').text('Request failed.'); })
+    .finally(function () { $btn.prop('disabled', false).html('<i class="ti ti-send me-1"></i> Send Test Email'); });
   });
 
 });
