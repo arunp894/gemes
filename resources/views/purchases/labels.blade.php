@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Print Labels &mdash; {{ $purchase->invoice_number }}</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.12.3/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
     <style>
         * { box-sizing: border-box; }
         body {
@@ -57,7 +58,7 @@
             padding: 3mm 3mm 2mm;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
             page-break-inside: avoid;
             background: #fff;
@@ -66,7 +67,7 @@
         .label-top {
             width: 100%;
             display: flex;
-            align-items: baseline;
+            align-items: flex-start;
             justify-content: space-between;
             gap: 4px;
         }
@@ -81,12 +82,20 @@
             line-height: 1.2;
             text-align: left;
         }
-        .label .price-code {
+        .label .qr-code {
             flex: 0 0 auto;
-            font-family: "Courier New", monospace;
-            font-weight: 700;
-            font-size: 9px;
-            letter-spacing: 0.5px;
+            width: 8mm;
+            height: 8mm;
+        }
+        .label .qr-code img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            image-rendering: pixelated;
+        }
+        .label .qr-error {
+            font-size: 6px;
+            color: #b91c1c;
         }
         .label .meta {
             width: 100%;
@@ -98,8 +107,19 @@
             margin-bottom: 1mm;
             text-align: left;
         }
-        .label svg { max-width: 100%; height: auto; display: block; }
+        .label svg.barcode { max-width: 100%; height: auto; display: block; }
         .label .barcode-error { font-size: 8px; color: #b91c1c; }
+        .label-bottom {
+            width: 100%;
+            display: flex;
+            justify-content: flex-start;
+        }
+        .label .price-code {
+            font-family: "Courier New", monospace;
+            font-weight: 700;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+        }
 
         .empty {
             max-width: 900px;
@@ -163,7 +183,7 @@
                 <div class="label">
                     <div class="label-top">
                         <div class="title">{{ $product?->stone_type ?: ($product?->title ?? 'Unknown product') }}</div>
-                        <div class="price-code">{{ $row->priceCode() }}</div>
+                        <div class="qr-code" data-value="{{ $row->lot_code }}"></div>
                     </div>
                     <div class="meta">
                         SKU: {{ $product?->sku ?? '—' }}
@@ -172,6 +192,9 @@
                         @endif
                     </div>
                     <svg class="barcode" data-value="{{ $row->lot_code }}"></svg>
+                    <div class="label-bottom">
+                        <div class="price-code">{{ $row->priceCode() }}</div>
+                    </div>
                 </div>
             @endforeach
         </div>
@@ -183,14 +206,32 @@
                 JsBarcode(el, el.dataset.value || '', {
                     format: 'CODE128',
                     displayValue: true,
-                    fontSize: 11,
-                    height: 30,
+                    fontSize: 10,
+                    height: 24,
                     margin: 0,
                 });
             } catch (e) {
                 var msg = document.createElement('div');
                 msg.className = 'barcode-error';
                 msg.textContent = 'Barcode error';
+                el.replaceWith(msg);
+            }
+        });
+
+        document.querySelectorAll('.qr-code').forEach(function (el) {
+            var value = el.dataset.value || '';
+            try {
+                var qr = qrcode(0, 'M');
+                qr.addData(value);
+                qr.make();
+                var img = document.createElement('img');
+                img.src = qr.createDataURL(6, 0);
+                img.alt = 'QR: ' + value;
+                el.appendChild(img);
+            } catch (e) {
+                var msg = document.createElement('div');
+                msg.className = 'qr-error';
+                msg.textContent = 'QR error';
                 el.replaceWith(msg);
             }
         });

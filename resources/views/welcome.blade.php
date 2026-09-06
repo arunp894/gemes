@@ -43,7 +43,7 @@
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <p class="text-muted fs-base text-uppercase fw-semibold mb-1">Sales This Month</p>
-                            <h3 class="fw-bold mb-1">₹{{ number_format($salesThisMonth->revenue, 0) }}</h3>
+                            <h3 class="fw-bold mb-1">{{ $settings->formatMoney($salesThisMonth->revenue, 0) }}</h3>
                             <p class="mb-0 text-muted fs-sm">
                                 @if($salesRevenueChange >= 0)
                                     <span class="text-success me-1"><i class="ti ti-arrow-up"></i> {{ abs($salesRevenueChange) }}%</span>
@@ -93,7 +93,7 @@
                         </div>
                     </div>
                     <div class="mt-2 pt-2 border-top border-dashed d-flex gap-3">
-                        <span class="text-muted fs-sm"><i class="ti ti-currency-rupee me-1"></i>₹{{ number_format($websiteOrdersThisMonth->revenue, 0) }}</span>
+                        <span class="text-muted fs-sm"><i class="ti ti-cash me-1"></i>{{ $settings->formatMoney($websiteOrdersThisMonth->revenue, 0) }}</span>
                         <a href="{{ route('sales.index') }}" class="ms-auto text-primary fs-sm fw-semibold">View all &rarr;</a>
                     </div>
                 </div>
@@ -109,7 +109,7 @@
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <p class="text-muted fs-base text-uppercase fw-semibold mb-1">Purchases This Month</p>
-                            <h3 class="fw-bold mb-1">₹{{ number_format($purchasesThisMonth->spend, 0) }}</h3>
+                            <h3 class="fw-bold mb-1">{{ $settings->formatMoney($purchasesThisMonth->spend, 0) }}</h3>
                             <p class="mb-0 text-muted fs-sm">
                                 @if($purchaseSpendChange >= 0)
                                     <span class="text-danger me-1"><i class="ti ti-arrow-up"></i> {{ abs($purchaseSpendChange) }}%</span>
@@ -333,7 +333,7 @@
                                         <span class="fs-sm">{{ $sale->customer?->display_name ?? 'Walk-in' }}</span>
                                     </td>
                                     <td class="text-muted fs-sm">{{ $sale->sale_date->format('d M Y') }}</td>
-                                    <td class="fw-semibold">₹{{ number_format($sale->grand_total, 2) }}</td>
+                                    <td class="fw-semibold">{{ $settings->formatMoney($sale->grand_total, 2) }}</td>
                                     <td>
                                         <span class="badge {{ $sale->statusBadgeClass() }} px-2 py-1 rounded-pill fs-12">
                                             {{ $sale->statusLabel() }}
@@ -393,7 +393,7 @@
                                         <span class="text-muted" style="font-size:11px">{{ $purchase->purchase_date->format('d M Y') }}</span>
                                     </td>
                                     <td class="fs-sm">{{ $purchase->supplier?->display_name }}</td>
-                                    <td class="fw-semibold fs-sm">₹{{ number_format($purchase->grand_total, 0) }}</td>
+                                    <td class="fw-semibold fs-sm">{{ $settings->formatMoney($purchase->grand_total, 0) }}</td>
                                     <td>
                                         <span class="badge {{ $purchase->statusBadgeClass() }} px-2 py-1 rounded-pill fs-12">
                                             {{ $purchase->statusLabel() }}
@@ -614,6 +614,14 @@
     var gridCol  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
     var textCol  = isDark ? '#adb5bd' : '#6c757d';
 
+    /* ── Currency, from Settings — mirrors SettingService::formatMoney() ── */
+    var currencySymbol   = @json($settings->get('currency_symbol', '₹'));
+    var currencyCode     = @json($settings->get('currency_code', 'INR'));
+    var currencyPosition = @json($settings->get('currency_position', 'before'));
+    function formatMoney(formatted) {
+        return currencyPosition === 'before' ? (currencySymbol + formatted) : (formatted + ' ' + currencyCode);
+    }
+
     /* ── 12-Month Sales vs Purchases area chart ─────────────────── */
     var trendSeries = @json($trendSeries);
     var trendEl = document.querySelector('#dashboard-trend-chart');
@@ -648,9 +656,9 @@
         yaxis: {
             labels: {
                 formatter: function (v) {
-                    if (v >= 100000) return '₹' + (v / 100000).toFixed(1) + 'L';
-                    if (v >= 1000)   return '₹' + (v / 1000).toFixed(0) + 'k';
-                    return '₹' + v;
+                    if (v >= 100000) return formatMoney((v / 100000).toFixed(1) + 'L');
+                    if (v >= 1000)   return formatMoney((v / 1000).toFixed(0) + 'k');
+                    return formatMoney(String(v));
                 },
                 style: { colors: textCol, fontSize: '11px' }
             }
@@ -662,7 +670,7 @@
         tooltip: {
             y: {
                 formatter: function (v) {
-                    return '₹' + new Intl.NumberFormat('en-IN').format(v);
+                    return formatMoney(new Intl.NumberFormat().format(v));
                 }
             }
         },

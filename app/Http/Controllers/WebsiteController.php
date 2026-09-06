@@ -41,12 +41,13 @@ class WebsiteController extends Controller
             ->filter->hasImage()
             ->values();
 
-        // Gemstone categories for "Shop by Collection" strip
+        // Gemstone categories for "Shop by Collection" strip — no cap;
+        // the view renders these as a horizontally-scrollable slider so an
+        // arbitrary number fits without breaking the layout.
         $categories = Category::where('is_gemstone', true)
             ->visibleOnFrontend()
             ->withCount(['products' => fn ($q) => $q->where('website_enabled', true)->where('status', 1)])
             ->orderBy('display_order')
-            ->limit(6)
             ->get();
 
         // Featured products — website_enabled + featured_product flag, active

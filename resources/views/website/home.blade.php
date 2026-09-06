@@ -135,27 +135,31 @@
     </div>
     <a href="{{ route('website.collections') }}" class="sg-btn-outline">View All</a>
   </div>
-  <div class="sg-reveal sg-collections-grid" style="display:grid;grid-template-columns:repeat({{ min($categories->count(), 5) }},1fr);gap:16px">
-    @foreach($categories as $cat)
-    @php
-      $gemColors = ['#0078be','#e63282','#7a2f9c','#c9a84c','#fa6e82','#321e8c'];
-      $gc = $gemColors[$loop->index % count($gemColors)];
-      $tileBg = $cat->image_url
-        ? "background-image:url('{$cat->image_url}');background-size:cover;background-position:center"
-        : "background:radial-gradient(circle at 40% 40%,{$gc}44,rgba(10,7,22,.95))";
-    @endphp
-    <a href="{{ route('website.collections', ['category' => strtolower($cat->code)]) }}"
-       style="position:relative;overflow:hidden;border-radius:4px;cursor:pointer;border:1px solid rgba(214,48,140,.1);transition:all .4s;aspect-ratio:3/4;display:flex;flex-direction:column;justify-content:flex-end;text-decoration:none;{{ $tileBg }}"
-       onmouseenter="this.style.borderColor='rgba(214,48,140,.4)';this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,0,0,.4)'"
-       onmouseleave="this.style.borderColor='rgba(214,48,140,.1)';this.style.transform='';this.style.boxShadow=''">
-      <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,7,22,.92) 0%,rgba(10,7,22,.25) 50%,transparent 100%)"></div>
-      <div style="position:relative;z-index:2;padding:18px">
-        <div style="width:10px;height:10px;border-radius:50%;background:{{ $gc }};box-shadow:0 0 10px {{ $gc }};margin-bottom:8px"></div>
-        <div style="font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:#f0faf8;margin-bottom:3px">{{ $cat->name }}</div>
-        <div style="font-size:12px;color:rgba(240,250,248,.4);letter-spacing:1px">{{ $cat->products_count }} gems</div>
-      </div>
-    </a>
-    @endforeach
+  <div class="sg-collections-slider-wrap" style="position:relative">
+    <button type="button" class="sg-coll-arrow prev" onclick="sgCollectionsScroll(-1)" aria-label="Previous collections">‹</button>
+    <button type="button" class="sg-coll-arrow next" onclick="sgCollectionsScroll(1)" aria-label="Next collections">›</button>
+    <div class="sg-reveal sg-collections-slider" id="sgCollectionsSlider">
+      @foreach($categories as $cat)
+      @php
+        $gemColors = ['#0078be','#e63282','#7a2f9c','#c9a84c','#fa6e82','#321e8c'];
+        $gc = $gemColors[$loop->index % count($gemColors)];
+        $tileBg = $cat->image_url
+          ? "background-image:url('{$cat->image_url}');background-size:cover;background-position:center"
+          : "background:radial-gradient(circle at 40% 40%,{$gc}44,rgba(10,7,22,.95))";
+      @endphp
+      <a href="{{ route('website.collections', ['category' => strtolower($cat->code)]) }}" class="sg-collections-slide"
+         style="position:relative;overflow:hidden;border-radius:4px;cursor:pointer;border:1px solid rgba(214,48,140,.1);transition:all .4s;display:flex;flex-direction:column;justify-content:flex-end;text-decoration:none;{{ $tileBg }}"
+         onmouseenter="this.style.borderColor='rgba(214,48,140,.4)';this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(0,0,0,.4)'"
+         onmouseleave="this.style.borderColor='rgba(214,48,140,.1)';this.style.transform='';this.style.boxShadow=''">
+        <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(10,7,22,.92) 0%,rgba(10,7,22,.25) 50%,transparent 100%)"></div>
+        <div style="position:relative;z-index:2;padding:18px">
+          <div style="width:10px;height:10px;border-radius:50%;background:{{ $gc }};box-shadow:0 0 10px {{ $gc }};margin-bottom:8px"></div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:#f0faf8;margin-bottom:3px">{{ $cat->name }}</div>
+          <div style="font-size:12px;color:rgba(240,250,248,.4);letter-spacing:1px">{{ $cat->products_count }} gem{{ $cat->products_count !== 1 ? 's' : '' }}</div>
+        </div>
+      </a>
+      @endforeach
+    </div>
   </div>
 </section>
 @endif
@@ -272,6 +276,15 @@
 .sg-hero-arrow:hover{background:#fff;transform:translateY(-50%) scale(1.08)}
 .sg-hero-arrow.prev{left:24px}
 .sg-hero-arrow.next{right:24px}
+
+/* ── Collections slider ────────────────────────────────────────── */
+.sg-collections-slider{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none;padding:4px 2px 8px}
+.sg-collections-slider::-webkit-scrollbar{display:none}
+.sg-collections-slide{flex:0 0 auto;width:220px;aspect-ratio:3/4;scroll-snap-align:start}
+.sg-coll-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:40px;height:40px;border-radius:50%;border:1px solid rgba(214,48,140,.25);background:var(--dark-800);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;color:var(--white-dim);transition:all .3s}
+.sg-coll-arrow:hover{background:var(--teal-600);border-color:var(--teal-500);color:#fff}
+.sg-coll-arrow.prev{left:-14px}
+.sg-coll-arrow.next{right:-14px}
 .sg-hero-dots{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:3;display:flex;gap:8px}
 .sg-hero-dot{width:8px;height:8px;padding:0;border-radius:50%;border:none;cursor:pointer;background:rgba(255,255,255,.55);transition:all .3s}
 .sg-hero-dot.active{background:#fff;width:22px;border-radius:4px}
@@ -302,7 +315,8 @@
   .sg-values-grid{grid-template-columns:1fr}
   .sg-value-item{border-right:none;border-bottom:1px solid rgba(214,48,140,.07);padding:32px 24px}
   .sg-value-item:last-child{border-bottom:none}
-  .sg-collections-grid{grid-template-columns:repeat(2,1fr)!important}
+  .sg-collections-slide{width:160px}
+  .sg-coll-arrow{display:none}
   .sg-featured-more-grid{grid-template-columns:repeat(2,1fr)}
   .sg-trust-grid{grid-template-columns:repeat(2,1fr)}
   .sg-trust-item{padding:24px 20px}
@@ -315,7 +329,8 @@
   .sg-hero-title{font-size:38px}
   .sg-hero-stats{gap:22px;flex-wrap:wrap}
   .sg-sec-header{flex-direction:column;align-items:flex-start;gap:14px}
-  .sg-collections-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
+  .sg-collections-slide{width:140px}
+  .sg-collections-slider{gap:10px}
   .sg-featured-more-grid{grid-template-columns:1fr}
   .sg-trust-grid{grid-template-columns:1fr;padding:0 16px}
   .sg-trust-item{border-right:none;border-bottom:1px solid rgba(214,48,140,.08)}
@@ -352,5 +367,14 @@
 
   resetTimer();
 })();
+
+// ── Collections slider (arrow buttons scroll the flex row) ──────
+window.sgCollectionsScroll = function (direction) {
+  var track = document.getElementById('sgCollectionsSlider');
+  if (!track) return;
+  var tile = track.querySelector('.sg-collections-slide');
+  var step = (tile ? tile.getBoundingClientRect().width : 220) + 16; // tile width + gap
+  track.scrollBy({ left: direction * step * 2, behavior: 'smooth' });
+};
 </script>
 @endpush
