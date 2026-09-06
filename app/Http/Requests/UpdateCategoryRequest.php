@@ -14,10 +14,12 @@ class UpdateCategoryRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        // Coerce the gemstone checkbox to a boolean so the rule accepts it
-        // whether the form sends '1', 'true', or omits it entirely.
+        // Coerce checkboxes to booleans so the rule accepts '1'/'true'/omitted.
+        // show_on_frontend defaults to true when omitted — see
+        // StoreCategoryRequest for why.
         $this->merge([
-            'is_gemstone' => $this->boolean('is_gemstone'),
+            'is_gemstone'      => $this->boolean('is_gemstone'),
+            'show_on_frontend' => $this->boolean('show_on_frontend', true),
         ]);
     }
 
@@ -49,10 +51,11 @@ class UpdateCategoryRequest extends FormRequest
             // parent_id removed — categories are a flat, single-level list.
             'description'   => ['nullable', 'string', 'max:1000'],
             'display_order' => ['nullable', 'integer', 'min:0', 'max:99999'],
-            'status'        => ['required', 'boolean'],
-            'is_gemstone'   => ['nullable', 'boolean'],
-            'image'         => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
-            'remove_image'  => ['nullable', 'boolean'],
+            'status'           => ['required', 'boolean'],
+            'is_gemstone'      => ['nullable', 'boolean'],
+            'show_on_frontend' => ['nullable', 'boolean'],
+            'image'            => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
+            'remove_image'     => ['nullable', 'boolean'],
         ];
     }
 
@@ -70,11 +73,12 @@ class UpdateCategoryRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'name'          => 'Category Name',
-            'code'          => 'Category Code',
-            'display_order' => 'Display Order',
-            'is_gemstone'   => 'Gemstone Category',
-            'image'         => 'Category Image',
+            'name'             => 'Category Name',
+            'code'             => 'Category Code',
+            'display_order'    => 'Display Order',
+            'is_gemstone'      => 'Gemstone Category',
+            'show_on_frontend' => 'Show on Frontend',
+            'image'            => 'Category Image',
         ];
     }
 }

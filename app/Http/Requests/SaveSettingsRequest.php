@@ -22,6 +22,7 @@ class SaveSettingsRequest extends FormRequest
             'currency_position' => ['required', 'in:before,after'],
             'contact_email'     => ['nullable', 'email', 'max:120'],
             'contact_phone'     => ['nullable', 'string', 'max:30'],
+            'contact_phone2'    => ['nullable', 'string', 'max:30'],
             'contact_whatsapp'  => ['nullable', 'string', 'max:30'],
             'contact_address'   => ['nullable', 'string', 'max:255'],
             'cart_enabled'      => ['nullable', 'boolean'],

@@ -389,7 +389,10 @@ body{background:var(--dark-900);color:var(--white);font-family:'Jost',sans-serif
         <li><a href="{{ route('website.pages.show', \App\Models\Page::SLUG_ABOUT_US) }}">About Us</a></li>
         <li><a href="{{ route('website.contact') }}">Contact Us</a></li>
         @if($settings->get('contact_email'))<li><a href="mailto:{{ $settings->get('contact_email') }}">Email Us</a></li>@endif
+        @if($settings->get('contact_phone'))<li><a href="tel:{{ $settings->get('contact_phone') }}">{{ $settings->get('contact_phone') }}</a></li>@endif
+        @if($settings->get('contact_phone2'))<li><a href="tel:{{ $settings->get('contact_phone2') }}">{{ $settings->get('contact_phone2') }}</a></li>@endif
         @if($settings->get('contact_whatsapp'))<li><a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $settings->get('contact_whatsapp')) }}">WhatsApp</a></li>@endif
+        @if($settings->get('contact_address'))<li><span style="color:inherit">{{ $settings->get('contact_address') }}</span></li>@endif
         <li><a href="{{ route('website.pages.show', \App\Models\Page::SLUG_TERMS_CONDITIONS) }}">Terms &amp; Conditions</a></li>
       </ul>
     </div>

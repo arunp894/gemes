@@ -48,6 +48,7 @@ class SettingController extends Controller
             'currency_position' => $data['currency_position']  ?? 'before',
             'contact_email'     => $data['contact_email']      ?? '',
             'contact_phone'     => $data['contact_phone']      ?? '',
+            'contact_phone2'    => $data['contact_phone2']     ?? '',
             'contact_whatsapp'  => $data['contact_whatsapp']   ?? '',
             'contact_address'   => $data['contact_address']    ?? '',
             'cart_enabled'      => isset($data['cart_enabled'])     ? '1' : '0',

@@ -680,6 +680,29 @@
             });
         });
 
+        $('#categoriesTable tbody').on('click', '.js-toggle-frontend', function () {
+            const url = $(this).data('url');
+            $.ajax({
+                url: url,
+                type: 'PATCH',
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                success: function (res) {
+                    if (res.success) {
+                        dt.ajax.reload(null, false);
+                        showToast('success', res.message || 'Frontend visibility updated.');
+                    } else {
+                        showToast('error', res.message || 'Failed to update frontend visibility.');
+                    }
+                },
+                error: function (xhr) {
+                    const msg = (xhr.responseJSON && xhr.responseJSON.message)
+                        ? xhr.responseJSON.message
+                        : 'Failed to update frontend visibility.';
+                    showToast('error', msg);
+                },
+            });
+        });
+
         // ============= Delete (styled confirmation modal) =============
         const deleteModalEl = document.getElementById('deleteStoneModal');
         const deleteModal = new bootstrap.Modal(deleteModalEl);

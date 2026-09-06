@@ -191,6 +191,8 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:categories.view')->name('data');
         Route::patch('/{category}/toggle-status', [CategoryController::class, 'toggleStatus'])
             ->whereNumber('category')->middleware('permission:categories.edit')->name('toggle-status');
+        Route::patch('/{category}/toggle-frontend', [CategoryController::class, 'toggleFrontend'])
+            ->whereNumber('category')->middleware('permission:categories.edit')->name('toggle-frontend');
     });
     Route::resource('categories', CategoryController::class)->whereNumber('category')
         ->middlewareFor(['index', 'show'], 'permission:categories.view')

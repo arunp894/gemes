@@ -40,9 +40,10 @@ textarea.sg-input{min-height:auto;resize:vertical}
 @php
     $contactEmail    = $settings->get('contact_email');
     $contactPhone    = $settings->get('contact_phone');
+    $contactPhone2   = $settings->get('contact_phone2');
     $contactWhatsapp = $settings->get('contact_whatsapp');
     $contactAddress  = $settings->get('contact_address');
-    $hasAnyContact   = $contactEmail || $contactPhone || $contactWhatsapp || $contactAddress;
+    $hasAnyContact   = $contactEmail || $contactPhone || $contactPhone2 || $contactWhatsapp || $contactAddress;
 @endphp
 
 <section class="sg-contact-hero">
@@ -86,6 +87,15 @@ textarea.sg-input{min-height:auto;resize:vertical}
                             <div>
                                 <div class="sg-contact-label">Phone</div>
                                 <a href="tel:{{ $contactPhone }}" class="sg-contact-value">{{ $contactPhone }}</a>
+                            </div>
+                        </div>
+                    @endif
+                    @if ($contactPhone2)
+                        <div class="sg-contact-row">
+                            <span class="sg-contact-icon">📞</span>
+                            <div>
+                                <div class="sg-contact-label">Phone</div>
+                                <a href="tel:{{ $contactPhone2 }}" class="sg-contact-value">{{ $contactPhone2 }}</a>
                             </div>
                         </div>
                     @endif

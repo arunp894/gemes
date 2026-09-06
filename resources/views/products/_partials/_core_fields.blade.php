@@ -125,7 +125,9 @@
                     Primary Image @if (!$product) <span class="text-danger">*</span> @endif
                 </label>
                 <input type="file" class="form-control" id="primary_image" name="primary_image"
-                    accept="image/jpeg,image/png" @change="onPrimaryImageChange">
+                    accept="image/jpeg,image/png" @change="onPrimaryImageChange"
+                    :class="{ 'is-invalid': errors.primary_image }">
+                <div class="invalid-feedback">@{{ errors.primary_image }}</div>
                 <small class="text-muted">JPG or PNG, max 5 MB. Required to enable website visibility.</small>
 
                 <div v-if="primaryImagePreview || existingPrimaryImage" class="mt-2">

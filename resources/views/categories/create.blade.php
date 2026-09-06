@@ -117,6 +117,19 @@
                             <small class="text-muted">Inactive categories are hidden from product creation forms.</small>
                         </div>
 
+                        {{-- Show on Frontend --}}
+                        <div class="mb-3">
+                            <label class="form-label d-block">Show on Frontend</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch"
+                                    v-model="form.show_on_frontend">
+                                <label class="form-check-label" for="show_on_frontend">
+                                    @{{ form.show_on_frontend ? 'Shown' : 'Hidden' }}
+                                </label>
+                            </div>
+                            <small class="text-muted">Controls whether this stone appears on the storefront (homepage collections, shop filter). Independent of Status above.</small>
+                        </div>
+
                         {{-- Server error banner --}}
                         <div v-if="serverError" class="alert alert-danger" role="alert">@{{ serverError }}</div>
 
@@ -212,6 +225,7 @@
                 display_order: 0,
                 status: true,
                 is_gemstone: false,
+                show_on_frontend: true,
             },
             imageFile: null,
             imagePreview: null,
@@ -272,6 +286,7 @@
                 fd.append('display_order', this.form.display_order || 0);
                 fd.append('status', this.form.status ? 1 : 0);
                 fd.append('is_gemstone', this.form.is_gemstone ? 1 : 0);
+                fd.append('show_on_frontend', this.form.show_on_frontend ? 1 : 0);
                 if (this.imageFile) fd.append('image', this.imageFile);
 
                 try {

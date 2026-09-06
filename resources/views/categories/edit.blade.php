@@ -152,6 +152,16 @@
                             </div>
                         </div>
 
+                        {{-- Show on Frontend --}}
+                        <div class="mb-3">
+                            <label class="form-label d-block">Show on Frontend</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" role="switch" v-model="form.show_on_frontend">
+                                <label class="form-check-label" for="show_on_frontend">@{{ form.show_on_frontend ? 'Shown' : 'Hidden' }}</label>
+                            </div>
+                            <small class="text-muted">Controls whether this stone appears on the storefront. Independent of Status above.</small>
+                        </div>
+
                         {{-- Server error --}}
                         <div v-if="serverError" class="alert alert-danger" role="alert">@{{ serverError }}</div>
 
@@ -244,6 +254,7 @@
                 display_order: @json($category->display_order),
                 status:        @json((bool) $category->status),
                 is_gemstone:   @json((bool) $category->is_gemstone),
+                show_on_frontend: @json((bool) $category->show_on_frontend),
             },
             currentImage: @json($category->thumb_url ?? $category->image_url),
             imageFile: null,
@@ -298,6 +309,7 @@
                 fd.append('display_order', this.form.display_order || 0);
                 fd.append('status', this.form.status ? 1 : 0);
                 fd.append('is_gemstone', this.form.is_gemstone ? 1 : 0);
+                fd.append('show_on_frontend', this.form.show_on_frontend ? 1 : 0);
                 if (this.imageFile)   fd.append('image', this.imageFile);
                 if (this.removeImage) fd.append('remove_image', 1);
 

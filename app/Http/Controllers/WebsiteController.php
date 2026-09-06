@@ -43,6 +43,7 @@ class WebsiteController extends Controller
 
         // Gemstone categories for "Shop by Collection" strip
         $categories = Category::where('is_gemstone', true)
+            ->visibleOnFrontend()
             ->withCount(['products' => fn ($q) => $q->where('website_enabled', true)->where('status', 1)])
             ->orderBy('display_order')
             ->limit(6)
@@ -120,6 +121,7 @@ class WebsiteController extends Controller
 
         // Sidebar categories
         $categories = Category::where('is_gemstone', true)
+            ->visibleOnFrontend()
             ->withCount(['products' => fn ($q) => $q->where('website_enabled', true)->where('status', 1)])
             ->orderBy('display_order')
             ->get();

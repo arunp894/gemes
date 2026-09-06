@@ -77,12 +77,14 @@ class CategoryController extends Controller
                 return $dt ? $dt->format('d M, Y') : '—';
             })
             ->addColumn('action', function (Category $category) {
-                $show    = route('categories.show', $category);
-                $edit    = route('categories.edit', $category);
-                $toggle  = route('categories.toggle-status', $category);
-                $destroy = route('categories.destroy', $category);
+                $show           = route('categories.show', $category);
+                $edit           = route('categories.edit', $category);
+                $toggle         = route('categories.toggle-status', $category);
+                $toggleFrontend = route('categories.toggle-frontend', $category);
+                $destroy        = route('categories.destroy', $category);
 
-                $toggleIcon = $category->isActive() ? 'ti-toggle-right' : 'ti-toggle-left';
+                $toggleIcon         = $category->isActive() ? 'ti-toggle-right' : 'ti-toggle-left';
+                $toggleFrontendIcon = $category->isVisibleOnFrontend() ? 'ti-world' : 'ti-world-off';
 
                 return '
                     <div class="d-flex justify-content-center gap-1">
@@ -95,6 +97,10 @@ class CategoryController extends Controller
                         <button type="button" class="action-btn action-toggle js-toggle-status"
                             data-url="' . $toggle . '" title="Toggle Status">
                             <i class="ti ' . $toggleIcon . '"></i>
+                        </button>
+                        <button type="button" class="action-btn action-toggle js-toggle-frontend"
+                            data-url="' . $toggleFrontend . '" title="Toggle Show on Frontend">
+                            <i class="ti ' . $toggleFrontendIcon . '"></i>
                         </button>
                         <button type="button" class="action-btn action-delete js-delete"
                             data-url="' . $destroy . '" data-name="' . e($category->name) . '" title="Delete">
@@ -130,12 +136,13 @@ class CategoryController extends Controller
 
         $category = DB::transaction(function () use ($request, $data) {
             $category = Category::create([
-                'name'          => $data['name'],
-                'code'          => strtoupper($data['code']),
-                'description'   => $data['description'] ?? null,
-                'display_order' => $data['display_order'] ?? 0,
-                'status'        => (bool) $data['status'],
-                'is_gemstone'   => (bool) ($data['is_gemstone'] ?? false),
+                'name'             => $data['name'],
+                'code'             => strtoupper($data['code']),
+                'description'      => $data['description'] ?? null,
+                'display_order'    => $data['display_order'] ?? 0,
+                'status'           => (bool) $data['status'],
+                'is_gemstone'      => (bool) ($data['is_gemstone'] ?? false),
+                'show_on_frontend' => (bool) ($data['show_on_frontend'] ?? true),
             ]);
 
             if ($request->hasFile('image')) {
@@ -186,11 +193,12 @@ class CategoryController extends Controller
 
         DB::transaction(function () use ($request, $category, $data) {
             $payload = [
-                'name'          => $data['name'],
-                'description'   => $data['description'] ?? null,
-                'display_order' => $data['display_order'] ?? 0,
-                'status'        => (bool) $data['status'],
-                'is_gemstone'   => (bool) ($data['is_gemstone'] ?? false),
+                'name'             => $data['name'],
+                'description'      => $data['description'] ?? null,
+                'display_order'    => $data['display_order'] ?? 0,
+                'status'           => (bool) $data['status'],
+                'is_gemstone'      => (bool) ($data['is_gemstone'] ?? false),
+                'show_on_frontend' => (bool) ($data['show_on_frontend'] ?? true),
             ];
 
             $category->fill($payload)->save();
@@ -252,6 +260,22 @@ class CategoryController extends Controller
             'status'  => (bool) $category->status,
             'label'   => $category->statusLabel(),
             'message' => 'Status updated.',
+        ]);
+    }
+
+    /**
+     * Toggle whether this category shows on the storefront.
+     */
+    public function toggleFrontend(Category $category): JsonResponse
+    {
+        $category->show_on_frontend = ! $category->show_on_frontend;
+        $category->save();
+
+        return response()->json([
+            'success' => true,
+            'shown'   => (bool) $category->show_on_frontend,
+            'label'   => $category->frontendVisibilityLabel(),
+            'message' => $category->show_on_frontend ? 'Now shown on the website.' : 'Hidden from the website.',
         ]);
     }
 }

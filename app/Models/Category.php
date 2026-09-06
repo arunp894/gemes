@@ -42,6 +42,7 @@ class Category extends Model implements HasMedia
         'display_order',
         'status',
         'is_gemstone',
+        'show_on_frontend',
         'created_by',
         'updated_by',
     ];
@@ -52,9 +53,10 @@ class Category extends Model implements HasMedia
      * @var array<string, string>
      */
     protected $casts = [
-        'status'        => 'boolean',
-        'display_order' => 'integer',
-        'is_gemstone'   => 'boolean',
+        'status'           => 'boolean',
+        'display_order'    => 'integer',
+        'is_gemstone'      => 'boolean',
+        'show_on_frontend' => 'boolean',
     ];
 
     /* -----------------------------------------------------------------
@@ -131,6 +133,15 @@ class Category extends Model implements HasMedia
         return $query->orderBy('display_order', 'asc')->orderBy('name', 'asc');
     }
 
+    /**
+     * Categories visible on the storefront — see the show_on_frontend
+     * migration for how this differs from scopeActive()/is_gemstone.
+     */
+    public function scopeVisibleOnFrontend($query)
+    {
+        return $query->where('show_on_frontend', true);
+    }
+
     /* -----------------------------------------------------------------
      |  Relationships
      | -----------------------------------------------------------------
@@ -175,5 +186,20 @@ class Category extends Model implements HasMedia
     public function statusBadgeClass(): string
     {
         return $this->isActive() ? 'badge bg-success' : 'badge bg-secondary';
+    }
+
+    public function isVisibleOnFrontend(): bool
+    {
+        return (bool) $this->show_on_frontend === true;
+    }
+
+    public function frontendVisibilityLabel(): string
+    {
+        return $this->isVisibleOnFrontend() ? 'Shown' : 'Hidden';
+    }
+
+    public function frontendVisibilityBadgeClass(): string
+    {
+        return $this->isVisibleOnFrontend() ? 'badge bg-success' : 'badge bg-secondary';
     }
 }

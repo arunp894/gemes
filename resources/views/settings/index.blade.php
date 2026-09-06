@@ -139,20 +139,27 @@
                       value="{{ old('contact_email', $all['contact_email'] ?? '') }}" placeholder="hello@sukainagems.com">
                   </div>
                   <div class="col-md-4 mb-3">
-                    <label class="form-label fw-semibold">Contact Phone</label>
+                    <label class="form-label fw-semibold">Phone No. 1</label>
                     <input type="text" name="contact_phone" class="form-control"
                       value="{{ old('contact_phone', $all['contact_phone'] ?? '') }}" placeholder="+91 …">
+                    <div class="form-text">Shown on the storefront footer and Contact page.</div>
                   </div>
                   <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold">Phone No. 2 <span class="text-muted fw-normal">(optional)</span></label>
+                    <input type="text" name="contact_phone2" class="form-control"
+                      value="{{ old('contact_phone2', $all['contact_phone2'] ?? '') }}" placeholder="+91 …">
+                    <div class="form-text">Shown on the storefront footer and Contact page.</div>
+                  </div>
+                  <div class="col-md-6 mb-3">
                     <label class="form-label fw-semibold">WhatsApp Number</label>
                     <input type="text" name="contact_whatsapp" class="form-control"
                       value="{{ old('contact_whatsapp', $all['contact_whatsapp'] ?? '') }}" placeholder="+91 …">
                   </div>
-                  <div class="col-md-4 mb-3">
+                  <div class="col-md-6 mb-3">
                     <label class="form-label fw-semibold">Address / Location</label>
                     <input type="text" name="contact_address" class="form-control"
                       value="{{ old('contact_address', $all['contact_address'] ?? '') }}" placeholder="Bangkok, Thailand">
-                    <div class="form-text">Shown on the storefront's Contact page.</div>
+                    <div class="form-text">Shown on the storefront footer and Contact page.</div>
                   </div>
                 </div>
 
