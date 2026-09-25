@@ -112,13 +112,19 @@
         .label-bottom {
             width: 100%;
             display: flex;
-            justify-content: flex-start;
+            align-items: baseline;
+            justify-content: space-between;
         }
         .label .price-code {
             font-family: "Courier New", monospace;
             font-weight: 700;
             font-size: 10px;
             letter-spacing: 0.5px;
+        }
+        .label .pcs {
+            font-size: 8px;
+            color: #4b5563;
+            white-space: nowrap;
         }
 
         .empty {
@@ -194,6 +200,7 @@
                     <svg class="barcode" data-value="{{ $row->lot_code }}"></svg>
                     <div class="label-bottom">
                         <div class="price-code">{{ $row->priceCode() }}</div>
+                        <div class="pcs">Pcs: {{ $row->qty }}</div>
                     </div>
                 </div>
             @endforeach
