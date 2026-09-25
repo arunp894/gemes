@@ -32,10 +32,10 @@
                 </ul>
             </div>
         </li>
-        <li class="side-nav-item {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') || request()->routeIs('country-origins.*') ? 'menuitem-active' : '' }}">
+        <li class="side-nav-item {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') || request()->routeIs('country-origins.*') || request()->routeIs('colors.*') || request()->routeIs('shapes.*') || request()->routeIs('clarities.*') || request()->routeIs('treatments.*') || request()->routeIs('ebay-titles.*') ? 'menuitem-active' : '' }}">
 
             <a data-bs-toggle="collapse" href="#catalogueMenu"
-                aria-expanded="{{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') || request()->routeIs('country-origins.*') ? 'true' : 'false' }}"
+                aria-expanded="{{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') || request()->routeIs('country-origins.*') || request()->routeIs('colors.*') || request()->routeIs('shapes.*') || request()->routeIs('clarities.*') || request()->routeIs('treatments.*') || request()->routeIs('ebay-titles.*') ? 'true' : 'false' }}"
                 aria-controls="catalogueMenu" class="side-nav-link">
 
                 <span class="menu-icon">
@@ -48,7 +48,7 @@
                 <span class="menu-arrow"></span>
             </a>
 
-            <div class="collapse {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') || request()->routeIs('country-origins.*') ? 'show' : '' }}"
+            <div class="collapse {{ request()->routeIs('categories.*') || request()->routeIs('subcategories.*') || request()->routeIs('products.*') || request()->routeIs('website-visibility.*') || request()->routeIs('country-origins.*') || request()->routeIs('colors.*') || request()->routeIs('shapes.*') || request()->routeIs('clarities.*') || request()->routeIs('treatments.*') || request()->routeIs('ebay-titles.*') ? 'show' : '' }}"
                 id="catalogueMenu">
 
                 <ul class="sub-menu">
@@ -76,6 +76,46 @@
                             </span>
                         </a>
                     </li>
+
+                    @permission('colors.view')
+                    <li class="side-nav-item {{ request()->routeIs('colors.*') ? 'active' : '' }}">
+                        <a href="{{ route('colors.index') }}" class="side-nav-link">
+                            <span class="menu-text">Colors</span>
+                        </a>
+                    </li>
+                    @endpermission
+
+                    @permission('shapes.view')
+                    <li class="side-nav-item {{ request()->routeIs('shapes.*') ? 'active' : '' }}">
+                        <a href="{{ route('shapes.index') }}" class="side-nav-link">
+                            <span class="menu-text">Shapes</span>
+                        </a>
+                    </li>
+                    @endpermission
+
+                    @permission('clarities.view')
+                    <li class="side-nav-item {{ request()->routeIs('clarities.*') ? 'active' : '' }}">
+                        <a href="{{ route('clarities.index') }}" class="side-nav-link">
+                            <span class="menu-text">Clarity</span>
+                        </a>
+                    </li>
+                    @endpermission
+
+                    @permission('treatments.view')
+                    <li class="side-nav-item {{ request()->routeIs('treatments.*') ? 'active' : '' }}">
+                        <a href="{{ route('treatments.index') }}" class="side-nav-link">
+                            <span class="menu-text">Treatment</span>
+                        </a>
+                    </li>
+                    @endpermission
+
+                    @permission('ebay-titles.view')
+                    <li class="side-nav-item {{ request()->routeIs('ebay-titles.*') ? 'active' : '' }}">
+                        <a href="{{ route('ebay-titles.index') }}" class="side-nav-link">
+                            <span class="menu-text">eBay Title</span>
+                        </a>
+                    </li>
+                    @endpermission
 
                 </ul>
             </div>

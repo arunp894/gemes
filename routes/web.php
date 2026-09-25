@@ -13,7 +13,12 @@ use App\Http\Controllers\TodayPerformanceController;
 use App\Http\Controllers\StockActivityReportController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChannelController;
+use App\Http\Controllers\ClarityController;
+use App\Http\Controllers\ColorController;
 use App\Http\Controllers\CountryOfOriginController;
+use App\Http\Controllers\EbayTitleController;
+use App\Http\Controllers\ShapeController;
+use App\Http\Controllers\TreatmentController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PageController;
@@ -180,6 +185,91 @@ Route::middleware('auth')->group(function () {
         ->middlewareFor(['create', 'store'], 'permission:channels.create')
         ->middlewareFor(['edit', 'update'], 'permission:channels.edit')
         ->middlewareFor('destroy', 'permission:channels.delete');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Colors
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('colors')->name('colors.')->group(function () {
+        Route::get('/data', [ColorController::class, 'data'])
+            ->middleware('permission:colors.view')->name('data');
+        Route::patch('/{color}/toggle-status', [ColorController::class, 'toggleStatus'])
+            ->whereNumber('color')->middleware('permission:colors.edit')->name('toggle-status');
+    });
+    Route::resource('colors', ColorController::class)->whereNumber('color')
+        ->middlewareFor(['index', 'show'], 'permission:colors.view')
+        ->middlewareFor(['create', 'store'], 'permission:colors.create')
+        ->middlewareFor(['edit', 'update'], 'permission:colors.edit')
+        ->middlewareFor('destroy', 'permission:colors.delete');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Shapes
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('shapes')->name('shapes.')->group(function () {
+        Route::get('/data', [ShapeController::class, 'data'])
+            ->middleware('permission:shapes.view')->name('data');
+        Route::patch('/{shape}/toggle-status', [ShapeController::class, 'toggleStatus'])
+            ->whereNumber('shape')->middleware('permission:shapes.edit')->name('toggle-status');
+    });
+    Route::resource('shapes', ShapeController::class)->whereNumber('shape')
+        ->middlewareFor(['index', 'show'], 'permission:shapes.view')
+        ->middlewareFor(['create', 'store'], 'permission:shapes.create')
+        ->middlewareFor(['edit', 'update'], 'permission:shapes.edit')
+        ->middlewareFor('destroy', 'permission:shapes.delete');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Clarity
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('clarities')->name('clarities.')->group(function () {
+        Route::get('/data', [ClarityController::class, 'data'])
+            ->middleware('permission:clarities.view')->name('data');
+        Route::patch('/{clarity}/toggle-status', [ClarityController::class, 'toggleStatus'])
+            ->whereNumber('clarity')->middleware('permission:clarities.edit')->name('toggle-status');
+    });
+    Route::resource('clarities', ClarityController::class)->whereNumber('clarity')
+        ->middlewareFor(['index', 'show'], 'permission:clarities.view')
+        ->middlewareFor(['create', 'store'], 'permission:clarities.create')
+        ->middlewareFor(['edit', 'update'], 'permission:clarities.edit')
+        ->middlewareFor('destroy', 'permission:clarities.delete');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Treatment
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('treatments')->name('treatments.')->group(function () {
+        Route::get('/data', [TreatmentController::class, 'data'])
+            ->middleware('permission:treatments.view')->name('data');
+        Route::patch('/{treatment}/toggle-status', [TreatmentController::class, 'toggleStatus'])
+            ->whereNumber('treatment')->middleware('permission:treatments.edit')->name('toggle-status');
+    });
+    Route::resource('treatments', TreatmentController::class)->whereNumber('treatment')
+        ->middlewareFor(['index', 'show'], 'permission:treatments.view')
+        ->middlewareFor(['create', 'store'], 'permission:treatments.create')
+        ->middlewareFor(['edit', 'update'], 'permission:treatments.edit')
+        ->middlewareFor('destroy', 'permission:treatments.delete');
+
+    /*
+    |--------------------------------------------------------------------------
+    | eBay Title
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('ebay-titles')->name('ebay-titles.')->group(function () {
+        Route::get('/data', [EbayTitleController::class, 'data'])
+            ->middleware('permission:ebay-titles.view')->name('data');
+        Route::patch('/{ebay_title}/toggle-status', [EbayTitleController::class, 'toggleStatus'])
+            ->whereNumber('ebay_title')->middleware('permission:ebay-titles.edit')->name('toggle-status');
+    });
+    Route::resource('ebay-titles', EbayTitleController::class)->whereNumber('ebay_title')
+        ->middlewareFor(['index', 'show'], 'permission:ebay-titles.view')
+        ->middlewareFor(['create', 'store'], 'permission:ebay-titles.create')
+        ->middlewareFor(['edit', 'update'], 'permission:ebay-titles.edit')
+        ->middlewareFor('destroy', 'permission:ebay-titles.delete');
 
     /*
     |--------------------------------------------------------------------------

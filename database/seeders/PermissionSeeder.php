@@ -19,6 +19,36 @@ class PermissionSeeder extends Seeder
             ['slug' => 'channels.edit',            'name' => 'Edit Channels',            'module' => 'channels'],
             ['slug' => 'channels.delete',          'name' => 'Delete Channels',          'module' => 'channels'],
 
+            // ----- Colors module -----
+            ['slug' => 'colors.view',              'name' => 'View Colors',              'module' => 'colors'],
+            ['slug' => 'colors.create',            'name' => 'Create Colors',            'module' => 'colors'],
+            ['slug' => 'colors.edit',              'name' => 'Edit Colors',              'module' => 'colors'],
+            ['slug' => 'colors.delete',            'name' => 'Delete Colors',            'module' => 'colors'],
+
+            // ----- Shapes module -----
+            ['slug' => 'shapes.view',              'name' => 'View Shapes',              'module' => 'shapes'],
+            ['slug' => 'shapes.create',            'name' => 'Create Shapes',            'module' => 'shapes'],
+            ['slug' => 'shapes.edit',              'name' => 'Edit Shapes',              'module' => 'shapes'],
+            ['slug' => 'shapes.delete',            'name' => 'Delete Shapes',            'module' => 'shapes'],
+
+            // ----- Clarity module -----
+            ['slug' => 'clarities.view',           'name' => 'View Clarity',             'module' => 'clarities'],
+            ['slug' => 'clarities.create',         'name' => 'Create Clarity',           'module' => 'clarities'],
+            ['slug' => 'clarities.edit',           'name' => 'Edit Clarity',             'module' => 'clarities'],
+            ['slug' => 'clarities.delete',         'name' => 'Delete Clarity',           'module' => 'clarities'],
+
+            // ----- Treatment module -----
+            ['slug' => 'treatments.view',          'name' => 'View Treatment',           'module' => 'treatments'],
+            ['slug' => 'treatments.create',        'name' => 'Create Treatment',         'module' => 'treatments'],
+            ['slug' => 'treatments.edit',          'name' => 'Edit Treatment',           'module' => 'treatments'],
+            ['slug' => 'treatments.delete',        'name' => 'Delete Treatment',         'module' => 'treatments'],
+
+            // ----- eBay Title module -----
+            ['slug' => 'ebay-titles.view',         'name' => 'View eBay Titles',         'module' => 'ebay-titles'],
+            ['slug' => 'ebay-titles.create',       'name' => 'Create eBay Titles',       'module' => 'ebay-titles'],
+            ['slug' => 'ebay-titles.edit',         'name' => 'Edit eBay Titles',         'module' => 'ebay-titles'],
+            ['slug' => 'ebay-titles.delete',       'name' => 'Delete eBay Titles',       'module' => 'ebay-titles'],
+
             // ----- Categories module -----
             ['slug' => 'categories.view',          'name' => 'View Categories',          'module' => 'categories'],
             ['slug' => 'categories.create',        'name' => 'Create Categories',        'module' => 'categories'],
