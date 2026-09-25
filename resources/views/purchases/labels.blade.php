@@ -112,7 +112,7 @@
         .label-bottom {
             width: 100%;
             display: flex;
-            align-items: baseline;
+            align-items: flex-end;
             justify-content: space-between;
         }
         .label .price-code {
@@ -121,9 +121,20 @@
             font-size: 10px;
             letter-spacing: 0.5px;
         }
+        .label .pcs-date {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            line-height: 1.2;
+        }
         .label .pcs {
             font-size: 8px;
             color: #4b5563;
+            white-space: nowrap;
+        }
+        .label .date {
+            font-size: 6px;
+            color: #9ca3af;
             white-space: nowrap;
         }
 
@@ -200,7 +211,10 @@
                     <svg class="barcode" data-value="{{ $row->lot_code }}"></svg>
                     <div class="label-bottom">
                         <div class="price-code">{{ $row->priceCode() }}</div>
-                        <div class="pcs">Pcs: {{ $row->qty }}</div>
+                        <div class="pcs-date">
+                            <div class="pcs">Pcs: {{ $row->qty }}</div>
+                            <div class="date">{{ optional($purchase->purchase_date)->format('d/m/y') }}</div>
+                        </div>
                     </div>
                 </div>
             @endforeach

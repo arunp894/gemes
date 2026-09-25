@@ -22,7 +22,7 @@
         </div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
-                <li class="breadcrumb-item"><a href="{{ url('/') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="{{ route('sales.index') }}">Sales</a></li>
                 <li class="breadcrumb-item active">{{ $sale->sale_number }}</li>
             </ol>
