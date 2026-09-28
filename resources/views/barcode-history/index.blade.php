@@ -356,7 +356,7 @@
                                                 <td class="text-muted text-center small">@{{ idx + 1 }}</td>
                                                 <td>
                                                     <a v-if="row.id"
-                                                       :href="'/purchases/' + row.id"
+                                                       :href="'/admin/purchases/' + row.id"
                                                        class="text-decoration-none fw-semibold"
                                                        target="_blank">
                                                         <i class="ti ti-file-invoice me-1 text-muted"></i>@{{ row.invoice_number }}

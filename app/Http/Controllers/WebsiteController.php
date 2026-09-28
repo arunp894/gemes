@@ -142,10 +142,14 @@ class WebsiteController extends Controller
 
     // ── Product Detail ───────────────────────────────────────────────
 
-    public function product(Product $product): View
+    public function product(Product $product): View|RedirectResponse
     {
-        // 404 if not visible on website
-        abort_if(! $product->website_enabled || ! $product->status, 404);
+        // Not visible on the website (e.g. a label's QR code scanned for a
+        // piece that's been disabled since printing) — send them to the
+        // homepage instead of a dead-end 404.
+        if (! $product->website_enabled || ! $product->status) {
+            return redirect()->route('website.home');
+        }
 
         $product->load(['category', 'barcodes', 'media']);
 

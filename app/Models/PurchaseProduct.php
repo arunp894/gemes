@@ -112,14 +112,38 @@ class PurchaseProduct extends Model
     }
 
     /**
-     * Digit → letter cipher for printing a coded cost price on labels
+     * Digit → letter cipher for printing a coded COST price on labels
      * (standard jewellery-trade practice — staff can read the cost back
      * off the tag, customers just see letters). Ten distinct letters,
-     * one per digit 0–9.
+     * one per digit 0–9 — the mnemonic is the word PATHFINDER, read as
+     * digits 1 through 9 then 0 (P=1, A=2, T=3, H=4, F=5, I=6, N=7,
+     * D=8, E=9, R=0).
      *
      * @var array<string, string>
      */
     public const PRICE_CODE_MAP = [
+        '0' => 'R',
+        '1' => 'P',
+        '2' => 'A',
+        '3' => 'T',
+        '4' => 'H',
+        '5' => 'F',
+        '6' => 'I',
+        '7' => 'N',
+        '8' => 'D',
+        '9' => 'E',
+    ];
+
+    /**
+     * Digit → letter cipher for printing a coded SELLING (website) price
+     * on labels — same scheme as PRICE_CODE_MAP but a different mnemonic
+     * so the two can't be confused at a glance: WONDERFULS, read as
+     * digits 1 through 9 then 0 (W=1, O=2, N=3, D=4, E=5, R=6, F=7,
+     * U=8, L=9, S=0).
+     *
+     * @var array<string, string>
+     */
+    public const SELLING_PRICE_CODE_MAP = [
         '0' => 'S',
         '1' => 'W',
         '2' => 'O',
@@ -133,14 +157,30 @@ class PurchaseProduct extends Model
     ];
 
     /**
-     * This row's price, rounded to the nearest whole rupee and run
-     * through PRICE_CODE_MAP. e.g. price 1234.56 -> "1235" -> "WOND".
+     * This row's cost price, rounded to the nearest whole rupee and run
+     * through PRICE_CODE_MAP. e.g. price 1234.56 -> "1235" -> "PHTE".
      */
     public function priceCode(): string
     {
         $rounded = (string) (int) round((float) $this->price);
 
         return strtr($rounded, self::PRICE_CODE_MAP);
+    }
+
+    /**
+     * This row's website (selling) price, rounded to the nearest whole
+     * rupee and run through SELLING_PRICE_CODE_MAP. Null when no selling
+     * price is set yet, e.g. price 78 -> "78" -> "FU".
+     */
+    public function sellingPriceCode(): ?string
+    {
+        if ($this->website_price === null) {
+            return null;
+        }
+
+        $rounded = (string) (int) round((float) $this->website_price);
+
+        return strtr($rounded, self::SELLING_PRICE_CODE_MAP);
     }
 
     /* ─── Lot code generator ───────────────────────────────── */

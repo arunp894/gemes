@@ -55,14 +55,7 @@ class UpdateProductRequest extends FormRequest
                     ->whereNull('deleted_at'),
             ],
 
-            // 'category_id' => [
-            //     'required',
-            //     'integer',
-            //     Rule::exists('categories', 'id')
-            //         ->whereNull('deleted_at')
-            //         ->where('status', 1)
-            //         ->whereNotNull('parent_id'),
-            // ],
+            'category_id' => ['required', 'integer'],
 
             'short_description' => ['nullable', 'string', 'max:500'],
             'full_description'  => ['nullable', 'string'],
