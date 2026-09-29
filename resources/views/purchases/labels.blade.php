@@ -225,6 +225,10 @@
                 'selling_price_code' => $row->sellingPriceCode(),
                 'product_url'        => $product ? route('website.product', $product) : null,
                 'qty'                => (int) $row->qty,
+                // The QR encodes the storefront product URL — pointless
+                // (and confusing to scan) for a product that isn't listed
+                // on the website, so this row gets a barcode label only.
+                'website_enabled'    => (bool) ($product?->website_enabled ?? false),
             ];
         });
     @endphp
@@ -254,7 +258,7 @@
     @else
         <div class="sheet">
             @foreach ($labelData as $item)
-                @foreach (['barcode', 'qr'] as $labelKind)
+                @foreach ($item['website_enabled'] ? ['barcode', 'qr'] : ['barcode'] as $labelKind)
                 <div class="label">
                     <div class="title">{{ $item['title'] }}</div>
                     @if ($labelKind === 'barcode')
@@ -525,7 +529,9 @@
                 var data = [];
                 TSC_LABELS.forEach(function (item) {
                     data.push({ type: 'raw', format: 'plain', data: buildTsplBarcodeLabel(item) });
-                    data.push({ type: 'raw', format: 'plain', data: buildTsplQrLabel(item) });
+                    if (item.website_enabled) {
+                        data.push({ type: 'raw', format: 'plain', data: buildTsplQrLabel(item) });
+                    }
                 });
                 console.log('[TSC] raw TSPL being sent:', data.map(function (d) { return d.data; }));
                 var result = await qz.print(config, data);
