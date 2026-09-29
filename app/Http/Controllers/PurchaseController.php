@@ -162,6 +162,23 @@ class PurchaseController extends Controller
                 fn(Purchase $p) =>
                 '<span class="badge ' . $p->statusBadgeClass() . '">' . $p->statusLabel() . '</span>'
             )
+            // The search box's global search normally does a plain LIKE on
+            // each searchable column's own DB value — but "lot code" isn't
+            // a purchase-level column at all, it lives on each line's rows
+            // (purchase_products.lot_code, one per stockable piece/box —
+            // see PurchaseProduct::generateLotCode()). Overriding the
+            // invoice_number column's filter to OR in a whereHas lets
+            // someone scan/type a shelf label's lot code here and land on
+            // the purchase invoice it came from, without a separate filter.
+            ->filterColumn('invoice_number', function (Builder $query, string $keyword) {
+                $like = "%{$keyword}%";
+                $query->where(function (Builder $qq) use ($like) {
+                    $qq->where('invoice_number', 'like', $like)
+                        ->orWhereHas('lines.rows', function (Builder $rows) use ($like) {
+                            $rows->where('lot_code', 'like', $like);
+                        });
+                });
+            })
             ->addColumn('actions', function (Purchase $p) {
                 $canEdit   = auth()->user()?->hasPermission('purchases.edit')   ?? false;
                 $canDelete = auth()->user()?->hasPermission('purchases.delete') ?? false;

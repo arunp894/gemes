@@ -74,7 +74,7 @@
                 <div class="card-header border-light justify-content-between">
                     <div class="d-flex gap-2 align-items-center">
                         <div class="app-search">
-                            <input id="purchaseSearch" type="search" class="form-control" placeholder="Search invoice / supplier..." />
+                            <input id="purchaseSearch" type="search" class="form-control" placeholder="Search invoice / supplier / lot code..." />
                             <i class="ti ti-search app-search-icon text-muted"></i>
                         </div>
                     </div>
