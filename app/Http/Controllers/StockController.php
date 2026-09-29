@@ -56,14 +56,74 @@ class StockController extends Controller
 
     public function index(Request $request): View
     {
-        $today = now()->toDateString();
+        $locationId = (int) $request->query('location_id', 0);
+        $categoryId = (int) $request->query('category_id', 0);
 
         $canStockTransfers = (bool) auth()->user()?->hasPermission('stock-transfers.view');
+
+        // ── Recent transfers (only if the user can see that module) ────
+        $recentTransfers = collect();
+        if ($canStockTransfers) {
+            $recentTransfers = StockTransfer::with(['fromLocation:id,name', 'toLocation:id,name'])
+                ->withCount('lines')
+                ->withSum('lines', 'qty')
+                ->latest('created_at')
+                ->limit(5)
+                ->get();
+        }
+
+        return view('stock.index', array_merge($this->computeSummary($locationId, $categoryId), [
+            'locations'  => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'is_default']),
+            'categories' => Category::active()->ordered()->get(['id', 'name']),
+
+            'lowStockThreshold'  => self::LOW_STOCK_THRESHOLD,
+            'canStockTransfers'  => $canStockTransfers,
+            'recentTransfers'    => $recentTransfers,
+            'filterLocationId'   => $locationId,
+            'filterCategoryId'   => $categoryId,
+        ]));
+    }
+
+    /**
+     * AJAX counterpart to index() — same on-hand/today/low-stock/by-location
+     * summary, recomputed for whatever location/stone filter the top filter
+     * bar currently has selected, so the KPI cards, donut chart, and low
+     * stock list update in place without a full page reload. The ledger
+     * and Stones & Carat tables are refreshed separately, via their own
+     * DataTables `ajax.reload()` reading the same filter values.
+     */
+    public function summaryData(Request $request): JsonResponse
+    {
+        $locationId = (int) $request->query('location_id', 0);
+        $categoryId = (int) $request->query('category_id', 0);
+
+        return response()->json(array_merge(['ok' => true], $this->computeSummary($locationId, $categoryId)));
+    }
+
+    /**
+     * Shared by index() (initial page render) and summaryData() (the top
+     * filter bar's AJAX refresh) so the two never drift apart. `$categoryId`
+     * filters every aggregate down to products under that stone (via a
+     * subquery on products.category_id — both stock_movements and
+     * carat_movements carry product_id directly, so no join/fan-out risk),
+     * `$locationId` the same way the ledger table (data()) already does.
+     */
+    private function computeSummary(int $locationId, int $categoryId): array
+    {
+        $today = now()->toDateString();
+
+        $productsInCategory = function ($q) use ($categoryId) {
+            $q->whereIn('product_id', function ($sub) use ($categoryId) {
+                $sub->select('id')->from('products')->where('category_id', $categoryId);
+            });
+        };
 
         // ── On-hand per (purchase_product, product) — the base every
         // other KPI here is derived from, so it's computed once. ────────
         $onHandPieces = DB::table('stock_movements')
             ->whereNull('deleted_at')
+            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
+            ->when($categoryId, $productsInCategory)
             ->groupBy('purchase_product_id', 'product_id')
             ->havingRaw("SUM(CASE WHEN direction = 'in' THEN qty ELSE -qty END) > 0")
             ->select([
@@ -74,11 +134,6 @@ class StockController extends Controller
 
         $totalCurrentStock = (int) DB::query()->fromSub($onHandPieces, 'op')->sum('on_hand');
 
-        $totalStockValue = (float) DB::query()
-            ->fromSub($onHandPieces, 'op')
-            ->join('purchase_products', 'purchase_products.id', '=', 'op.purchase_product_id')
-            ->sum(DB::raw('op.on_hand * purchase_products.price'));
-
         // Same ledger-first, carat_weight-fallback approach as
         // categoryData() below — a piece with no carat_movements history
         // (demo/seed data inserted directly into stock_movements) would
@@ -86,21 +141,33 @@ class StockController extends Controller
         // real recorded carat_weight.
         $caratLedgerByPiece = DB::table('carat_movements')
             ->whereNull('deleted_at')
+            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
+            ->when($categoryId, $productsInCategory)
             ->groupBy('purchase_product_id')
             ->selectRaw("purchase_product_id, SUM(CASE WHEN direction = 'in' THEN carat ELSE -carat END) as remaining_carat");
 
-        $totalCurrentStockCt = (float) DB::query()
+        // Pricing is per carat (see PurchaseService::recalculate(), which
+        // derives a purchase's grand_total — the "Total Value" on the
+        // Purchases page — from carat_weight × price on each row). Stock
+        // value here must use the same unit: remaining CARAT × price, not
+        // remaining PIECE COUNT × price, or this figure won't reconcile
+        // against Purchases' Total Value at all.
+        $valuedPieces = DB::query()
             ->fromSub($onHandPieces, 'op')
             ->join('purchase_products', 'purchase_products.id', '=', 'op.purchase_product_id')
             ->leftJoinSub($caratLedgerByPiece, 'cl', 'cl.purchase_product_id', '=', 'op.purchase_product_id')
-            ->selectRaw('COALESCE(cl.remaining_carat, purchase_products.carat_weight * op.on_hand) as ct')
-            ->get()
-            ->sum('ct');
+            ->selectRaw('COALESCE(cl.remaining_carat, purchase_products.carat_weight * op.on_hand) as remaining_carat, purchase_products.price as price')
+            ->get();
+
+        $totalCurrentStockCt = (float) $valuedPieces->sum('remaining_carat');
+        $totalStockValue     = (float) $valuedPieces->sum(fn ($row) => $row->remaining_carat * $row->price);
 
         // ── Today's received / removed (qty + ct) ───────────────────────
         $todayQty = DB::table('stock_movements')
             ->whereNull('deleted_at')
             ->whereDate('movement_date', $today)
+            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
+            ->when($categoryId, $productsInCategory)
             ->selectRaw("SUM(CASE WHEN direction = 'in' THEN qty ELSE 0 END) as received")
             ->selectRaw("SUM(CASE WHEN direction = 'out' THEN qty ELSE 0 END) as removed")
             ->first();
@@ -108,6 +175,8 @@ class StockController extends Controller
         $todayCt = DB::table('carat_movements')
             ->whereNull('deleted_at')
             ->whereDate('movement_date', $today)
+            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
+            ->when($categoryId, $productsInCategory)
             ->selectRaw("SUM(CASE WHEN direction = 'in' THEN carat ELSE 0 END) as received")
             ->selectRaw("SUM(CASE WHEN direction = 'out' THEN carat ELSE 0 END) as removed")
             ->first();
@@ -116,6 +185,8 @@ class StockController extends Controller
         $todayByReason = DB::table('stock_movements')
             ->whereNull('deleted_at')
             ->whereDate('movement_date', $today)
+            ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
+            ->when($categoryId, $productsInCategory)
             ->selectRaw("SUM(CASE WHEN reason IN ('transfer_in','transfer_out') THEN qty ELSE 0 END) as transfers")
             ->selectRaw("SUM(CASE WHEN reason = 'sale' THEN qty ELSE 0 END) as sales")
             ->selectRaw("SUM(CASE WHEN reason = 'sale_return' THEN qty ELSE 0 END) as returns")
@@ -143,6 +214,10 @@ class StockController extends Controller
         $byLocation = DB::table('stock_movements')
             ->join('locations', 'locations.id', '=', 'stock_movements.location_id')
             ->whereNull('stock_movements.deleted_at')
+            ->when($locationId, fn ($q) => $q->where('stock_movements.location_id', $locationId))
+            ->when($categoryId, fn ($q) => $q->whereIn('stock_movements.product_id', function ($sub) use ($categoryId) {
+                $sub->select('id')->from('products')->where('category_id', $categoryId);
+            }))
             ->groupBy('locations.id', 'locations.name')
             ->havingRaw("SUM(CASE WHEN stock_movements.direction = 'in' THEN stock_movements.qty ELSE -stock_movements.qty END) > 0")
             ->select([
@@ -157,21 +232,7 @@ class StockController extends Controller
             // before it ever reaches @json() in the view.
             ->map(fn ($row) => tap($row, fn ($r) => $r->on_hand = (int) $r->on_hand));
 
-        // ── Recent transfers (only if the user can see that module) ────
-        $recentTransfers = collect();
-        if ($canStockTransfers) {
-            $recentTransfers = StockTransfer::with(['fromLocation:id,name', 'toLocation:id,name'])
-                ->withCount('lines')
-                ->withSum('lines', 'qty')
-                ->latest('created_at')
-                ->limit(5)
-                ->get();
-        }
-
-        return view('stock.index', [
-            'locations'  => Location::active()->orderBy('name')->get(['id', 'location_code', 'name', 'is_default']),
-            'categories' => Category::active()->ordered()->get(['id', 'name']),
-
+        return [
             'totalCurrentStock'   => $totalCurrentStock,
             'totalCurrentStockCt' => $totalCurrentStockCt,
             'totalStockValue'     => $totalStockValue,
@@ -185,11 +246,8 @@ class StockController extends Controller
             'todayAdjustmentsQty' => (int) ($todayByReason->adjustments ?? 0),
             'lowStockCount'       => $lowStockCount,
             'lowStockItems'       => $lowStockItems,
-            'lowStockThreshold'   => self::LOW_STOCK_THRESHOLD,
             'byLocation'          => $byLocation,
-            'canStockTransfers'   => $canStockTransfers,
-            'recentTransfers'     => $recentTransfers,
-        ]);
+        ];
     }
 
     /**
@@ -414,7 +472,11 @@ class StockController extends Controller
                 'products.category_id as category_id',
                 'op.product_id        as product_id',
                 'op.on_hand           as on_hand',
-                DB::raw('op.on_hand * purchase_products.price as piece_value'),
+                // Pricing is per carat (see PurchaseService::recalculate()),
+                // so value here has to be remaining CARAT × price — not
+                // on_hand PIECE COUNT × price — to reconcile with the
+                // Purchases page's Total Value.
+                DB::raw('COALESCE(cl.remaining_carat, purchase_products.carat_weight * op.on_hand) * purchase_products.price as piece_value'),
                 DB::raw('COALESCE(cl.remaining_carat, purchase_products.carat_weight * op.on_hand) as piece_carat'),
             ]);
 
@@ -503,7 +565,11 @@ class StockController extends Controller
                 'products.title as product_title',
                 'products.sku   as product_sku',
                 DB::raw('SUM(op.on_hand) as pieces'),
-                DB::raw('SUM(op.on_hand * purchase_products.price) as stock_value'),
+                // Pricing is per carat (see PurchaseService::recalculate()),
+                // so value has to be remaining CARAT × price — not on_hand
+                // PIECE COUNT × price — to reconcile with the Purchases
+                // page's Total Value.
+                DB::raw('SUM(COALESCE(cl.remaining_carat, purchase_products.carat_weight * op.on_hand) * purchase_products.price) as stock_value'),
                 DB::raw('SUM(COALESCE(cl.remaining_carat, purchase_products.carat_weight * op.on_hand)) as carat_weight'),
             ])
             ->orderByDesc('stock_value')
@@ -548,6 +614,7 @@ class StockController extends Controller
     public function movementsData(Request $request): JsonResponse
     {
         $locationId = (int) $request->query('location_id', 0);
+        $categoryId = (int) $request->query('category_id', 0);
         $productId  = (int) $request->query('product_id', 0);
         $type       = (string) $request->query('type', '');
         $dateFrom   = $request->query('date_from');
@@ -599,6 +666,9 @@ class StockController extends Controller
 
         if ($locationId) {
             $query->where('stock_movements.location_id', $locationId);
+        }
+        if ($categoryId) {
+            $query->where('products.category_id', $categoryId);
         }
         if ($productId) {
             $query->where('stock_movements.product_id', $productId);

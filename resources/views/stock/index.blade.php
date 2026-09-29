@@ -20,22 +20,60 @@
         </div>
     </div>
 
+    {{-- ── Global filter bar ────────────────────────────────────
+         One filter, at the top, that drives every piece of content
+         below it (KPI cards, the by-location chart, the low stock
+         list, and all four tables) — replacing the old per-tab
+         Location/Stone dropdowns that only ever touched their own
+         table and left the cards/chart showing unfiltered totals. --}}
+    <div class="card mb-3 stock-global-filter">
+        <div class="card-body py-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="fw-semibold fs-sm text-muted d-inline-flex align-items-center gap-1 flex-shrink-0">
+                    <i class="ti ti-filter fs-sm"></i> Filter:
+                </span>
+                <div class="app-search">
+                    <select id="globalLocationFilter" class="form-select form-control my-1 my-md-0">
+                        <option value="">All Locations</option>
+                        @foreach ($locations as $l)
+                            <option value="{{ $l->id }}" @selected($filterLocationId === $l->id)>{{ $l->name }}</option>
+                        @endforeach
+                    </select>
+                    <i class="ti ti-map-pin app-search-icon text-muted"></i>
+                </div>
+                <div class="app-search">
+                    <select id="globalCategoryFilter" class="form-select form-control my-1 my-md-0">
+                        <option value="">All Stones</option>
+                        @foreach ($categories as $c)
+                            <option value="{{ $c->id }}" @selected($filterCategoryId === $c->id)>{{ $c->name }}</option>
+                        @endforeach
+                    </select>
+                    <i class="ti ti-diamond app-search-icon text-muted"></i>
+                </div>
+                <button type="button" id="globalFilterReset" class="btn btn-outline-secondary btn-sm" title="Clear filters">
+                    <i class="ti ti-filter-x fs-xs me-1"></i>Clear
+                </button>
+                <span id="globalFilterBadge" class="badge badge-soft-primary fs-xs @if(!$filterLocationId && !$filterCategoryId) d-none @endif">
+                    <i class="ti ti-filter-check fs-xxs me-1"></i>Filter applied
+                </span>
+            </div>
+        </div>
+    </div>
+
     {{-- ── KPI row ─────────────────────────────────────────── --}}
     <div class="row g-3 mb-1">
         <div class="col-6 col-xl-3">
             <div class="stock-kpi">
                 <div class="stock-kpi-icon stock-kpi-icon-primary"><i class="ti ti-package"></i></div>
-                <div class="stock-kpi-value">{{ number_format($totalCurrentStock) }} <span class="stock-kpi-unit">Pcs</span></div>
+                <div class="stock-kpi-value"><span id="kpiTotalStockQty">{{ number_format($totalCurrentStock) }}</span> <span class="stock-kpi-unit">Pcs</span></div>
                 <div class="stock-kpi-label">Total Current Stock</div>
-                @if ($totalCurrentStockCt > 0)
-                    <div class="stock-kpi-sub">{{ rtrim(rtrim(number_format($totalCurrentStockCt, 2), '0'), '.') }} Ct</div>
-                @endif
+                <div class="stock-kpi-sub" id="kpiTotalStockCt" style="{{ $totalCurrentStockCt > 0 ? '' : 'display:none' }}">{{ rtrim(rtrim(number_format($totalCurrentStockCt, 2), '0'), '.') }} Ct</div>
             </div>
         </div>
         <div class="col-6 col-xl-3">
             <div class="stock-kpi">
-                <div class="stock-kpi-icon stock-kpi-icon-gold"><i class="ti ti-currency-rupee"></i></div>
-                <div class="stock-kpi-value">₹{{ number_format($totalStockValue) }}</div>
+                <div class="stock-kpi-icon stock-kpi-icon-gold"><i class="ti ti-report-money"></i></div>
+                <div class="stock-kpi-value"><span id="kpiStockValue">{{ $settings->formatMoney($totalStockValue) }}</span></div>
                 <div class="stock-kpi-label">Total Stock Value</div>
                 <div class="stock-kpi-sub">At Cost Price</div>
             </div>
@@ -43,21 +81,17 @@
         <div class="col-6 col-xl-3">
             <div class="stock-kpi">
                 <div class="stock-kpi-icon stock-kpi-icon-success"><i class="ti ti-arrow-down-circle"></i></div>
-                <div class="stock-kpi-value text-success">+{{ number_format($todayReceivedQty) }} <span class="stock-kpi-unit">Pcs</span></div>
+                <div class="stock-kpi-value text-success">+<span id="kpiReceivedQty">{{ number_format($todayReceivedQty) }}</span> <span class="stock-kpi-unit">Pcs</span></div>
                 <div class="stock-kpi-label">Today Stock Received</div>
-                @if ($todayReceivedCt > 0)
-                    <div class="stock-kpi-sub">{{ rtrim(rtrim(number_format($todayReceivedCt, 2), '0'), '.') }} Ct</div>
-                @endif
+                <div class="stock-kpi-sub" id="kpiReceivedCt" style="{{ $todayReceivedCt > 0 ? '' : 'display:none' }}">{{ rtrim(rtrim(number_format($todayReceivedCt, 2), '0'), '.') }} Ct</div>
             </div>
         </div>
         <div class="col-6 col-xl-3">
             <div class="stock-kpi">
                 <div class="stock-kpi-icon stock-kpi-icon-danger"><i class="ti ti-arrow-up-circle"></i></div>
-                <div class="stock-kpi-value text-danger">-{{ number_format($todayRemovedQty) }} <span class="stock-kpi-unit">Pcs</span></div>
+                <div class="stock-kpi-value text-danger">-<span id="kpiRemovedQty">{{ number_format($todayRemovedQty) }}</span> <span class="stock-kpi-unit">Pcs</span></div>
                 <div class="stock-kpi-label">Today Stock Removed</div>
-                @if ($todayRemovedCt > 0)
-                    <div class="stock-kpi-sub">{{ rtrim(rtrim(number_format($todayRemovedCt, 2), '0'), '.') }} Ct</div>
-                @endif
+                <div class="stock-kpi-sub" id="kpiRemovedCt" style="{{ $todayRemovedCt > 0 ? '' : 'display:none' }}">{{ rtrim(rtrim(number_format($todayRemovedCt, 2), '0'), '.') }} Ct</div>
             </div>
         </div>
     </div>
@@ -66,7 +100,7 @@
             <div class="stock-kpi stock-kpi-wide">
                 <div class="stock-kpi-icon stock-kpi-icon-warning"><i class="ti ti-alert-triangle"></i></div>
                 <div class="flex-grow-1">
-                    <div class="stock-kpi-value">{{ number_format($lowStockCount) }} <span class="stock-kpi-unit">Items</span></div>
+                    <div class="stock-kpi-value"><span id="kpiLowStockCount">{{ number_format($lowStockCount) }}</span> <span class="stock-kpi-unit">Items</span></div>
                     <div class="stock-kpi-label">Low Stock Items <span class="text-muted fw-normal">— {{ $lowStockThreshold }} units or fewer remaining</span></div>
                 </div>
                 <a href="#lowStockCard" class="stock-kpi-link">View Details</a>
@@ -128,42 +162,42 @@
                 <div class="movement-summary-tile">
                     <span class="movement-summary-icon movement-summary-icon-success"><i class="ti ti-arrow-down"></i></span>
                     <div>
-                        <div class="movement-summary-value">{{ number_format($todayReceivedQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-value"><span id="stripReceivedQty">{{ number_format($todayReceivedQty) }}</span> <span class="fw-normal fs-xs text-muted">Pcs</span></div>
                         <div class="movement-summary-label">Stock Received <span class="text-muted">Today</span></div>
                     </div>
                 </div>
                 <div class="movement-summary-tile">
                     <span class="movement-summary-icon movement-summary-icon-danger"><i class="ti ti-arrow-up"></i></span>
                     <div>
-                        <div class="movement-summary-value">{{ number_format($todayRemovedQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-value"><span id="stripRemovedQty">{{ number_format($todayRemovedQty) }}</span> <span class="fw-normal fs-xs text-muted">Pcs</span></div>
                         <div class="movement-summary-label">Stock Removed <span class="text-muted">Today</span></div>
                     </div>
                 </div>
                 <div class="movement-summary-tile">
                     <span class="movement-summary-icon movement-summary-icon-info"><i class="ti ti-arrows-exchange"></i></span>
                     <div>
-                        <div class="movement-summary-value">{{ number_format($todayTransfersQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-value"><span id="stripTransfersQty">{{ number_format($todayTransfersQty) }}</span> <span class="fw-normal fs-xs text-muted">Pcs</span></div>
                         <div class="movement-summary-label">Transfers <span class="text-muted">Today</span></div>
                     </div>
                 </div>
                 <div class="movement-summary-tile">
                     <span class="movement-summary-icon movement-summary-icon-purple"><i class="ti ti-shopping-cart"></i></span>
                     <div>
-                        <div class="movement-summary-value">{{ number_format($todaySalesQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-value"><span id="stripSalesQty">{{ number_format($todaySalesQty) }}</span> <span class="fw-normal fs-xs text-muted">Pcs</span></div>
                         <div class="movement-summary-label">Sales (Impact) <span class="text-muted">Today</span></div>
                     </div>
                 </div>
                 <div class="movement-summary-tile">
                     <span class="movement-summary-icon movement-summary-icon-success"><i class="ti ti-arrow-back-up"></i></span>
                     <div>
-                        <div class="movement-summary-value">{{ number_format($todayReturnsQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-value"><span id="stripReturnsQty">{{ number_format($todayReturnsQty) }}</span> <span class="fw-normal fs-xs text-muted">Pcs</span></div>
                         <div class="movement-summary-label">Returns <span class="text-muted">Today</span></div>
                     </div>
                 </div>
                 <div class="movement-summary-tile">
                     <span class="movement-summary-icon movement-summary-icon-warning"><i class="ti ti-adjustments"></i></span>
                     <div>
-                        <div class="movement-summary-value">{{ number_format($todayAdjustmentsQty) }} <span class="fw-normal fs-xs text-muted">Pcs</span></div>
+                        <div class="movement-summary-value"><span id="stripAdjustmentsQty">{{ number_format($todayAdjustmentsQty) }}</span> <span class="fw-normal fs-xs text-muted">Pcs</span></div>
                         <div class="movement-summary-label">Adjustments <span class="text-muted">Today</span></div>
                     </div>
                 </div>
@@ -193,16 +227,6 @@
                                 <select id="{{ $t['id'] }}ProductFilter" class="form-select" style="min-width: 180px;">
                                     <option value="">All Products</option>
                                 </select>
-
-                                <div class="app-search">
-                                    <select id="{{ $t['id'] }}LocationFilter" class="form-select form-control my-1 my-md-0">
-                                        <option value="">All Locations</option>
-                                        @foreach ($locations as $l)
-                                            <option value="{{ $l->id }}">{{ $l->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <i class="ti ti-map-pin app-search-icon text-muted"></i>
-                                </div>
                             </div>
 
                             <div class="d-flex flex-wrap align-items-center gap-1 flex-grow-1 justify-content-end">
@@ -282,24 +306,6 @@
 
                             <div class="d-flex flex-wrap align-items-center gap-1">
                                 <div class="app-search">
-                                    <select id="byStoneCategoryFilter" class="form-select form-control my-1 my-md-0">
-                                        <option value="">All Stones</option>
-                                        @foreach ($categories as $c)
-                                            <option value="{{ $c->id }}">{{ $c->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <i class="ti ti-tag app-search-icon text-muted"></i>
-                                </div>
-                                <div class="app-search">
-                                    <select id="byStoneLocationFilter" class="form-select form-control my-1 my-md-0">
-                                        <option value="">All Locations</option>
-                                        @foreach ($locations as $l)
-                                            <option value="{{ $l->id }}">{{ $l->name }}</option>
-                                        @endforeach
-                                    </select>
-                                    <i class="ti ti-map-pin app-search-icon text-muted"></i>
-                                </div>
-                                <div class="app-search">
                                     <input id="byStoneSearch" type="search" class="form-control" placeholder="Search stone…" />
                                     <i class="ti ti-search app-search-icon text-muted"></i>
                                 </div>
@@ -350,11 +356,10 @@
                     <h5 class="card-title mb-0">Stock by Location</h5>
                 </div>
                 <div class="card-body">
-                    @if ($byLocation->isEmpty())
-                        <p class="text-muted small mb-0 text-center py-3">No stock recorded yet.</p>
-                    @else
+                    <p id="byLocationEmpty" class="text-muted small mb-0 text-center py-3" style="{{ $byLocation->isEmpty() ? '' : 'display:none' }}">No stock recorded yet.</p>
+                    <div id="byLocationChartWrap" style="{{ $byLocation->isEmpty() ? 'display:none' : '' }}">
                         <div id="locationDonutChart"></div>
-                        <ul class="location-legend">
+                        <ul class="location-legend" id="locationLegendList">
                             @foreach ($byLocation as $i => $loc)
                                 <li>
                                     <span class="location-legend-dot" style="background: {{ ['#0f5e57','#b8860b','#2563eb','#dc2626','#059669','#9333ea'][$i % 6] }}"></span>
@@ -363,7 +368,7 @@
                                 </li>
                             @endforeach
                         </ul>
-                    @endif
+                    </div>
                 </div>
             </div>
 
@@ -372,7 +377,7 @@
                     <h5 class="card-title mb-0">Low Stock Items</h5>
                     <a href="#" onclick="document.getElementById('byStoneTab').click(); return false;" class="fs-sm">View All</a>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body p-0" id="lowStockListContainer">
                     @if ($lowStockItems->isEmpty())
                         <p class="text-muted small mb-0 text-center py-3">Nothing running low right now.</p>
                     @else
@@ -658,20 +663,173 @@
 @push('scripts')
 <script>
 $(function () {
-    // ═══════════════════ Stock by Location donut ═══════════════════
-    const locationEl = document.querySelector('#locationDonutChart');
-    if (locationEl) {
-        new ApexCharts(locationEl, {
-            series: @json($byLocation->pluck('on_hand')),
-            labels: @json($byLocation->pluck('name')),
-            chart: { type: 'donut', height: 200, fontFamily: 'inherit' },
-            colors: ['#0f5e57', '#b8860b', '#2563eb', '#dc2626', '#059669', '#9333ea'],
-            dataLabels: { enabled: false },
-            legend: { show: false },
-            tooltip: { y: { formatter: (v) => v.toLocaleString() + ' Pcs' } },
-        }).render();
+    // ═══════════════════ Global filter bar ═══════════════════
+    // One Location + Stone filter, at the top, that drives everything
+    // below it: the KPI cards, the by-location chart, the low stock
+    // list (all via stock.summary-data), and every table (via each
+    // DataTable's own ajax.data reading these same two values) — instead
+    // of the old per-tab Location dropdowns that only ever touched their
+    // own table.
+    const globalFilters = {
+        location_id: '{{ $filterLocationId ?: '' }}',
+        category_id: '{{ $filterCategoryId ?: '' }}',
+    };
+
+    // Currency is a global setting (Settings → General), not hardcoded —
+    // mirrors SettingService::formatMoney() so the AJAX-refreshed KPI
+    // matches whatever symbol/position the initial Blade-rendered value used.
+    const currency = {
+        symbol: @json($settings->get('currency_symbol', '₹')),
+        code: @json($settings->get('currency_code', 'INR')),
+        position: @json($settings->get('currency_position', 'before')),
+    };
+
+    function formatMoney(amount, decimals = 2) {
+        const formatted = Number(amount).toLocaleString(undefined, {
+            minimumFractionDigits: decimals, maximumFractionDigits: decimals,
+        });
+        return currency.position === 'before' ? currency.symbol + formatted : formatted + ' ' + currency.code;
     }
 
+    function escapeHtml(str) {
+        return String(str ?? '').replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        }[c]));
+    }
+
+    function formatCt(value) {
+        let s = Number(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return s.replace(/0+$/, '').replace(/\.$/, '');
+    }
+
+    function toggleCt(selector, value) {
+        const el = $(selector);
+        if (value > 0) {
+            el.text(formatCt(value) + ' Ct').show();
+        } else {
+            el.hide();
+        }
+    }
+
+    function renderLowStockList(items) {
+        const container = $('#lowStockListContainer');
+        if (!items || items.length === 0) {
+            container.html('<p class="text-muted small mb-0 text-center py-3">Nothing running low right now.</p>');
+            return;
+        }
+        let html = '<ul class="low-stock-list">';
+        items.forEach((item) => {
+            html += '<li>'
+                + '<span class="movement-thumb movement-thumb-sm"><i class="ti ti-diamond"></i></span>'
+                + '<div class="flex-grow-1 min-w-0">'
+                + `<div class="fw-semibold fs-sm text-truncate">${escapeHtml(item.title)}</div>`
+                + `<small class="text-muted">${escapeHtml(item.category_name || item.sku)}</small>`
+                + '</div>'
+                + '<div class="text-end">'
+                + `<div class="fs-sm">${Number(item.on_hand).toLocaleString()} Pcs</div>`
+                + '<span class="badge badge-soft-danger fs-xxs">Low Stock</span>'
+                + '</div></li>';
+        });
+        container.html(html + '</ul>');
+    }
+
+    // ═══════════════════ Stock by Location donut ═══════════════════
+    let byLocationChart = null;
+
+    function renderLocationLegend(byLocation) {
+        const colors = ['#0f5e57', '#b8860b', '#2563eb', '#dc2626', '#059669', '#9333ea'];
+        const total = byLocation.reduce((sum, l) => sum + Number(l.on_hand), 0) || 1;
+        let html = '';
+        byLocation.forEach((loc, i) => {
+            const pct = Math.round((Number(loc.on_hand) / total) * 100);
+            html += '<li>'
+                + `<span class="location-legend-dot" style="background: ${colors[i % 6]}"></span>`
+                + `<span class="flex-grow-1">${escapeHtml(loc.name)}</span>`
+                + `<span class="fw-semibold">${pct}%</span></li>`;
+        });
+        $('#locationLegendList').html(html);
+    }
+
+    function renderByLocationChart(byLocation) {
+        if (!byLocation || byLocation.length === 0) {
+            $('#byLocationChartWrap').hide();
+            $('#byLocationEmpty').show();
+            return;
+        }
+        $('#byLocationEmpty').hide();
+        $('#byLocationChartWrap').show();
+
+        const series = byLocation.map((l) => Number(l.on_hand));
+        const labels = byLocation.map((l) => l.name);
+
+        if (byLocationChart) {
+            byLocationChart.updateOptions({ series, labels });
+        } else {
+            byLocationChart = new ApexCharts(document.querySelector('#locationDonutChart'), {
+                series, labels,
+                chart: { type: 'donut', height: 200, fontFamily: 'inherit' },
+                colors: ['#0f5e57', '#b8860b', '#2563eb', '#dc2626', '#059669', '#9333ea'],
+                dataLabels: { enabled: false },
+                legend: { show: false },
+                tooltip: { y: { formatter: (v) => v.toLocaleString() + ' Pcs' } },
+            });
+            byLocationChart.render();
+        }
+        renderLocationLegend(byLocation);
+    }
+
+    renderByLocationChart(@json($byLocation));
+
+    // ═══════════════════ Apply a summary payload everywhere ═══════════════════
+    function applySummary(data) {
+        $('#kpiTotalStockQty').text(Number(data.totalCurrentStock).toLocaleString());
+        toggleCt('#kpiTotalStockCt', data.totalCurrentStockCt);
+        $('#kpiStockValue').text(formatMoney(data.totalStockValue));
+        $('#kpiReceivedQty').text(Number(data.todayReceivedQty).toLocaleString());
+        toggleCt('#kpiReceivedCt', data.todayReceivedCt);
+        $('#kpiRemovedQty').text(Number(data.todayRemovedQty).toLocaleString());
+        toggleCt('#kpiRemovedCt', data.todayRemovedCt);
+        $('#kpiLowStockCount').text(Number(data.lowStockCount).toLocaleString());
+
+        $('#stripReceivedQty').text(Number(data.todayReceivedQty).toLocaleString());
+        $('#stripRemovedQty').text(Number(data.todayRemovedQty).toLocaleString());
+        $('#stripTransfersQty').text(Number(data.todayTransfersQty).toLocaleString());
+        $('#stripSalesQty').text(Number(data.todaySalesQty).toLocaleString());
+        $('#stripReturnsQty').text(Number(data.todayReturnsQty).toLocaleString());
+        $('#stripAdjustmentsQty').text(Number(data.todayAdjustmentsQty).toLocaleString());
+
+        renderLowStockList(data.lowStockItems);
+        renderByLocationChart(data.byLocation);
+    }
+
+    function refreshSummary() {
+        $.getJSON('{{ route('stock.summary-data') }}', globalFilters, function (data) {
+            if (data && data.ok) applySummary(data);
+        });
+    }
+
+    function onGlobalFilterChange() {
+        globalFilters.location_id = $('#globalLocationFilter').val() || '';
+        globalFilters.category_id = $('#globalCategoryFilter').val() || '';
+        $('#globalFilterBadge').toggleClass('d-none', !globalFilters.location_id && !globalFilters.category_id);
+
+        refreshSummary();
+        if (byStoneDt) byStoneDt.draw();
+        Object.values(ledgerInstances).forEach((dt) => dt.draw());
+
+        const url = new URL(window.location.href);
+        ['location_id', 'category_id'].forEach((key) => {
+            if (globalFilters[key]) url.searchParams.set(key, globalFilters[key]);
+            else url.searchParams.delete(key);
+        });
+        window.history.replaceState({}, '', url);
+    }
+
+    $('#globalLocationFilter, #globalCategoryFilter').on('change', onGlobalFilterChange);
+    $('#globalFilterReset').on('click', function () {
+        $('#globalLocationFilter, #globalCategoryFilter').val('');
+        onGlobalFilterChange();
+    });
 
     // ═══════════════════ Stones & Carat tab ═══════════════════
     let byStoneDt = null;
@@ -687,8 +845,8 @@ $(function () {
             ajax: {
                 url: '{{ route('stock.by-stone-data') }}',
                 data: function (d) {
-                    d.location_id = $('#byStoneLocationFilter').val();
-                    d.category_id = $('#byStoneCategoryFilter').val();
+                    d.location_id = globalFilters.location_id;
+                    d.category_id = globalFilters.category_id;
                 },
             },
             dom: 'rt<"stock-tail"ip>',
@@ -722,8 +880,6 @@ $(function () {
             timer = setTimeout(() => byStoneDt.search(v).draw(), 250);
         });
         $('#byStonePerPage').on('change', function () { byStoneDt.page.len(parseInt(this.value, 10)).draw(); });
-        $('#byStoneLocationFilter').on('change', () => byStoneDt.draw());
-        $('#byStoneCategoryFilter').on('change', () => byStoneDt.draw());
     }
 
     document.getElementById('byStoneTab').addEventListener('shown.bs.tab', initByStoneTable);
@@ -787,7 +943,8 @@ $(function () {
                 url: '{{ route('stock.movements-data') }}',
                 data: function (d) {
                     d.product_id  = $(`#${cfg.id}ProductFilter`).val();
-                    d.location_id = $(`#${cfg.id}LocationFilter`).val();
+                    d.location_id = globalFilters.location_id;
+                    d.category_id = globalFilters.category_id;
                     d.type        = cfg.type;
                     d.date_from   = $(`#${cfg.id}DateFrom`).val();
                     d.date_to     = $(`#${cfg.id}DateTo`).val();
@@ -819,11 +976,10 @@ $(function () {
         });
         $(`#${cfg.id}PerPage`).on('change', function () { dt.page.len(parseInt(this.value, 10)).draw(); });
         $(`#${cfg.id}ProductFilter`).on('change', () => dt.draw());
-        $(`#${cfg.id}LocationFilter, #${cfg.id}DateFrom, #${cfg.id}DateTo`).on('change', () => dt.draw());
+        $(`#${cfg.id}DateFrom, #${cfg.id}DateTo`).on('change', () => dt.draw());
 
         $(`#${cfg.id}FilterReset`).on('click', function () {
             $(`#${cfg.id}Search`).val('');
-            $(`#${cfg.id}LocationFilter`).val('');
             $(`#${cfg.id}DateFrom, #${cfg.id}DateTo`).val('');
             $(`#${cfg.id}ProductFilter`).val(null).trigger('change');
             dt.search('').draw();

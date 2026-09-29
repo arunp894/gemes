@@ -518,6 +518,8 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:stock.view')->name('index');
         Route::get('/data', [StockController::class, 'data'])
             ->middleware('permission:stock.view')->name('data');
+        Route::get('/summary-data', [StockController::class, 'summaryData'])
+            ->middleware('permission:stock.view')->name('summary-data');
         Route::get('/category-data', [StockController::class, 'categoryData'])
             ->middleware('permission:stock.view')->name('category-data');
         Route::get('/by-stone-data', [StockController::class, 'byStoneData'])
