@@ -60,6 +60,16 @@
       @endforeach
       @endforelse
     </div>
+
+    @if($product->video_url)
+    <div style="padding:14px 14px 0;background:var(--dark-900)">
+      <div style="font-size:11px;font-weight:500;letter-spacing:2px;text-transform:uppercase;color:var(--teal-400);margin-bottom:10px">
+        Product Video
+      </div>
+      <video src="{{ $product->video_url }}" controls preload="metadata"
+        style="width:100%;max-height:320px;border-radius:2px;background:#000"></video>
+    </div>
+    @endif
   </div>
 
   {{-- RIGHT: Product Info --}}

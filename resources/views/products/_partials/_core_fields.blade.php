@@ -115,7 +115,7 @@
 
 {{-- Images --}}
 <div class="card mb-3">
-    <div class="card-header"><h5 class="card-title mb-0">Images</h5></div>
+    <div class="card-header"><h5 class="card-title mb-0">Media</h5></div>
     <div class="card-body">
         <div class="row g-3">
 
@@ -187,6 +187,30 @@
                 <template v-for="rid in form.remove_gallery_ids">
                     <input type="hidden" name="remove_gallery_ids[]" :value="rid" :key="'rmg-' + rid">
                 </template>
+            </div>
+
+            {{-- Product Video --}}
+            <div class="col-md-6">
+                <label for="product_video" class="form-label">Product Video</label>
+                <input type="file" class="form-control" id="product_video" name="product_video"
+                    accept="video/mp4,video/webm,video/ogg" @change="onProductVideoChange"
+                    :class="{ 'is-invalid': errors.product_video }">
+                <div class="invalid-feedback">@{{ errors.product_video }}</div>
+                <small class="text-muted">MP4, WebM, or OGG, max 50 MB. Shown on the product's storefront page.</small>
+
+                <div v-if="productVideoPreview || existingProductVideo" class="mt-2">
+                    <video :src="productVideoPreview || existingProductVideo" controls
+                        class="rounded border" style="max-height: 150px; max-width: 100%;"></video>
+                    @if ($product)
+                        <div class="form-check mt-2" v-if="existingProductVideo && !productVideoPreview">
+                            <input class="form-check-input" type="checkbox" id="remove_product_video"
+                                name="remove_product_video" value="1" v-model="form.remove_product_video">
+                            <label class="form-check-label text-danger" for="remove_product_video">
+                                Remove video
+                            </label>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </div>

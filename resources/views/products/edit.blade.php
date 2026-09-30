@@ -151,6 +151,7 @@
         'id'                 => $product->id,
         'primary_image_url'  => $product->primary_image_url,
         'certificate_url'    => $product->certificate_url,
+        'product_video_url'  => $product->video_url,
         'gallery'            => $product->gallery_urls,
         // Live CT ledger balance, not the static purchased weight — see
         // StockService::remainingCaratForProductGlobal(). Drives the

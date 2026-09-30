@@ -88,6 +88,7 @@ class Product extends Model implements HasMedia
     public const MEDIA_COLLECTION_PRIMARY     = 'primary_image';
     public const MEDIA_COLLECTION_GALLERY     = 'gallery_images';
     public const MEDIA_COLLECTION_CERTIFICATE = 'certificate_image';
+    public const MEDIA_COLLECTION_VIDEO       = 'product_video';
 
     /**
      * Maximum gallery images per product (spec §4.1).
@@ -260,6 +261,12 @@ class Product extends Model implements HasMedia
         $this->addMediaCollection(self::MEDIA_COLLECTION_CERTIFICATE)
             ->singleFile()
             ->acceptsMimeTypes(['image/jpeg', 'image/png', 'application/pdf']);
+
+        // Product video — optional, shown on the storefront product page
+        // when present.
+        $this->addMediaCollection(self::MEDIA_COLLECTION_VIDEO)
+            ->singleFile()
+            ->acceptsMimeTypes(['video/mp4', 'video/webm', 'video/ogg']);
     }
 
     public function registerMediaConversions(?Media $media = null): void
@@ -306,6 +313,12 @@ class Product extends Model implements HasMedia
     public function getCertificateUrlAttribute(): ?string
     {
         $media = $this->getFirstMedia(self::MEDIA_COLLECTION_CERTIFICATE);
+        return $media ? $media->getUrl() : null;
+    }
+
+    public function getVideoUrlAttribute(): ?string
+    {
+        $media = $this->getFirstMedia(self::MEDIA_COLLECTION_VIDEO);
         return $media ? $media->getUrl() : null;
     }
 

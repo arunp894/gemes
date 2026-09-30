@@ -95,6 +95,7 @@ class StoreProductRequest extends FormRequest
             'gallery_images'        => ['nullable', 'array', 'max:' . Product::MAX_GALLERY_IMAGES],
             'gallery_images.*'      => ['image', 'mimes:jpg,jpeg,png', 'max:5120'],
             'certificate_image'     => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'], // 10 MB for PDF
+            'product_video'         => ['nullable', 'file', 'mimes:mp4,webm,ogg', 'max:51200'], // 50 MB
 
             /* ----------------------------- Barcodes ------------------------- */
             // Optional here: a product created directly on this screen (or
@@ -232,6 +233,8 @@ class StoreProductRequest extends FormRequest
             'gallery_images.max'   => 'You may upload at most ' . Product::MAX_GALLERY_IMAGES . ' gallery images.',
             'gallery_images.*.max' => 'Each gallery image must not be larger than 5 MB.',
             'barcodes.max'         => 'A product may have at most ' . Barcode::MAX_BARCODES_PER_PRODUCT . ' barcodes.',
+            'product_video.max'    => 'Product video must not be larger than 50 MB.',
+            'product_video.mimes'  => 'Product video must be an MP4, WebM, or OGG file.',
         ];
     }
 
@@ -255,6 +258,7 @@ class StoreProductRequest extends FormRequest
             'primary_image'      => 'Primary Image',
             'gallery_images'     => 'Gallery Images',
             'certificate_image'  => 'Certificate File',
+            'product_video'      => 'Product Video',
             'website_enabled'    => 'Website Enabled',
             'website_price'      => 'Website Price',
             'website_title'      => 'Website Title',

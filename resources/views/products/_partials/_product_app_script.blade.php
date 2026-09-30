@@ -89,6 +89,7 @@
                     remove_primary_image: false,
                     remove_certificate_image: false,
                     remove_gallery_ids: [],
+                    remove_product_video: false,
                 },
                 isGemstone: false,
                 // Live CT ledger balance for an existing product (0 for a
@@ -106,6 +107,9 @@
                 certificateFile: null,
                 certificatePreview: null,
                 existingCertificate: null,
+                productVideoFile: null,
+                productVideoPreview: null,
+                existingProductVideo: null,
 
                 barcodeMode: 'single',
                 barcodes: [],
@@ -209,6 +213,28 @@
                     this.certificateFile = file;
                     this.certificatePreview = file.name;
                     this.form.remove_certificate_image = false;
+                },
+
+                onProductVideoChange(e) {
+                    const file = e.target.files[0];
+                    if (!file) { this.productVideoFile = null; this.productVideoPreview = null; return; }
+                    if (!['video/mp4', 'video/webm', 'video/ogg'].includes(file.type)) {
+                        this.$set(this.errors, 'product_video', 'Video must be MP4, WebM, or OGG.');
+                        return;
+                    }
+                    if (file.size > 50 * 1024 * 1024) {
+                        this.$set(this.errors, 'product_video', 'Video must not exceed 50 MB.');
+                        return;
+                    }
+                    this.$delete(this.errors, 'product_video');
+                    this.productVideoFile = file;
+                    // A data-URL preview (like the image handlers use) would
+                    // hold the whole file as a base64 string in Vue's
+                    // reactive state — fine for a few MB of image, wasteful
+                    // for up to 50 MB of video. An object URL just points at
+                    // the in-memory file.
+                    this.productVideoPreview = URL.createObjectURL(file);
+                    this.form.remove_product_video = false;
                 },
 
                 /* -------------------- Barcode methods -------------------- */
@@ -349,6 +375,7 @@
                     this.existingPrimaryImage = data.primary_image_url || null;
                     this.existingGallery = data.gallery || [];
                     this.existingCertificate = data.certificate_url || null;
+                    this.existingProductVideo = data.product_video_url || null;
 
                     if (Array.isArray(data.barcodes) && data.barcodes.length) {
                         this.barcodes = data.barcodes.map((b) => ({
@@ -450,6 +477,7 @@
                     if (this.mode === 'edit') {
                         if (this.form.remove_primary_image)     fd.append('remove_primary_image', 1);
                         if (this.form.remove_certificate_image) fd.append('remove_certificate_image', 1);
+                        if (this.form.remove_product_video)     fd.append('remove_product_video', 1);
                         this.form.remove_gallery_ids.forEach((id) => {
                             fd.append('remove_gallery_ids[]', id);
                         });
@@ -457,6 +485,7 @@
 
                     if (this.primaryImageFile) fd.append('primary_image', this.primaryImageFile);
                     if (this.certificateFile)  fd.append('certificate_image', this.certificateFile);
+                    if (this.productVideoFile) fd.append('product_video', this.productVideoFile);
                     this.galleryFiles.forEach((file) => fd.append('gallery_images[]', file));
 
                     // Defensive: drop any row that never got a value typed

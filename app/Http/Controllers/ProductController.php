@@ -600,6 +600,16 @@ class ProductController extends Controller
             $product->addMediaFromRequest('certificate_image')
                 ->toMediaCollection(Product::MEDIA_COLLECTION_CERTIFICATE);
         }
+
+        /* ----- Product video ----- */
+        if ($isUpdate && $request->boolean('remove_product_video')) {
+            $product->clearMediaCollection(Product::MEDIA_COLLECTION_VIDEO);
+        }
+        if ($request->hasFile('product_video')) {
+            $product->clearMediaCollection(Product::MEDIA_COLLECTION_VIDEO);
+            $product->addMediaFromRequest('product_video')
+                ->toMediaCollection(Product::MEDIA_COLLECTION_VIDEO);
+        }
     }
 
     /**

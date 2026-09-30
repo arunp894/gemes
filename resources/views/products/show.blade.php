@@ -48,6 +48,12 @@
                         </div>
                     @endif
 
+                    @if ($product->video_url)
+                        <hr>
+                        <h6 class="text-muted text-uppercase fs-xs mb-2">Video</h6>
+                        <video src="{{ $product->video_url }}" controls class="w-100 rounded" style="max-height: 300px;"></video>
+                    @endif
+
                     @if ($product->certificate_url)
                         <hr>
                         <a href="{{ $product->certificate_url }}" target="_blank" class="btn btn-light">
