@@ -268,6 +268,11 @@
                                             :class="{ 'is-invalid': lineError(idx, 'unit_price') }"
                                             v-model.number="line.unit_price">
                                         <div class="invalid-feedback d-block" v-if="lineError(idx, 'unit_price')">@{{ lineError(idx, 'unit_price') }}</div>
+                                        {{-- Reference only — Unit Price is seeded from this (rate × Ct)
+                                             but stays freely editable afterward. --}}
+                                        <small class="text-muted d-block text-end" v-if="line.cost_price">
+                                            Purchase Price: @{{ formatMoney(line.cost_price) }}@{{ line.piece_carat_weight !== null && line.piece_carat_weight !== undefined ? ' / ct' : '' }}
+                                        </small>
                                     </td>
                                     <td>
                                         <input type="number" min="0" max="100" step="0.01"
@@ -578,6 +583,19 @@ $(function () {
     const currencyCode     = @json($currencyCode);
     const currencyPosition = @json($currencyPosition);
 
+    // Unit Price's default is seeded from the purchase line's cost rate
+    // (purchase_products.price) × Ct, mirroring StockService::
+    // websiteSellingPrice()'s own rate-times-carat formula: per-carat for
+    // a weighed (gemstone) piece, per-piece as-is for anything else (a
+    // null caratWeight means "not weighed at all"). Only a starting
+    // suggestion — the seller can freely edit it afterward.
+    function defaultUnitPriceFromCost(costPrice, caratWeight, remainingCarat) {
+        if (costPrice === null || costPrice === undefined) return 0;
+        const isWeighed = caratWeight !== null && caratWeight !== undefined;
+        const ct = isWeighed ? (Number(remainingCarat) || 0) : 1;
+        return +(Number(costPrice) * ct).toFixed(2);
+    }
+
     new Vue({
         el: '#salesTerminalApp',
         data: {
@@ -756,12 +774,7 @@ $(function () {
                     }
                 }
 
-                // Prefer the price actually set on the product (seeded at
-                // purchase time, editable on the product screen); fall back
-                // to a cost-based estimate only when nothing's been set yet.
-                const defaultPrice = (p.website_price !== null && p.website_price !== undefined)
-                    ? Number(p.website_price)
-                    : (inv && inv.cost_price ? +(Number(inv.cost_price) * 1.3).toFixed(2) : 0);
+                const defaultPrice = defaultUnitPriceFromCost(inv ? inv.cost_price : null, data.carat_weight, data.remaining_carat);
 
                 this.form.lines.push({
                     product_id:          p.id,
@@ -817,6 +830,10 @@ $(function () {
             addProductBySearch(p) {
                 this.form.lines.push({
                     product_id:          p.id,
+                    // No specific piece resolved by a name search (unlike a
+                    // barcode/lot scan) — Ct editing stays off for this row,
+                    // same as before. cost_price/carat_weight below are only
+                    // used to seed Unit Price's default.
                     carat_weight:        null,
                     piece_carat_weight:  null,
                     product_title:       p.title,
@@ -824,8 +841,8 @@ $(function () {
                     purchase_product_id: null,
                     barcode:             null,
                     qty:                 1,
-                    unit_price:          (p.website_price !== null && p.website_price !== undefined) ? Number(p.website_price) : 0,
-                    cost_price:          0,
+                    unit_price:          defaultUnitPriceFromCost(p.cost_price, p.carat_weight, p.remaining_carat),
+                    cost_price:          p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
                     qty_on_record:       null,
                     tax_percent:         0,
                     discount_percent:    0,

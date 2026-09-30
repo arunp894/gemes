@@ -524,10 +524,13 @@ class SaleController extends Controller
         }
 
         // Strategy 2: registered barcode that hasn't been linked to a
-        // specific purchase row — still useful, just no cost / qty info.
+        // specific purchase row — no purchase_product_id, but the product
+        // still has its own 1:1 purchaseProduct (see Product::purchaseProduct())
+        // to source a cost rate/carat from.
         $bc = Barcode::with([
             'product:id,title,sku,website_price,website_enabled,category_id',
             'product.category:id,is_gemstone',
+            'product.purchaseProduct:id,product_id,price,carat_weight',
         ])->where('barcode_value', $value)->first();
         if ($bc && $bc->product) {
             if (! $bc->product->website_enabled) {
@@ -538,6 +541,10 @@ class SaleController extends Controller
             }
 
             $onHand = $this->stock->onHandForProductGlobal((int) $bc->product->id);
+            $pieceCaratWeight = $bc->product->purchaseProduct?->carat_weight;
+            $remainingCarat = $pieceCaratWeight !== null
+                ? $this->stock->remainingCaratForProductGlobal((int) $bc->product->id)
+                : null;
 
             return response()->json([
                 'ok'      => true,
@@ -551,7 +558,12 @@ class SaleController extends Controller
                 'inventory' => [
                     'purchase_product_id' => null,
                     'on_hand'             => $onHand,
+                    'cost_price'          => $bc->product->purchaseProduct?->price !== null
+                        ? (float) $bc->product->purchaseProduct->price
+                        : null,
                 ],
+                'carat_weight'    => $pieceCaratWeight,
+                'remaining_carat' => $remainingCarat,
                 'barcode'   => $value,
             ]);
         }
@@ -580,7 +592,7 @@ class SaleController extends Controller
         $q = Product::query()
             ->websiteEnabled()
             ->select(['id', 'title', 'sku', 'website_price', 'category_id'])
-            ->with('category:id,is_gemstone')
+            ->with(['category:id,is_gemstone', 'purchaseProduct:id,product_id,price,carat_weight'])
             ->limit(15);
 
         if ($term !== '') {
@@ -594,12 +606,30 @@ class SaleController extends Controller
 
         return response()->json([
             'ok'    => true,
-            'items' => $q->get()->map(fn(Product $p) => [
-                'id'            => $p->id,
-                'title'         => $p->title,
-                'sku'           => $p->sku,
-                'website_price' => $this->stock->websiteSellingPrice($p),
-            ]),
+            'items' => $q->get()->map(function (Product $p) {
+                // Live remaining CT, shared by both the reference Website
+                // Price and the Purchase Price used to seed Unit Price —
+                // one query per product instead of two.
+                $remainingCarat = $p->purchaseProduct?->carat_weight !== null
+                    ? $this->stock->remainingCaratForProductGlobal($p->id)
+                    : null;
+
+                return [
+                    'id'              => $p->id,
+                    'title'           => $p->title,
+                    'sku'             => $p->sku,
+                    'website_price'   => $this->stock->websiteSellingPrice($p),
+                    // Purchase line cost rate (purchase_products.price) —
+                    // per-carat for a gemstone, per-piece otherwise. Seeds
+                    // Unit Price's default (rate × Ct — see
+                    // addProductFromLookup()/addProductBySearch() in
+                    // sales/create.blade.php + edit.blade.php) and is shown
+                    // as reference text under that field.
+                    'cost_price'      => $p->purchaseProduct?->price !== null ? (float) $p->purchaseProduct->price : null,
+                    'carat_weight'    => $p->purchaseProduct?->carat_weight,
+                    'remaining_carat' => $remainingCarat,
+                ];
+            }),
         ]);
     }
 
