@@ -152,6 +152,12 @@
         'primary_image_url'  => $product->primary_image_url,
         'certificate_url'    => $product->certificate_url,
         'gallery'            => $product->gallery_urls,
+        // Live CT ledger balance, not the static purchased weight — see
+        // StockService::remainingCaratForProductGlobal(). Drives the
+        // "Website Sales Price" preview below the Website Price field
+        // (remaining carat × rate — see websiteSalesPrice() in the Vue
+        // script and StockService::websiteSellingPrice()).
+        'remaining_carat_weight' => $product->remainingCaratWeight(),
         'form'               => [
             'title'              => $product->title,
             'sku'                => $product->sku,

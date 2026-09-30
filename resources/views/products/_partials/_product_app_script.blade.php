@@ -5,6 +5,21 @@
     (function () {
         const csrfToken = $('meta[name="csrf-token"]').attr('content');
 
+        // Currency is a global setting, not hardcoded — mirrors
+        // SettingService::formatMoney() so the live Website Sales Price
+        // preview below matches whatever the rest of the admin shows.
+        const currency = {
+            symbol: @json($settings->get('currency_symbol', '₹')),
+            code: @json($settings->get('currency_code', 'INR')),
+            position: @json($settings->get('currency_position', 'before')),
+        };
+        function formatMoney(amount) {
+            const formatted = Number(amount || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 2, maximumFractionDigits: 2,
+            });
+            return currency.position === 'before' ? currency.symbol + formatted : formatted + ' ' + currency.code;
+        }
+
         // ============= Toast helper =============
         function showToast(type, message) {
             const container = document.getElementById('productFormToastContainer');
@@ -76,6 +91,11 @@
                     remove_gallery_ids: [],
                 },
                 isGemstone: false,
+                // Live CT ledger balance for an existing product (0 for a
+                // brand-new one — nothing purchased yet). Drives the
+                // Website Sales Price preview; see websiteSalesPrice()
+                // below and StockService::websiteSellingPrice().
+                remainingCaratWeight: 0,
 
                 primaryImageFile: null,
                 primaryImagePreview: null,
@@ -97,6 +117,19 @@
                 serverError: null,
             },
 
+            computed: {
+                // The actual customer-facing price — remaining carat ×
+                // the per-carat Website Price rate for a gemstone, or the
+                // rate as-is for anything else (mirrors
+                // StockService::websiteSellingPrice() exactly, so this
+                // preview never drifts from what the storefront/POS
+                // actually charge).
+                websiteSalesPrice() {
+                    const rate = parseFloat(this.form.website_price) || 0;
+                    return this.isGemstone ? (this.remainingCaratWeight * rate) : rate;
+                },
+            },
+
             mounted() {
                 if (window.__productBootstrap) {
                     this.bootstrapFromExisting(window.__productBootstrap);
@@ -104,6 +137,8 @@
             },
 
             methods: {
+                formatMoney,
+
                 /* -------------------- Category selection -------------------- */
                 recomputeGemstone() {
                     const sel = document.getElementById('category_id');
@@ -298,6 +333,7 @@
                 bootstrapFromExisting(data) {
                     this.mode = 'edit';
                     this.productId = data.id;
+                    this.remainingCaratWeight = parseFloat(data.remaining_carat_weight) || 0;
 
                     Object.keys(this.form).forEach((k) => {
                         if (data.form && Object.prototype.hasOwnProperty.call(data.form, k)) {

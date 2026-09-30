@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Services\SettingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -109,14 +110,30 @@ class WebsiteController extends Controller
             });
         }
 
-        // Sorting
-        $query = match ($sort) {
-            'price_asc'  => $query->orderBy('website_price', 'asc'),
-            'price_desc' => $query->orderBy('website_price', 'desc'),
-            'latest'     => $query->orderByDesc('website_enabled_at'),
-            'carat_desc' => $query->orderByDesc('carat_weight'),
-            default      => $query->orderBy('website_sort_order')->orderByDesc('featured_product'),
-        };
+        // Sorting. website_price on a gemstone is a per-carat rate, not
+        // the final price (see StockService::websiteSellingPrice()) —
+        // sorting by the raw column would order by rate, not by what a
+        // customer actually pays. price_asc/price_desc join the live
+        // remaining-carat balance per product so the sort matches the
+        // price shown on each card; COALESCE to 1 for a product with no
+        // CT ledger history yet, matching websiteSellingPrice()'s own
+        // non-gemstone/unweighed pass-through.
+        if ($sort === 'price_asc' || $sort === 'price_desc') {
+            $remainingCaratSub = DB::table('carat_movements')
+                ->whereNull('deleted_at')
+                ->groupBy('product_id')
+                ->selectRaw("product_id, SUM(CASE WHEN direction = 'in' THEN carat ELSE -carat END) as remaining_carat");
+
+            $query->leftJoinSub($remainingCaratSub, 'rc', 'rc.product_id', '=', 'products.id')
+                ->select('products.*')
+                ->orderByRaw('(products.website_price * COALESCE(rc.remaining_carat, 1)) ' . ($sort === 'price_asc' ? 'asc' : 'desc'));
+        } else {
+            match ($sort) {
+                'latest'     => $query->orderByDesc('website_enabled_at'),
+                'carat_desc' => $query->orderByDesc('carat_weight'),
+                default      => $query->orderBy('website_sort_order')->orderByDesc('featured_product'),
+            };
+        }
 
         $products = $query->paginate(12)->withQueryString();
 

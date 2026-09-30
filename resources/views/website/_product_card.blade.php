@@ -11,9 +11,15 @@
   $badge      = $badge      ?? ($product->featured_product ? 'gia' : 'new');
   $badgeText  = $badgeText  ?? ($product->featured_product ? 'Featured' : 'New');
   $badgeClass = ['gia' => 'sg-badge-gia', 'rare' => 'sg-badge-rare', 'new' => 'sg-badge-new', 'hot' => 'sg-badge-hot'][$badge] ?? 'sg-badge-gia';
-  $price      = $product->website_price ? $settings->formatPrice($product->website_price) : null;
+  $sellingPrice    = $product->websiteSellingPrice();
+  $price      = $sellingPrice ? $settings->formatPrice($sellingPrice) : null;
   $cartEnabled     = $settings->bool('cart_enabled', true);
-  $hasPrice        = (bool) $product->website_price;
+  $hasPrice        = (bool) $sellingPrice;
+  // Remaining Ct (live CT ledger), not the static purchased weight —
+  // matches the price above (see StockService::websiteSellingPrice()).
+  $caratDisplay    = $product->carat_weight !== null
+      ? rtrim(rtrim(number_format($product->remainingCaratWeight(), 3), '0'), '.')
+      : null;
 @endphp
 
 <div class="sg-product-card">
@@ -32,7 +38,7 @@
     <div class="sg-product-body">
       <div class="sg-product-name">{{ $product->title }}</div>
       <div class="sg-product-meta">
-        @if($product->carat_weight){{ $product->carat_weight }} ct<span>·</span>@endif
+        @if($caratDisplay){{ $caratDisplay }} ct<span>·</span>@endif
         @if($product->country_of_origin){{ $product->country_of_origin }}@endif
       </div>
     </div>

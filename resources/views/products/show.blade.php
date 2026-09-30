@@ -225,8 +225,16 @@
                         </dd>
 
                         @if (!is_null($product->website_price))
-                            <dt class="col-sm-4 text-muted">Website Price</dt>
+                            <dt class="col-sm-4 text-muted">Website Price{{ $product->isGemstone() ? ' (per Ct)' : '' }}</dt>
                             <dd class="col-sm-8">{{ number_format($product->website_price, 2) }}</dd>
+
+                            <dt class="col-sm-4 text-muted">Website Sales Price</dt>
+                            <dd class="col-sm-8">
+                                {{ $settings->formatMoney($product->websiteSellingPrice()) }}
+                                @if ($product->isGemstone())
+                                    <small class="text-muted">(Remaining {{ rtrim(rtrim(number_format($product->remainingCaratWeight(), 3), '0'), '.') }} ct &times; Website Price)</small>
+                                @endif
+                            </dd>
                         @endif
 
                         @if ($product->website_title)

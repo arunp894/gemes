@@ -527,7 +527,30 @@ class Product extends Model implements HasMedia
      */
     public function isPurchasableOnline(): bool
     {
-        return $this->isWebsiteEnabled() && $this->isActive() && (float) $this->website_price > 0;
+        return $this->isWebsiteEnabled() && $this->isActive() && (float) ($this->websiteSellingPrice() ?? 0) > 0;
+    }
+
+    /**
+     * Current remaining carat weight — the live CT ledger balance, not
+     * the static weight recorded at purchase time (see
+     * StockService::remainingCaratForProductGlobal()).
+     */
+    public function remainingCaratWeight(): float
+    {
+        return app(\App\Services\StockService::class)->remainingCaratForProductGlobal($this->id);
+    }
+
+    /**
+     * The actual customer-facing selling price — remaining carat × the
+     * per-carat website_price rate for a gemstone, or website_price
+     * as-is for anything else. See StockService::websiteSellingPrice(),
+     * which this delegates to; use that directly in any controller
+     * that already has StockService injected instead of going through
+     * the model.
+     */
+    public function websiteSellingPrice(): ?float
+    {
+        return app(\App\Services\StockService::class)->websiteSellingPrice($this);
     }
 
     /**

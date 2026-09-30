@@ -81,7 +81,14 @@ class CartController extends Controller
             return $this->respond($request, false, 'Product not available.', 0);
         }
 
-        if (! $product->website_price) {
+        // website_price on a gemstone is a per-carat rate, not the final
+        // price — see StockService::websiteSellingPrice(). The cart
+        // caches whatever this resolves to right now (per CartService's
+        // docblock, it isn't refreshed later), so this is the one place
+        // that has to get it right for the item's whole time in the cart.
+        $sellingPrice = $this->stock->websiteSellingPrice($product);
+
+        if (! $sellingPrice) {
             return $this->respond($request, false, 'This gem requires an enquiry — no online price set.', 0);
         }
 
@@ -92,10 +99,10 @@ class CartController extends Controller
             $cart[$product->id] = [
                 'id'       => $product->id,
                 'title'    => $product->display_website_title,
-                'price'    => (float) $product->website_price,
+                'price'    => $sellingPrice,
                 'thumb'    => $product->primary_thumb_url,
                 'qty'      => 1,
-                'subtotal' => (float) $product->website_price,
+                'subtotal' => $sellingPrice,
                 'carat'    => $product->carat_weight,
                 'sku'      => $product->sku,
             ];

@@ -498,7 +498,7 @@
         document.getElementById('confirmPostBtn').addEventListener('click', function () {
             const btn = this;
             btn.disabled = true;
-            fetch(`/purchases/${postBtn.dataset.id}/post`, {
+            fetch('{{ route('purchases.post', $purchase) }}', {
                 method: 'PATCH',
                 headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' },
             })

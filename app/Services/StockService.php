@@ -239,6 +239,39 @@ class StockService
     }
 
     /**
+     * The customer-facing selling price for a product: `website_price`
+     * on a gemstone product is a per-carat RATE, not a final price (a
+     * jeweler prices by rate/ct, same convention as a purchase line's
+     * cost Price — see PurchaseService::syncLines()) — so the amount to
+     * actually display or charge is that rate × the product's current
+     * REMAINING carat weight (the live CT ledger balance, not the
+     * static weight recorded at purchase time, since a partial sale/
+     * adjustment can draw it down). Non-gemstone products have no
+     * carat concept at all, so their website_price is already the
+     * final per-piece price and is returned as-is.
+     *
+     * This is the one formula behind every price the storefront
+     * (listing, detail, cart, checkout), the Sale Terminal, and the
+     * admin Product edit page show or charge — call this instead of
+     * reading `$product->website_price` directly anywhere customer- or
+     * cashier-facing.
+     */
+    public function websiteSellingPrice(Product $product): ?float
+    {
+        if ($product->website_price === null) {
+            return null;
+        }
+
+        if (! $product->isGemstone()) {
+            return (float) $product->website_price;
+        }
+
+        $remainingCarat = $this->remainingCaratForProductGlobal($product->id);
+
+        return round($remainingCarat * (float) $product->website_price, 2);
+    }
+
+    /**
      * Pairs a set of StockMovement rows with their matching per-movement
      * CT amount, for ledger/history views that show one row per event
      * (Stock's product page, Barcode History). Returns [movement_id =>

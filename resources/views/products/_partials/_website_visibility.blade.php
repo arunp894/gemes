@@ -46,11 +46,22 @@
         <div class="row g-3" :class="{ 'opacity-50': !form.website_enabled }">
 
             <div class="col-md-6">
-                <label for="website_price" class="form-label">Website Price (override)</label>
+                <label for="website_price" class="form-label">
+                    Website Price @{{ isGemstone ? '(per Ct)' : '' }}
+                </label>
                 <input type="number" step="0.01" min="0" class="form-control" id="website_price"
                     name="website_price" v-model="form.website_price"
                     :disabled="!form.website_enabled" placeholder="Leave blank to use base price">
-                <small class="text-muted">Optional — if blank, the base Selling Price is used.</small>
+                <small class="text-muted d-block">Optional — if blank, the base Selling Price is used.</small>
+                {{-- Gemstone pricing is per carat, not a flat total — see
+                     StockService::websiteSellingPrice(). This previews the
+                     actual amount the storefront/POS will charge, live, as
+                     the rate is typed. --}}
+                <small class="text-muted d-block" v-if="mode === 'edit' && form.website_price">
+                    <i class="ti ti-calculator me-1"></i>
+                    Website Sales Price: <strong>@{{ formatMoney(websiteSalesPrice) }}</strong>
+                    <span v-if="isGemstone">(Remaining @{{ remainingCaratWeight }} ct &times; Website Price)</span>
+                </small>
             </div>
 
             <div class="col-md-6">

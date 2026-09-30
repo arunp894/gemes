@@ -444,8 +444,10 @@ class SaleController extends Controller
         // barcode or its lot code (SS-PPP-UUU) — both identify this exact
         // physical piece, unlike the product-level Barcode table below.
         $pp = PurchaseProduct::with([
-            'product:id,title,sku,website_price,website_enabled',
-            'line.product:id,title,sku,website_price,website_enabled',
+            'product:id,title,sku,website_price,website_enabled,category_id',
+            'product.category:id,is_gemstone',
+            'line.product:id,title,sku,website_price,website_enabled,category_id',
+            'line.product.category:id,is_gemstone',
             'line.purchase:id,status',
         ])
             ->where(function ($q) use ($value) {
@@ -466,7 +468,7 @@ class SaleController extends Controller
             // terminal, scan included — same rule searchProducts()
             // already applies for the search path.
 
-            if ($product->website_enabled) {
+            if (! $product->website_enabled) {
                 return response()->json([
                     'ok'      => false,
                     'message' => "{$product->title} is not enabled for sale.",
@@ -478,6 +480,14 @@ class SaleController extends Controller
             // the sale but does not gate availability.
             $onHand = $this->stock->onHandForPieceGlobal((int) $pp->id);
 
+            // Actual remaining CT for this exact piece, read from the
+            // CT ledger — NOT qty × per-unit carat. A row's units can
+            // carry different individual weights (see CaratMovement),
+            // so this must be the real tracked balance, never derived.
+            $remainingCarat = $pp->carat_weight !== null
+                ? $this->stock->remainingCaratForPieceGlobal((int) $pp->id)
+                : null;
+
             return response()->json([
                 'ok'       => true,
                 'source'   => 'inventory',
@@ -485,11 +495,19 @@ class SaleController extends Controller
                     'id'            => $product->id,
                     'title'         => $product->title,
                     'sku'           => $product->sku,
-                    // Seeded at purchase time (see purchase_products.website_price);
-                    // null when staff left it blank there and hasn't set one on
-                    // the product since — the terminal falls back to a cost-based
-                    // estimate in that case.
-                    'website_price' => $product->website_price !== null ? (float) $product->website_price : null,
+                    // website_price on a gemstone is a per-carat rate, not
+                    // the final price — the terminal's suggested unit price
+                    // has to be that rate × this piece's remaining carat
+                    // (see StockService::websiteSellingPrice()), not the
+                    // raw rate. Null when staff left it blank at purchase
+                    // time and hasn't set one on the product since — the
+                    // terminal falls back to a cost-based estimate in that
+                    // case.
+                    'website_price' => $product->website_price !== null
+                        ? ($product->isGemstone() && $remainingCarat !== null
+                            ? round($remainingCarat * (float) $product->website_price, 2)
+                            : (float) $product->website_price)
+                        : null,
                 ],
                 'inventory' => [
                     'purchase_product_id' => $pp->id,
@@ -499,21 +517,18 @@ class SaleController extends Controller
                     'rack_id'             => $pp->rack_id,
                     'expiry_date'         => optional($pp->expiry_date)->toDateString(),
                 ],
-                'carat_weight' => $pp->carat_weight,
-                // Actual remaining CT for this exact piece, read from the
-                // CT ledger — NOT qty × per-unit carat. A row's units can
-                // carry different individual weights (see CaratMovement),
-                // so this must be the real tracked balance, never derived.
-                'remaining_carat' => $pp->carat_weight !== null
-                    ? $this->stock->remainingCaratForPieceGlobal((int) $pp->id)
-                    : null,
+                'carat_weight'    => $pp->carat_weight,
+                'remaining_carat' => $remainingCarat,
                 'barcode'  => $value,
             ]);
         }
 
         // Strategy 2: registered barcode that hasn't been linked to a
         // specific purchase row — still useful, just no cost / qty info.
-        $bc = Barcode::with('product:id,title,sku,website_price,website_enabled')->where('barcode_value', $value)->first();
+        $bc = Barcode::with([
+            'product:id,title,sku,website_price,website_enabled,category_id',
+            'product.category:id,is_gemstone',
+        ])->where('barcode_value', $value)->first();
         if ($bc && $bc->product) {
             if (! $bc->product->website_enabled) {
                 return response()->json([
@@ -531,7 +546,7 @@ class SaleController extends Controller
                     'id'            => $bc->product->id,
                     'title'         => $bc->product->title,
                     'sku'           => $bc->product->sku,
-                    'website_price' => $bc->product->website_price !== null ? (float) $bc->product->website_price : null,
+                    'website_price' => $this->stock->websiteSellingPrice($bc->product),
                 ],
                 'inventory' => [
                     'purchase_product_id' => null,
@@ -564,7 +579,8 @@ class SaleController extends Controller
 
         $q = Product::query()
             ->websiteEnabled()
-            ->select(['id', 'title', 'sku', 'website_price'])
+            ->select(['id', 'title', 'sku', 'website_price', 'category_id'])
+            ->with('category:id,is_gemstone')
             ->limit(15);
 
         if ($term !== '') {
@@ -582,7 +598,7 @@ class SaleController extends Controller
                 'id'            => $p->id,
                 'title'         => $p->title,
                 'sku'           => $p->sku,
-                'website_price' => $p->website_price !== null ? (float) $p->website_price : null,
+                'website_price' => $this->stock->websiteSellingPrice($p),
             ]),
         ]);
     }

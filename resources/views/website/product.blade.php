@@ -77,11 +77,14 @@
     <p style="font-size:16px;color:var(--white-dim);margin-bottom:26px;line-height:1.7">{{ $product->short_description }}</p>
     @endif
 
-    {{-- Price --}}
+    {{-- Price — website_price is a per-carat rate, not the final price;
+         the actual amount is that rate × remaining carat weight (see
+         StockService::websiteSellingPrice()). --}}
+    @php $sellingPrice = $product->websiteSellingPrice(); @endphp
     <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:28px">
-      @if($product->website_price)
+      @if($sellingPrice)
       <div class="sg-product-price-lg" style="font-family:'Cormorant Garamond',serif;font-weight:700;color:var(--teal-300)">
-        {{ $settings->formatPrice($product->website_price) }}
+        {{ $settings->formatPrice($sellingPrice) }}
       </div>
       @else
       <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--teal-300)">Price on Request</div>
@@ -94,8 +97,15 @@
         Gem Specifications
       </div>
       @php
+        // Remaining Ct (the live CT ledger balance), not the static weight
+        // recorded at purchase time — matches the price above, which is
+        // already computed from remaining carat (see
+        // StockService::websiteSellingPrice()).
+        $remainingCaratDisplay = $product->carat_weight !== null
+            ? rtrim(rtrim(number_format($product->remainingCaratWeight(), 3), '0'), '.')
+            : null;
         $specs = [
-          ['label' => 'Carat Weight',    'value' => $product->carat_weight ? $product->carat_weight . ' ct' : null,  'highlight' => true],
+          ['label' => 'Carat Weight',    'value' => $remainingCaratDisplay !== null ? $remainingCaratDisplay . ' ct' : null,  'highlight' => true],
           ['label' => 'Stone Type',      'value' => $product->stone_type,    'highlight' => false],
           ['label' => 'Colour Grade',    'value' => $product->colour_grade,  'highlight' => false],
           ['label' => 'Clarity Grade',   'value' => $product->clarity_grade, 'highlight' => false],
@@ -142,7 +152,7 @@
 
     {{-- CTA --}}
     <div class="sg-cta-row" style="margin-bottom:28px">
-      @if($settings->bool('cart_enabled', true) && $product->website_price)
+      @if($settings->bool('cart_enabled', true) && $sellingPrice)
         <button id="addToCartBtn"
           onclick="addToCart({{ $product->id }}, this)"
           style="flex:1;background:var(--teal-500);color:#fff;border:none;cursor:pointer;font-family:'Jost',sans-serif;font-size:13px;font-weight:500;letter-spacing:2px;text-transform:uppercase;padding:16px;border-radius:2px;transition:all .3s"
