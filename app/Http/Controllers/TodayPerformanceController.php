@@ -51,8 +51,8 @@ class TodayPerformanceController extends Controller
         $stockInQty = $stockOutQty = 0;
         if ($canStock) {
             $movementTotals = StockMovement::whereDate('movement_date', $today)
-                ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'in' THEN qty ELSE 0 END),0) as in_qty")
-                ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'out' THEN qty ELSE 0 END),0) as out_qty")
+                ->selectRaw('COALESCE(' . StockMovement::receivedSql('qty') . ',0) as in_qty')
+                ->selectRaw('COALESCE(' . StockMovement::removedSql('qty') . ',0) as out_qty')
                 ->first();
             $stockInQty  = (int) $movementTotals->in_qty;
             $stockOutQty = (int) $movementTotals->out_qty;

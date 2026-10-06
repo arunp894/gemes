@@ -1568,26 +1568,58 @@ class StockService
         $direction = $delta > 0 ? StockMovement::DIRECTION_IN : StockMovement::DIRECTION_OUT;
         $reason    = $delta > 0 ? StockMovement::REASON_ADJUSTMENT_IN : StockMovement::REASON_ADJUSTMENT_OUT;
 
-        if ($delta < 0) {
-            $onHand = $this->onHandForPiece($purchaseProductId, $locationId);
-            if ($onHand < abs($delta)) {
-                throw new RuntimeException(
-                    "Cannot adjust down by " . abs($delta) . ": piece #{$purchaseProductId} only has on-hand {$onHand}."
-                );
-            }
+        $onHand = $this->onHandForPiece($purchaseProductId, $locationId);
+        if ($delta < 0 && $onHand < abs($delta)) {
+            throw new RuntimeException(
+                "Cannot adjust down by " . abs($delta) . ": piece #{$purchaseProductId} only has on-hand {$onHand}."
+            );
         }
 
-        return $this->record([
-            'purchase_product_id' => $purchaseProductId,
-            'product_id'          => $productId,
-            'location_id'         => $locationId,
-            'direction'           => $direction,
-            'qty'                 => abs($delta),
-            'reason'              => $reason,
-            'source_type'         => StockMovement::SOURCE_STOCK_ADJUSTMENT,
-            'source_id'           => null,
-            'notes'               => $notes ?: null,
-        ]);
+        return DB::transaction(function () use ($purchaseProductId, $productId, $locationId, $delta, $notes, $direction, $reason, $onHand) {
+            $movement = $this->record([
+                'purchase_product_id' => $purchaseProductId,
+                'product_id'          => $productId,
+                'location_id'         => $locationId,
+                'direction'           => $direction,
+                'qty'                 => abs($delta),
+                'reason'              => $reason,
+                'source_type'         => StockMovement::SOURCE_STOCK_ADJUSTMENT,
+                'source_id'           => null,
+                'notes'               => $notes ?: null,
+            ]);
+
+            // Keep the CT ledger in step with the qty ledger — CT is its own
+            // ledger, so without this an adjustment moves pieces but no carat.
+            // OUT takes this location's remaining CT pro rata (all of it when
+            // the adjustment empties the piece here); IN adds the row's
+            // average CT per piece. recordCarat() no-ops on zero, so pieces
+            // without a carat weight are unaffected.
+            $carat = 0.0;
+            if ($delta < 0) {
+                $remaining = $this->remainingCaratForPiece($purchaseProductId, $locationId);
+                $carat = ($onHand > 0 && abs($delta) < $onHand)
+                    ? round($remaining * abs($delta) / $onHand, 3)
+                    : $remaining;
+            } else {
+                $pp = PurchaseProduct::find($purchaseProductId);
+                if ($pp && (int) $pp->qty > 0 && (float) $pp->carat_weight > 0) {
+                    $carat = round((float) $pp->carat_weight * $delta / (int) $pp->qty, 3);
+                }
+            }
+
+            $this->recordCarat([
+                'purchase_product_id' => $purchaseProductId,
+                'product_id'          => $productId,
+                'location_id'         => $locationId,
+                'direction'           => $delta > 0 ? CaratMovement::DIRECTION_IN : CaratMovement::DIRECTION_OUT,
+                'carat'               => $carat,
+                'reason'              => $delta > 0 ? CaratMovement::REASON_ADJUSTMENT_IN : CaratMovement::REASON_ADJUSTMENT_OUT,
+                'source_type'         => CaratMovement::SOURCE_STOCK_ADJUSTMENT,
+                'notes'               => $notes ?: null,
+            ]);
+
+            return $movement;
+        });
     }
 
     /* ─────────────────────────────────────────────────────────

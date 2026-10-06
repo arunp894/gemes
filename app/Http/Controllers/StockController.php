@@ -163,13 +163,22 @@ class StockController extends Controller
         $totalStockValue     = (float) $valuedPieces->sum(fn ($row) => $row->remaining_carat * $row->price);
 
         // ── Today's received / removed (qty + ct) ───────────────────────
+        // Received/Removed must not count bookkeeping that nets to zero:
+        //  - a sale edit books a reversing IN (sale_edit_reverse) plus a fresh
+        //    OUT, so the reversal is netted out of Removed (and kept out of
+        //    Received) instead of the sale showing up twice.
+        //  - transfers only move stock between locations; across all
+        //    locations they're excluded, but when a single location is
+        //    selected they're a real in/out for it, so they stay.
+        $withTransfers = (bool) $locationId;
+
         $todayQty = DB::table('stock_movements')
             ->whereNull('deleted_at')
             ->whereDate('movement_date', $today)
             ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
             ->when($categoryId, $productsInCategory)
-            ->selectRaw("SUM(CASE WHEN direction = 'in' THEN qty ELSE 0 END) as received")
-            ->selectRaw("SUM(CASE WHEN direction = 'out' THEN qty ELSE 0 END) as removed")
+            ->selectRaw(StockMovement::receivedSql('qty', $withTransfers) . ' as received')
+            ->selectRaw(StockMovement::removedSql('qty', $withTransfers) . ' as removed')
             ->first();
 
         $todayCt = DB::table('carat_movements')
@@ -177,8 +186,8 @@ class StockController extends Controller
             ->whereDate('movement_date', $today)
             ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
             ->when($categoryId, $productsInCategory)
-            ->selectRaw("SUM(CASE WHEN direction = 'in' THEN carat ELSE 0 END) as received")
-            ->selectRaw("SUM(CASE WHEN direction = 'out' THEN carat ELSE 0 END) as removed")
+            ->selectRaw(StockMovement::receivedSql('carat', $withTransfers) . ' as received')
+            ->selectRaw(StockMovement::removedSql('carat', $withTransfers) . ' as removed')
             ->first();
 
         // ── Bottom summary strip: today's activity by category ──────────
@@ -188,7 +197,7 @@ class StockController extends Controller
             ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
             ->when($categoryId, $productsInCategory)
             ->selectRaw("SUM(CASE WHEN reason IN ('transfer_in','transfer_out') THEN qty ELSE 0 END) as transfers")
-            ->selectRaw("SUM(CASE WHEN reason = 'sale' THEN qty ELSE 0 END) as sales")
+            ->selectRaw("SUM(CASE WHEN reason = 'sale' THEN qty WHEN reason = 'sale_edit_reverse' THEN -qty ELSE 0 END) as sales")
             ->selectRaw("SUM(CASE WHEN reason = 'sale_return' THEN qty ELSE 0 END) as returns")
             ->selectRaw("SUM(CASE WHEN reason IN ('adjustment_in','adjustment_out') THEN qty ELSE 0 END) as adjustments")
             ->first();

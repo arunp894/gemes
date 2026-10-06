@@ -224,4 +224,29 @@ class StockMovement extends Model
             default                          => 'badge-soft-secondary',
         };
     }
+
+    /**
+     * SQL for the "Received"/"Removed" KPI totals, shared by the Stock page and
+     * the Today Performance / Stock Activity reports so they can't disagree.
+     *
+     * A sale edit books a reversing IN (sale_edit_reverse) plus a fresh OUT, so
+     * the reversal is netted out of Removed and kept out of Received. Transfers
+     * only move stock between locations, so they're excluded unless the view is
+     * scoped to one location (where they're a real in/out).
+     * $col is a trusted column name ('qty' or 'carat'), never user input.
+     */
+    public static function receivedSql(string $col = 'qty', bool $includeTransfers = false): string
+    {
+        $skip = $includeTransfers ? '' : ",'transfer_in','transfer_cancel_out'";
+
+        return "SUM(CASE WHEN direction = 'in' AND reason NOT IN ('sale_edit_reverse'{$skip}) THEN {$col} ELSE 0 END)";
+    }
+
+    public static function removedSql(string $col = 'qty', bool $includeTransfers = false): string
+    {
+        $skip = $includeTransfers ? "''" : "'transfer_out'";
+
+        return "SUM(CASE WHEN direction = 'out' AND reason NOT IN ({$skip}) THEN {$col} "
+            . "WHEN direction = 'in' AND reason = 'sale_edit_reverse' THEN -{$col} ELSE 0 END)";
+    }
 }

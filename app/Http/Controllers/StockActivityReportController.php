@@ -48,8 +48,8 @@ class StockActivityReportController extends Controller
         /* ── KPIs ─────────────────────────────────────────────── */
         $movementTotals = StockMovement::whereNull('deleted_at')
             ->whereBetween('movement_date', [$start->toDateString(), $end->toDateString()])
-            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'in' THEN qty ELSE 0 END),0) as in_qty")
-            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'out' THEN qty ELSE 0 END),0) as out_qty")
+            ->selectRaw('COALESCE(' . StockMovement::receivedSql('qty') . ',0) as in_qty')
+            ->selectRaw('COALESCE(' . StockMovement::removedSql('qty') . ',0) as out_qty')
             ->first();
         $stockInQty  = (int) $movementTotals->in_qty;
         $stockOutQty = (int) $movementTotals->out_qty;
@@ -62,8 +62,8 @@ class StockActivityReportController extends Controller
         $caratTotals = DB::table('carat_movements')
             ->whereNull('deleted_at')
             ->whereBetween('movement_date', [$start->toDateString(), $end->toDateString()])
-            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'in' THEN carat ELSE 0 END),0) as in_carat")
-            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'out' THEN carat ELSE 0 END),0) as out_carat")
+            ->selectRaw('COALESCE(' . StockMovement::receivedSql('carat') . ',0) as in_carat')
+            ->selectRaw('COALESCE(' . StockMovement::removedSql('carat') . ',0) as out_carat')
             ->first();
         $stockInCarat  = (float) $caratTotals->in_carat;
         $stockOutCarat = (float) $caratTotals->out_carat;
@@ -90,8 +90,8 @@ class StockActivityReportController extends Controller
         $rows = StockMovement::whereNull('deleted_at')
             ->whereBetween('movement_date', [$start->toDateString(), $end->toDateString()])
             ->selectRaw("$dateExpr as bucket")
-            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'in' THEN qty ELSE 0 END),0) as in_qty")
-            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'out' THEN qty ELSE 0 END),0) as out_qty")
+            ->selectRaw('COALESCE(' . StockMovement::receivedSql('qty') . ',0) as in_qty')
+            ->selectRaw('COALESCE(' . StockMovement::removedSql('qty') . ',0) as out_qty')
             ->groupBy('bucket')
             ->get()
             ->keyBy(fn ($r) => $bucketFormat === 'hour' ? (int) $r->bucket : (string) $r->bucket);
@@ -110,8 +110,8 @@ class StockActivityReportController extends Controller
             ->whereNull('deleted_at')
             ->whereBetween('movement_date', [$start->toDateString(), $end->toDateString()])
             ->selectRaw("$dateExpr as bucket")
-            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'in' THEN carat ELSE 0 END),0) as in_carat")
-            ->selectRaw("COALESCE(SUM(CASE WHEN direction = 'out' THEN carat ELSE 0 END),0) as out_carat")
+            ->selectRaw('COALESCE(' . StockMovement::receivedSql('carat') . ',0) as in_carat')
+            ->selectRaw('COALESCE(' . StockMovement::removedSql('carat') . ',0) as out_carat')
             ->groupBy('bucket')
             ->get()
             ->keyBy(fn ($r) => $bucketFormat === 'hour' ? (int) $r->bucket : (string) $r->bucket);
@@ -145,18 +145,25 @@ class StockActivityReportController extends Controller
             'Purchases'   => [StockMovement::REASON_PURCHASE],
             'Sales'       => [StockMovement::REASON_SALE],
             'Transfers'   => [StockMovement::REASON_TRANSFER_IN, StockMovement::REASON_TRANSFER_OUT, StockMovement::REASON_TRANSFER_CANCEL_OUT],
-            'Returns'     => [StockMovement::REASON_SALE_RETURN, StockMovement::REASON_SALE_CANCEL, StockMovement::REASON_SALE_EDIT_REVERSE],
+            'Returns'     => [StockMovement::REASON_SALE_RETURN, StockMovement::REASON_SALE_CANCEL],
             'Adjustments' => [StockMovement::REASON_ADJUSTMENT_IN, StockMovement::REASON_ADJUSTMENT_OUT, StockMovement::REASON_OPENING, StockMovement::REASON_PURCHASE_CANCEL],
         ];
+        // A sale edit re-books the whole sale (reversal IN + fresh OUT), so
+        // the reversal is netted off Sales rather than counted as a Return.
+        $netOff = ['Sales' => [StockMovement::REASON_SALE_EDIT_REVERSE]];
         $movementTypeLabels = [];
         $movementTypeQty    = [];
         $movementTypeCarat  = [];
         foreach ($reasonBuckets as $label => $reasons) {
-            $qty = (int) $reasonRows->whereIn('reason', $reasons)->sum('qty');
+            $off   = $netOff[$label] ?? [];
+            $qty   = (int) $reasonRows->whereIn('reason', $reasons)->sum('qty')
+                   - (int) $reasonRows->whereIn('reason', $off)->sum('qty');
+            $carat = (float) $caratReasonRows->whereIn('reason', $reasons)->sum('carat')
+                   - (float) $caratReasonRows->whereIn('reason', $off)->sum('carat');
             if ($qty > 0) {
                 $movementTypeLabels[] = $label;
                 $movementTypeQty[]    = $qty;
-                $movementTypeCarat[]  = round((float) $caratReasonRows->whereIn('reason', $reasons)->sum('carat'), 2);
+                $movementTypeCarat[]  = round($carat, 2);
             }
         }
 
@@ -347,17 +354,23 @@ class StockActivityReportController extends Controller
      */
     private function topStonesByCarat(Carbon $start, Carbon $end, string $reason, int $limit = 6): \Illuminate\Support\Collection
     {
+        // Sales are netted against their edit reversals so an edited sale
+        // isn't counted twice (original OUT + re-booked OUT).
+        $isSale = $reason === 'sale';
+
         return DB::table('carat_movements')
             ->join('products', 'products.id', '=', 'carat_movements.product_id')
             ->join('categories', 'categories.id', '=', 'products.category_id')
             ->whereNull('carat_movements.deleted_at')
-            ->where('carat_movements.reason', $reason)
+            ->whereIn('carat_movements.reason', $isSale ? ['sale', 'sale_edit_reverse'] : [$reason])
             ->whereBetween('carat_movements.movement_date', [$start->toDateString(), $end->toDateString()])
             ->groupBy('categories.id', 'categories.name')
             ->select([
                 'categories.id   as category_id',
                 'categories.name as category_name',
-                DB::raw('SUM(carat_movements.carat) as carat'),
+                DB::raw($isSale
+                    ? "SUM(CASE WHEN carat_movements.reason = 'sale_edit_reverse' THEN -carat_movements.carat ELSE carat_movements.carat END) as carat"
+                    : 'SUM(carat_movements.carat) as carat'),
                 DB::raw('COUNT(DISTINCT carat_movements.purchase_product_id) as pieces'),
             ])
             ->orderByDesc('carat')
