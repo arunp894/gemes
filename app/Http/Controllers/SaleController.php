@@ -464,17 +464,6 @@ class SaleController extends Controller
         if ($pp && $pp->resolved_product) {
             $product = $pp->resolved_product;
 
-            // Site-disabled products are never sellable from the
-            // terminal, scan included — same rule searchProducts()
-            // already applies for the search path.
-
-            if (! $product->website_enabled) {
-                return response()->json([
-                    'ok'      => false,
-                    'message' => "{$product->title} is not enabled for sale.",
-                ], 404);
-            }
-
             // Live on-hand from the ledger, summed across all locations.
             // Stock is one global pool; the sale's location is recorded on
             // the sale but does not gate availability.
@@ -533,13 +522,6 @@ class SaleController extends Controller
             'product.purchaseProduct:id,product_id,price,carat_weight',
         ])->where('barcode_value', $value)->first();
         if ($bc && $bc->product) {
-            if (! $bc->product->website_enabled) {
-                return response()->json([
-                    'ok'      => false,
-                    'message' => "{$bc->product->title} is not enabled for sale.",
-                ], 404);
-            }
-
             $onHand = $this->stock->onHandForProductGlobal((int) $bc->product->id);
             $pieceCaratWeight = $bc->product->purchaseProduct?->carat_weight;
             $remainingCarat = $pieceCaratWeight !== null
@@ -578,19 +560,14 @@ class SaleController extends Controller
      * Quick product search for the terminal picker. Mirrors the purchase
      * search but doesn't surface inventory rows in the results.
      *
-     * Scoped to website_enabled products only -- these are the listed,
-     * finished items ready to sell (an item left disabled is typically
-     * still being finished/priced, same as why WebsiteController gates
-     * the public storefront on the same flag). lookupByBarcode() applies
-     * the same gate now too -- a disabled product can't be added to a
-     * sale by either path.
+     * Not gated on website_enabled -- that flag only controls the public
+     * storefront, not what the terminal can sell.
      */
     public function searchProducts(Request $request): JsonResponse
     {
         $term = trim((string) $request->query('q', ''));
 
         $q = Product::query()
-            ->websiteEnabled()
             ->select(['id', 'title', 'sku', 'website_price', 'category_id'])
             ->with(['category:id,is_gemstone', 'purchaseProduct:id,product_id,price,carat_weight'])
             ->limit(15);

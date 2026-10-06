@@ -192,8 +192,10 @@
                                     <td><input type="number" min="1" step="1" :max="line.on_hand" :disabled="line.on_hand === 1" class="form-control form-control-sm text-end" v-model.number="line.qty" @input="checkStockWarning(idx)" @blur="normalizeQty(idx)"></td>
                                     <td>
                                         <input type="number" min="0" step="0.01" class="form-control form-control-sm text-end" v-model.number="line.unit_price">
-                                        {{-- Reference only — Unit Price is seeded from this (rate × Ct)
-                                             but stays freely editable afterward. --}}
+                                        <small class="text-muted d-block text-end" v-if="line.piece_carat_weight !== null && line.piece_carat_weight !== undefined">
+                                            per ct (Total = Ct × Price)
+                                        </small>
+                                        {{-- Reference only. --}}
                                         <small class="text-muted d-block text-end" v-if="line.cost_price">
                                             Purchase Price: @{{ formatMoney(line.cost_price) }}@{{ line.piece_carat_weight !== null && line.piece_carat_weight !== undefined ? ' / ct' : '' }}
                                         </small>
@@ -298,7 +300,13 @@
                 ? $stockSvc->onHandForPieceGlobal($l->purchase_product_id) + (int) $l->qty
                 : null,
             'qty'                 => $l->qty,
-            'unit_price'          => (float) $l->unit_price,
+            // Stored unit_price is per piece; the terminal edits it as a
+            // per-ct rate for weighed lines (total = Ct x Piece x rate).
+            // Derived from the exact stored subtotal, not the 2dp-rounded
+            // unit_price, so re-saving an untouched line can't drift.
+            'unit_price'          => (optional($l->purchaseProduct)->carat_weight !== null && (float) $lineCarat > 0)
+                ? round((float) $l->subtotal / (float) $lineCarat, 6)
+                : (float) $l->unit_price,
             'cost_price'          => (float) $l->cost_price,
             'tax_percent'         => (float) $l->tax_percent,
             'discount_percent'    => (float) $l->discount_percent,
@@ -318,17 +326,19 @@
 $(function () {
     const csrfToken = $('meta[name="csrf-token"]').attr('content');
 
-    // Unit Price's default is seeded from the purchase line's cost rate
-    // (purchase_products.price) × Ct, mirroring StockService::
-    // websiteSellingPrice()'s own rate-times-carat formula: per-carat for
-    // a weighed (gemstone) piece, per-piece as-is for anything else (a
-    // null caratWeight means "not weighed at all"). Only a starting
-    // suggestion — the seller can freely edit it afterward.
-    function defaultUnitPriceFromCost(costPrice, caratWeight, remainingCarat) {
-        if (costPrice === null || costPrice === undefined) return 0;
-        const isWeighed = caratWeight !== null && caratWeight !== undefined;
-        const ct = isWeighed ? (Number(remainingCarat) || 0) : 1;
-        return +(Number(costPrice) * ct).toFixed(2);
+    // Weighed lines (carat_weight set) total CT x rate -- Unit Price is a
+    // per-ct rate and Piece doesn't multiply it, since the line's CT is
+    // already the total for the whole line. Unweighed lines are qty x price.
+    function lineGross(l) {
+        const weighed = l.piece_carat_weight !== null && l.piece_carat_weight !== undefined;
+        const rate = Number(l.unit_price) || 0;
+        return weighed ? (Number(l.carat_weight) || 0) * rate : (Number(l.qty) || 0) * rate;
+    }
+    // The server still totals qty x unit_price, so send it the per-piece
+    // equivalent of lineGross().
+    function pieceUnitPrice(l) {
+        const qty = Number(l.qty) || 0;
+        return qty > 0 ? lineGross(l) / qty : 0;
     }
 
     new Vue({
@@ -374,7 +384,7 @@ $(function () {
             totals() {
                 let subtotal = 0, discount = 0, tax = 0;
                 this.form.lines.forEach((l) => {
-                    const qty = Number(l.qty) || 0, price = Number(l.unit_price) || 0;
+                    const qty = Number(l.qty) || 0, price = pieceUnitPrice(l);
                     const dPct = Number(l.discount_percent) || 0, tPct = Number(l.tax_percent) || 0;
                     const gross = qty * price;
                     const dAmt = +(gross * dPct / 100).toFixed(2);
@@ -394,7 +404,7 @@ $(function () {
         methods: {
             formatMoney(v) { return Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); },
             lineTotal(l) {
-                const qty = Number(l.qty) || 0, price = Number(l.unit_price) || 0;
+                const qty = Number(l.qty) || 0, price = pieceUnitPrice(l);
                 const dPct = Number(l.discount_percent) || 0, tPct = Number(l.tax_percent) || 0;
                 const gross = qty * price, dAmt = gross * dPct / 100;
                 const base = gross - dAmt, tAmt = base * tPct / 100;
@@ -411,7 +421,6 @@ $(function () {
                         this.scannerMessage = data.message || 'Not found.'; return;
                     }
                     const p = data.product, inv = data.inventory;
-                    const defaultPrice = defaultUnitPriceFromCost(inv ? inv.cost_price : null, data.carat_weight, data.remaining_carat);
                     this.form.lines.push({
                         product_id: p.id, product_title: p.title, product_sku: p.sku,
                         purchase_product_id: inv ? inv.purchase_product_id : null,
@@ -425,7 +434,7 @@ $(function () {
                         piece_carat_weight: data.carat_weight,
                         remaining_carat_before: data.remaining_carat,
                         on_hand: inv ? inv.on_hand : null,
-                        unit_price: defaultPrice,
+                        unit_price: 0,
                         cost_price: inv ? Number(inv.cost_price || 0) : 0,
                         tax_percent: 0, discount_percent: 0,
                     });
@@ -452,12 +461,10 @@ $(function () {
                     qty: 1,
                     // No specific piece resolved by a name search (unlike a
                     // barcode/lot scan) — Ct editing stays off for this row.
-                    // p.carat_weight/p.remaining_carat are only used below
-                    // to seed Unit Price's default.
                     carat_weight: null,
                     piece_carat_weight: null,
                     on_hand: null,
-                    unit_price: defaultUnitPriceFromCost(p.cost_price, p.carat_weight, p.remaining_carat),
+                    unit_price: 0,
                     cost_price: p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
                     tax_percent: 0, discount_percent: 0,
                 });
@@ -549,7 +556,7 @@ $(function () {
                         barcode: l.barcode,
                         qty: Number(l.qty) || 1,
                         carat_weight: (l.carat_weight === '' || l.carat_weight === null || l.carat_weight === undefined) ? null : Number(l.carat_weight),
-                        unit_price: Number(l.unit_price) || 0,
+                        unit_price: +pieceUnitPrice(l).toFixed(6),
                         tax_percent: Number(l.tax_percent) || 0,
                         discount_percent: Number(l.discount_percent) || 0,
                     })),

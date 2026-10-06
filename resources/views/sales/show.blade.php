@@ -183,7 +183,14 @@
                                         <td>{{ $line->carat_weight ?? optional($line->purchaseProduct)->carat_weight ?? '—' }}</td>
                                         <td><code class="small">{{ $line->barcode ?? '—' }}</code></td>
                                         <td class="text-end">{{ $line->qty }}</td>
-                                        <td class="text-end">{{ number_format((float) $line->unit_price, 2) }}</td>
+                                        @php
+                                            // Weighed lines total CT x rate, so show the per-ct rate
+                                            // (derived from the exact subtotal); others show unit_price.
+                                            $lineCt = (float) ($line->carat_weight ?? 0);
+                                            $isWeighed = optional($line->purchaseProduct)->carat_weight !== null && $lineCt > 0;
+                                            $shownRate = $isWeighed ? (float) $line->subtotal / $lineCt : (float) $line->unit_price;
+                                        @endphp
+                                        <td class="text-end">{{ number_format($shownRate, 2) }}@if ($isWeighed)<small class="d-block text-muted">per ct</small>@endif</td>
                                         <td class="text-end">{{ number_format((float) $line->discount_amount, 2) }}</td>
                                         <td class="text-end">{{ number_format((float) $line->tax_amount, 2) }}</td>
                                         <td class="text-end fw-semibold">{{ number_format((float) $line->total, 2) }}</td>
@@ -323,7 +330,7 @@
             </div>
 
             {{-- Audit --}}
-            <div class="card">
+            <div class="card d-print-none">
                 <div class="card-header border-light"><h5 class="card-title mb-0">Audit</h5></div>
                 <div class="card-body">
                     <dl class="row mb-0 small">
@@ -345,7 +352,7 @@
 
             {{-- Edit History --}}
             @if ($sale->editLogs->isNotEmpty())
-            <div class="card">
+            <div class="card d-print-none">
                 <div class="card-header border-light d-flex align-items-center gap-2">
                     <i class="ti ti-history text-muted"></i>
                     <h5 class="card-title mb-0">Edit History</h5>

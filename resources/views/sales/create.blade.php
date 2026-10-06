@@ -268,8 +268,10 @@
                                             :class="{ 'is-invalid': lineError(idx, 'unit_price') }"
                                             v-model.number="line.unit_price">
                                         <div class="invalid-feedback d-block" v-if="lineError(idx, 'unit_price')">@{{ lineError(idx, 'unit_price') }}</div>
-                                        {{-- Reference only — Unit Price is seeded from this (rate × Ct)
-                                             but stays freely editable afterward. --}}
+                                        <small class="text-muted d-block text-end" v-if="line.piece_carat_weight !== null && line.piece_carat_weight !== undefined">
+                                            per ct (Total = Ct × Price)
+                                        </small>
+                                        {{-- Reference only. --}}
                                         <small class="text-muted d-block text-end" v-if="line.cost_price">
                                             Purchase Price: @{{ formatMoney(line.cost_price) }}@{{ line.piece_carat_weight !== null && line.piece_carat_weight !== undefined ? ' / ct' : '' }}
                                         </small>
@@ -589,11 +591,19 @@ $(function () {
     // a weighed (gemstone) piece, per-piece as-is for anything else (a
     // null caratWeight means "not weighed at all"). Only a starting
     // suggestion — the seller can freely edit it afterward.
-    function defaultUnitPriceFromCost(costPrice, caratWeight, remainingCarat) {
-        if (costPrice === null || costPrice === undefined) return 0;
-        const isWeighed = caratWeight !== null && caratWeight !== undefined;
-        const ct = isWeighed ? (Number(remainingCarat) || 0) : 1;
-        return +(Number(costPrice) * ct).toFixed(2);
+    // Weighed lines (carat_weight set) total CT x rate -- Unit Price is a
+    // per-ct rate and Piece doesn't multiply it, since the line's CT is
+    // already the total for the whole line. Unweighed lines are qty x price.
+    function lineGross(l) {
+        const weighed = l.piece_carat_weight !== null && l.piece_carat_weight !== undefined;
+        const rate = Number(l.unit_price) || 0;
+        return weighed ? (Number(l.carat_weight) || 0) * rate : (Number(l.qty) || 0) * rate;
+    }
+    // The server still totals qty x unit_price, so send it the per-piece
+    // equivalent of lineGross().
+    function pieceUnitPrice(l) {
+        const qty = Number(l.qty) || 0;
+        return qty > 0 ? lineGross(l) / qty : 0;
     }
 
     new Vue({
@@ -645,7 +655,7 @@ $(function () {
                 let subtotal = 0, discount = 0, tax = 0;
                 this.form.lines.forEach((l) => {
                     const qty   = Number(l.qty) || 0;
-                    const price = Number(l.unit_price) || 0;
+                    const price = pieceUnitPrice(l);
                     const dPct  = Number(l.discount_percent) || 0;
                     const tPct  = Number(l.tax_percent) || 0;
 
@@ -688,7 +698,7 @@ $(function () {
             },
             lineTotal(l) {
                 const qty   = Number(l.qty) || 0;
-                const price = Number(l.unit_price) || 0;
+                const price = pieceUnitPrice(l);
                 const dPct  = Number(l.discount_percent) || 0;
                 const tPct  = Number(l.tax_percent) || 0;
                 const gross = qty * price;
@@ -774,8 +784,6 @@ $(function () {
                     }
                 }
 
-                const defaultPrice = defaultUnitPriceFromCost(inv ? inv.cost_price : null, data.carat_weight, data.remaining_carat);
-
                 this.form.lines.push({
                     product_id:          p.id,
                     // Defaults to "sell everything left on this piece" —
@@ -801,7 +809,7 @@ $(function () {
                     purchase_product_id: inv ? inv.purchase_product_id : null,
                     barcode:             data.barcode || null,
                     qty:                 1,
-                    unit_price:          defaultPrice,
+                    unit_price:          0,
                     cost_price:          inv ? Number(inv.cost_price || 0) : 0,
                     qty_on_record:       inv && inv.on_hand !== undefined && inv.on_hand !== null
                                             ? Number(inv.on_hand)
@@ -841,7 +849,7 @@ $(function () {
                     purchase_product_id: null,
                     barcode:             null,
                     qty:                 1,
-                    unit_price:          defaultUnitPriceFromCost(p.cost_price, p.carat_weight, p.remaining_carat),
+                    unit_price:          0,
                     cost_price:          p.cost_price !== null && p.cost_price !== undefined ? Number(p.cost_price) : 0,
                     qty_on_record:       null,
                     tax_percent:         0,
@@ -1027,7 +1035,7 @@ $(function () {
                         barcode:             l.barcode,
                         qty:                 Number(l.qty) || 1,
                         carat_weight:        (l.carat_weight === '' || l.carat_weight === null || l.carat_weight === undefined) ? null : Number(l.carat_weight),
-                        unit_price:          Number(l.unit_price) || 0,
+                        unit_price:          +pieceUnitPrice(l).toFixed(6),
                         tax_percent:         Number(l.tax_percent) || 0,
                         discount_percent:    Number(l.discount_percent) || 0,
                     })),
