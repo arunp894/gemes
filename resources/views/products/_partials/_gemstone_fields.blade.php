@@ -27,48 +27,36 @@
                  editable here. form.stone_type is left untouched so an
                  existing value round-trips unchanged on save. --}}
 
-            {{-- Treatment --}}
-            <div class="col-md-4">
-                <label for="treatment" class="form-label">Treatment</label>
-                <select class="form-select" id="treatment" name="treatment"
-                    v-model="form.treatment" :class="{ 'is-invalid': errors.treatment }">
-                    <option :value="null">— Select —</option>
-                    @foreach (\App\Models\Product::TREATMENTS as $treatment)
-                        <option value="{{ $treatment }}">{{ $treatment }}</option>
-                    @endforeach
-                </select>
-                <div class="invalid-feedback">@{{ errors.treatment }}</div>
-            </div>
-
-            {{-- Cut / Shape --}}
-            <div class="col-md-4">
-                <label for="cut_shape" class="form-label">Cut / Shape</label>
-                <select class="form-select" id="cut_shape" name="cut_shape" v-model="form.cut_shape">
-                    <option :value="null">— Select —</option>
-                    @foreach (\App\Models\Product::CUT_SHAPES as $shape)
-                        <option value="{{ $shape }}">{{ $shape }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            {{-- Colour Grade --}}
-            <div class="col-md-4">
-                <label for="colour_grade" class="form-label">Colour Grade</label>
-                <input type="text" class="form-control" id="colour_grade" name="colour_grade"
-                    v-model="form.colour_grade" maxlength="100"
-                    placeholder="e.g. Vivid Red, Deep Blue">
-            </div>
-
-            {{-- Clarity Grade --}}
-            <div class="col-md-4">
-                <label for="clarity_grade" class="form-label">Clarity Grade</label>
-                <select class="form-select" id="clarity_grade" name="clarity_grade" v-model="form.clarity_grade">
-                    <option :value="null">— Select —</option>
-                    @foreach (\App\Models\Product::CLARITY_GRADES as $clarity)
-                        <option value="{{ $clarity }}">{{ $clarity }}</option>
-                    @endforeach
-                </select>
-            </div>
+            @php
+                // Options come from the Treatment / Shape / Colour / Clarity masters.
+                // An inactive master the product already uses stays selectable.
+                $attrFields = [
+                    ['treatment_id', 'Treatment',      \App\Models\Treatment::class],
+                    ['shape_id',     'Cut / Shape',    \App\Models\Shape::class],
+                    ['color_id',     'Colour',         \App\Models\Color::class],
+                    ['clarity_id',   'Clarity',        \App\Models\Clarity::class],
+                ];
+            @endphp
+            @foreach ($attrFields as [$field, $label, $model])
+                @php
+                    $options = $model::active()->ordered()->get(['id', 'name']);
+                    $current = $product->{$field} ?? null;
+                    if ($current && ! $options->contains('id', $current)) {
+                        $options->push($model::withTrashed()->find($current, ['id', 'name']));
+                    }
+                @endphp
+                <div class="col-md-4">
+                    <label for="{{ $field }}" class="form-label">{{ $label }}</label>
+                    <select class="form-select" id="{{ $field }}" name="{{ $field }}"
+                        v-model.number="form.{{ $field }}" :class="{ 'is-invalid': errors.{{ $field }} }">
+                        <option :value="null">— Select —</option>
+                        @foreach ($options->filter() as $opt)
+                            <option value="{{ $opt->id }}">{{ $opt->name }}</option>
+                        @endforeach
+                    </select>
+                    <div class="invalid-feedback" v-text="errors.{{ $field }}"></div>
+                </div>
+            @endforeach
 
             {{-- Certificate Number --}}
             <div class="col-md-4">

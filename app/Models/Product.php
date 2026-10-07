@@ -124,6 +124,10 @@ class Product extends Model implements HasMedia
         'clarity_grade',
         'cut_shape',
         'treatment',
+        'treatment_id',
+        'shape_id',
+        'color_id',
+        'clarity_id',
         'stone_description',
         'certificate_number',
         // Website visibility
@@ -179,6 +183,26 @@ class Product extends Model implements HasMedia
      */
     protected static function booted(): void
     {
+        // Keep the Treatment/Shape/Colour/Clarity foreign keys and the
+        // mirrored text columns (treatment, cut_shape, colour_grade,
+        // clarity_grade) in step. Picking a master copies its name into the
+        // text column; a writer that only sets the text (purchase intake,
+        // imports) gets the matching master resolved by name.
+        static::saving(function (self $product) {
+            foreach (self::ATTRIBUTE_MASTERS as $text => [$fk, $model]) {
+                if ($product->isDirty($fk)) {
+                    $product->{$text} = $product->{$fk}
+                        ? $model::withTrashed()->whereKey($product->{$fk})->value('name')
+                        : null;
+                } elseif ($product->isDirty($text)) {
+                    $value = trim((string) $product->{$text});
+                    $product->{$fk} = $value === ''
+                        ? null
+                        : $model::withTrashed()->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($value)])->value('id');
+                }
+            }
+        });
+
         static::creating(function (self $product) {
             if (auth()->check()) {
                 $product->created_by = $product->created_by ?? auth()->id();
@@ -296,7 +320,7 @@ class Product extends Model implements HasMedia
     public function getPrimaryThumbUrlAttribute(): ?string
     {
         $media = $this->getFirstMedia(self::MEDIA_COLLECTION_PRIMARY);
-        return $media ? $media->getUrl('thumb') : null;
+        return $media ? $this->mediaThumbUrl($media) : null;
     }
 
     public function getGalleryUrlsAttribute(): array
@@ -305,9 +329,19 @@ class Product extends Model implements HasMedia
             ->map(fn ($m) => [
                 'id'    => $m->id,
                 'url'   => $m->getUrl(),
-                'thumb' => $m->getUrl('thumb'),
+                'thumb' => $this->mediaThumbUrl($m),
             ])
             ->toArray();
+    }
+
+    /**
+     * Thumbnail URL, falling back to the original when the 'thumb' conversion
+     * was never generated (images uploaded before conversions existed, or a
+     * failed conversion) — otherwise the storefront shows a broken thumbnail.
+     */
+    private function mediaThumbUrl(Media $media): string
+    {
+        return $media->hasGeneratedConversion('thumb') ? $media->getUrl('thumb') : $media->getUrl();
     }
 
     public function getCertificateUrlAttribute(): ?string
@@ -384,6 +418,20 @@ class Product extends Model implements HasMedia
      |  Relationships
      | -----------------------------------------------------------------
      */
+    /** text column => [foreign key column, master model] */
+    public const ATTRIBUTE_MASTERS = [
+        'treatment'     => ['treatment_id', Treatment::class],
+        'cut_shape'     => ['shape_id',     Shape::class],
+        'colour_grade'  => ['color_id',     Color::class],
+        'clarity_grade' => ['clarity_id',   Clarity::class],
+    ];
+
+    // Named *Ref because the plain names (treatment, ...) are the mirrored text columns.
+    public function treatmentRef(): BelongsTo { return $this->belongsTo(Treatment::class, 'treatment_id')->withTrashed(); }
+    public function shapeRef(): BelongsTo     { return $this->belongsTo(Shape::class, 'shape_id')->withTrashed(); }
+    public function colorRef(): BelongsTo     { return $this->belongsTo(Color::class, 'color_id')->withTrashed(); }
+    public function clarityRef(): BelongsTo   { return $this->belongsTo(Clarity::class, 'clarity_id')->withTrashed(); }
+
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);

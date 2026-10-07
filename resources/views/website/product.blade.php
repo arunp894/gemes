@@ -47,7 +47,7 @@
           $gallery
         );
       @endphp
-      @forelse(array_slice($allImgs, 0, 4) as $i => $img)
+      @forelse($allImgs as $i => $img)
       <div class="sg-thumb {{ $i===0 ? 'active' : '' }}" onclick="setMainImg('{{ $img['url'] }}', this)"
         style="aspect-ratio:1;cursor:pointer;background:var(--dark-750);display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px solid {{ $i===0 ? 'var(--teal-400)' : 'transparent' }};transition:border-color .3s">
         <img src="{{ $img['thumb'] ?? $img['url'] }}" alt="" style="width:100%;height:100%;object-fit:cover;transition:opacity .3s" onmouseenter="this.style.opacity='.8'" onmouseleave="this.style.opacity='1'">
@@ -135,6 +135,29 @@
       @endif
       @endforeach
     </div>
+
+    {{-- Certificate --}}
+    @php $certMedia = $product->getFirstMedia(\App\Models\Product::MEDIA_COLLECTION_CERTIFICATE); @endphp
+    @if($certMedia)
+    <div style="background:var(--dark-800);border:1px solid rgba(214,48,140,.1);border-radius:4px;margin-bottom:28px;overflow:hidden">
+      <div style="padding:12px 18px;background:rgba(214,48,140,.055);border-bottom:1px solid rgba(214,48,140,.1);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--teal-400)">
+        Certificate
+      </div>
+      <div style="padding:16px 18px">
+        @if(str_starts_with((string) $certMedia->mime_type, 'image/'))
+        <a href="{{ $certMedia->getUrl() }}" target="_blank" rel="noopener">
+          <img src="{{ $certMedia->getUrl() }}" alt="Certificate for {{ $product->title }}"
+            style="max-width:100%;max-height:420px;border-radius:2px;border:1px solid rgba(214,48,140,.15)">
+        </a>
+        @else
+        <a href="{{ $certMedia->getUrl() }}" target="_blank" rel="noopener"
+          style="display:inline-block;padding:10px 20px;border:1px solid rgba(214,48,140,.3);border-radius:2px;color:var(--teal-300);font-size:13px;text-decoration:none">
+          📄 View certificate (PDF)
+        </a>
+        @endif
+      </div>
+    </div>
+    @endif
 
     {{-- Stone Description --}}
     @if($product->stone_description)

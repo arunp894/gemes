@@ -536,10 +536,11 @@ class ProductController extends Controller
             // Gemstone
             'carat_weight'       => $data['carat_weight'] ?? null,
             'stone_type'         => $data['stone_type'] ?? null,
-            'colour_grade'       => $data['colour_grade'] ?? null,
-            'clarity_grade'      => $data['clarity_grade'] ?? null,
-            'cut_shape'          => $data['cut_shape'] ?? null,
-            'treatment'          => $data['treatment'] ?? null,
+            // The mirrored text columns are filled from these in Product::booted().
+            'color_id'           => $data['color_id'] ?? null,
+            'clarity_id'         => $data['clarity_id'] ?? null,
+            'shape_id'           => $data['shape_id'] ?? null,
+            'treatment_id'       => $data['treatment_id'] ?? null,
             'stone_description'  => $data['stone_description'] ?? null,
             'certificate_number' => $data['certificate_number'] ?? null,
 

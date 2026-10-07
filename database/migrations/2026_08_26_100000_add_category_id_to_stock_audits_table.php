@@ -22,6 +22,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Already added by hand on some databases — nothing left to do there.
+        if (Schema::hasColumn('stock_audits', 'category_id')) {
+            return;
+        }
+
         Schema::table('stock_audits', function (Blueprint $table) {
             $table->unsignedBigInteger('category_id')->nullable()->after('location_id')->index();
 
