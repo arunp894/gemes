@@ -568,9 +568,28 @@ class PurchaseController extends Controller
             fn ($copies, $id) => $rows->has($id) ? array_fill(0, $copies, $rows[$id]) : []
         )->values();
 
+        // Labels show what's still on the shelf, not the original purchase
+        // figures: live on-hand pieces and remaining CT from the ledgers.
+        $stock = app(\App\Services\StockService::class);
+        $withLedger = \App\Models\CaratMovement::whereIn('purchase_product_id', $rows->keys())
+            ->distinct()->pluck('purchase_product_id')->flip();
+        $remaining = $rows->mapWithKeys(function ($row) use ($stock, $withLedger) {
+            $pcs = $stock->onHandForPieceGlobal((int) $row->id);
+            $ct  = null;
+            if ($row->carat_weight !== null) {
+                // Rows that predate the CT ledger have no carat rows at all —
+                // estimate pro rata from on-hand, same as the ledger backfill.
+                $ct = $withLedger->has($row->id)
+                    ? $stock->remainingCaratForPieceGlobal((int) $row->id)
+                    : ((int) $row->qty > 0 ? round((float) $row->carat_weight * $pcs / (int) $row->qty, 3) : 0.0);
+            }
+            return [$row->id => ['pcs' => $pcs, 'ct' => $ct]];
+        });
+
         return view('purchases.labels', [
-            'purchase' => $purchase,
-            'labels'   => $labels,
+            'purchase'  => $purchase,
+            'labels'    => $labels,
+            'remaining' => $remaining,
         ]);
     }
 }

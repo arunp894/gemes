@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Barcode;
+use App\Models\CaratMovement;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Purchase;
@@ -273,6 +274,23 @@ class PurchaseService
                     'rack_id'             => $row->rack_id,
                     'notes'               => 'Reversed for edit of purchase ' . $purchase->invoice_number,
                 ]);
+
+                // The CT ledger is separate: take back this piece's whole
+                // remaining CT too, so step 4 can re-seed it from the
+                // (possibly corrected) carat weight. Unlocked rows have no
+                // sales, so this is the full original balance.
+                $this->stock->recordCarat([
+                    'purchase_product_id' => $row->id,
+                    'product_id'          => $row->product_id,
+                    'location_id'         => $oldLocationId,
+                    'direction'           => CaratMovement::DIRECTION_OUT,
+                    'carat'               => $this->stock->remainingCaratForPiece($row->id, $oldLocationId),
+                    'reason'              => CaratMovement::REASON_PURCHASE_CANCEL,
+                    'source_type'         => CaratMovement::SOURCE_PURCHASE,
+                    'source_id'           => $purchase->id,
+                    'source_line_id'      => $line->id,
+                    'notes'               => 'Reversed for edit of purchase ' . $purchase->invoice_number,
+                ]);
             }
         }
 
@@ -312,6 +330,21 @@ class PurchaseService
                     'source_id'           => $purchase->id,
                     'source_line_id'      => $line->id,
                     'rack_id'             => $row->rack_id,
+                    'movement_date'       => optional($purchase->purchase_date)->toDateString() ?? now()->toDateString(),
+                ]);
+
+                // Same as recordPurchasePosting(): seed the row's CT balance
+                // (no-ops when the row has no carat weight).
+                $this->stock->recordCarat([
+                    'purchase_product_id' => $row->id,
+                    'product_id'          => $row->product_id,
+                    'location_id'         => $newLocationId,
+                    'direction'           => CaratMovement::DIRECTION_IN,
+                    'carat'               => (float) $row->carat_weight,
+                    'reason'              => CaratMovement::REASON_PURCHASE,
+                    'source_type'         => CaratMovement::SOURCE_PURCHASE,
+                    'source_id'           => $purchase->id,
+                    'source_line_id'      => $line->id,
                     'movement_date'       => optional($purchase->purchase_date)->toDateString() ?? now()->toDateString(),
                 ]);
             }

@@ -208,13 +208,15 @@
         // Single source for both the on-screen labels below and the TSC
         // (TSPL) print payload in the script block — computed once so the
         // two can never drift apart from each other.
-        $labelData = $labels->map(function ($row) use ($purchase) {
+        $labelData = $labels->map(function ($row) use ($purchase, $remaining) {
             // New-style rows own their product directly; historical rows
             // (pre this column existing) fall back to the line's shared
             // product.
             $product = $row->product ?? $row->line?->product;
-            $carat   = $row->carat_weight !== null
-                ? rtrim(rtrim(number_format((float) $row->carat_weight, 3), '0'), '.') . ' Ct'
+            // Remaining (on-shelf) pieces and CT, not the purchase-time figures.
+            $left    = $remaining[$row->id] ?? ['pcs' => (int) $row->qty, 'ct' => null];
+            $carat   = $left['ct'] !== null
+                ? (rtrim(rtrim(number_format((float) $left['ct'], 3), '0'), '.') ?: '0') . ' Ct'
                 : null;
 
             return [
@@ -224,7 +226,7 @@
                 'price_code'         => $row->priceCode(),
                 'selling_price_code' => $row->sellingPriceCode(),
                 'product_url'        => $product ? route('website.product', $product) : null,
-                'qty'                => (int) $row->qty,
+                'qty'                => (int) $left['pcs'],
                 // The QR encodes the storefront product URL — pointless
                 // (and confusing to scan) for a product that isn't listed
                 // on the website, so this row gets a barcode label only.
