@@ -264,61 +264,64 @@ class Purchase extends Model
     }
 
     /**
-     * Has any piece of stock that originated from this purchase already
-     * been sold? Editing a purchase whose stock has moved would desync
-     * the inventory ledger, so this is a hard block.
-     */
-    public function hasSoldStock(): bool
-    {
-        $ids = $this->purchaseProductIds();
-        if (empty($ids)) {
-            return false;
-        }
-
-        return StockMovement::query()
-            ->whereIn('purchase_product_id', $ids)
-            ->where('reason', StockMovement::REASON_SALE)
-            ->exists();
-    }
-
-    /**
-     * Last moment this purchase can still be edited: purchase date
-     * (falling back to created_at) plus the configurable edit window.
-     */
-    public function editWindowEndsAt(int $editDays): Carbon
-    {
-        $reference = $this->purchase_date ?? $this->created_at ?? now();
-
-        return Carbon::parse($reference)->startOfDay()->addDays($editDays)->endOfDay();
-    }
-
-    public function isEditWindowExpired(int $editDays): bool
-    {
-        return now()->greaterThan($this->editWindowEndsAt($editDays));
-    }
-
-    /**
-     * Single entry point for the "can this purchase still be edited?"
-     * decision. Returns null when editing is allowed, or a human-readable
-     * reason (suitable for a flash message / alert) when it is not.
+     * Inventory rows of this purchase that can no longer be edited, keyed by
+     * purchase_product id => human-readable reason. Each row is its own
+     * product, so only the row that was sold (or whose stock was moved) is
+     * locked — the other rows of the same box line stay editable. A row is
+     * locked on a net sale (sold minus edit/cancel/return reversals) or on
+     * any transfer/adjustment of its stock.
      *
-     * $editDays is read from the `purchase_edit_days` app setting.
+     * @return array<int, string>
      */
-    public function editBlockReason(int $editDays): ?string
+    public function lockedRowReasons(): array
     {
-        if ($this->isCancelled()) {
-            return 'Cancelled purchases cannot be edited.';
+        $rowIds = $this->purchaseProductIds();
+        if (empty($rowIds)) {
+            return [];
         }
 
-        if ($this->hasSoldStock()) {
-            return 'This purchase cannot be edited because stock from it has already been sold.';
+        $inReversals = "'" . implode("','", [
+            StockMovement::REASON_SALE_EDIT_REVERSE,
+            StockMovement::REASON_SALE_CANCEL,
+            StockMovement::REASON_SALE_RETURN,
+        ]) . "'";
+        $moved = "'" . implode("','", [
+            StockMovement::REASON_TRANSFER_IN,
+            StockMovement::REASON_TRANSFER_OUT,
+            StockMovement::REASON_TRANSFER_CANCEL_OUT,
+            StockMovement::REASON_ADJUSTMENT_IN,
+            StockMovement::REASON_ADJUSTMENT_OUT,
+        ]) . "'";
+
+        $locked = [];
+        $stats = StockMovement::query()
+            ->whereIn('purchase_product_id', $rowIds)
+            ->groupBy('purchase_product_id')
+            ->selectRaw('purchase_product_id')
+            ->selectRaw("SUM(CASE WHEN direction = 'out' AND reason = 'sale' THEN qty "
+                . "WHEN direction = 'in' AND reason IN ({$inReversals}) THEN -qty ELSE 0 END) as sold")
+            ->selectRaw("SUM(CASE WHEN reason IN ({$moved}) THEN 1 ELSE 0 END) as moved")
+            ->get();
+
+        foreach ($stats as $row) {
+            if ((int) $row->sold > 0) {
+                $locked[$row->purchase_product_id] = 'Sold — this item can no longer be edited.';
+            } elseif ((int) $row->moved > 0) {
+                $locked[$row->purchase_product_id] = 'Stock was transferred or adjusted — this item can no longer be edited.';
+            }
         }
 
-        if ($this->isEditWindowExpired($editDays)) {
-            $unit = $editDays === 1 ? 'day' : 'days';
-            return "This purchase cannot be edited because it is older than {$editDays} {$unit}.";
-        }
+        return $locked;
+    }
 
-        return null;
+    /**
+     * Single entry point for the "can this purchase be edited?" decision.
+     * Returns null when allowed, or a reason when not. Only a cancelled
+     * purchase is blocked outright — otherwise it's always editable, and
+     * individual sold rows are locked instead (see lockedRowReasons()).
+     */
+    public function editBlockReason(): ?string
+    {
+        return $this->isCancelled() ? 'Cancelled purchases cannot be edited.' : null;
     }
 }

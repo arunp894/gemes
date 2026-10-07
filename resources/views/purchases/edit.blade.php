@@ -112,6 +112,16 @@
     .sidenav-toggle-button { display: none !important; }
     .app-topbar { display: none !important; }
 
+    /* Lines whose stock has been sold/moved: read-only, but the expand chevron still works. */
+    .purchase-line-table tr.line-locked { background: #f8fafc; }
+    .purchase-line-table tr.line-locked input,
+    .purchase-line-table tr.line-locked select,
+    .purchase-line-table tr.line-locked .btn:not(.btn-link),
+    .purchase-line-table tr.line-locked .select2-container { pointer-events: none; opacity: .65; }
+    /* Partly-sold box line: freeze the line-level controls (type / pack qty) only. */
+    .purchase-line-table tr.line-partial .btn-group,
+    .purchase-line-table tr.line-partial input[type=number][min="1"] { pointer-events: none; opacity: .65; }
+
     .purchases-form-page { padding-top: 10px; padding-bottom: 20px; }
     .purchases-form-page .page-title-head {
         display: flex !important;
@@ -162,6 +172,7 @@
     'submitUrl'        => route('purchases.update', $purchase),
     'submitMethod'     => 'PUT',
     'existingPurchase' => $purchase,
+    'lockedRows'       => $lockedRows,
     'currencySymbol'   => $currencySymbol,
 ])
 @endpush

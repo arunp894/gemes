@@ -48,6 +48,8 @@
         submitUrl:   @json($submitUrl),
         submitMethod:@json($submitMethod),
         existing:    {!! $existingPurchase ? $existingPurchase->toJson() : 'null' !!},
+        // purchase_product id => reason, for rows that can no longer be edited (sold / moved stock).
+        lockedRows: @json($lockedRows ?? new \stdClass),
     };
 
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
@@ -111,7 +113,9 @@
     function hydrateLines(purchase) {
         if (!purchase || !Array.isArray(purchase.lines)) return [];
 
-        return purchase.lines.map(l => ({
+        return purchase.lines.map(l => {
+        const rowLocks = (l.rows || []).map(r => CONFIG.lockedRows[r.id] || null);
+        return {
             id:                 l.id,
             category_id:        l.category_id,
             title:              l.title || '',
@@ -130,6 +134,10 @@
             stone_description:  l.stone_description || '',
             _highlight:         false,
             _expanded:          (l.rows || []).length > 1,
+            // Whole line is read-only only when every row is sold/moved; a
+            // partly-sold box line keeps its other rows editable.
+            _locked:            rowLocks.length && rowLocks.every(Boolean) ? rowLocks[0] : null,
+            _anyLocked:         rowLocks.some(Boolean),
             type:               l.type,
             package_name:       l.package_name,
             package_qty:        l.package_qty,
@@ -152,8 +160,10 @@
                 _focused:         false,
                 _lotCode:         r.lot_code || null,
                 _product:         r.product ? { id: r.product.id, title: r.product.title, sku: r.product.sku } : null,
+                _locked:          CONFIG.lockedRows[r.id] || null,
             })),
-        }));
+        };
+        });
     }
 
     // ── Searchable-select directive ─────────────────────────────────

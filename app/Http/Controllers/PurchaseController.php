@@ -35,15 +35,6 @@ class PurchaseController extends Controller
     ) {}
 
     /**
-     * Number of days after the purchase date during which a purchase
-     * remains editable. Configurable via Settings → Purchases.
-     */
-    private function purchaseEditDays(): int
-    {
-        return (int) $this->settings->get('purchase_edit_days', 10);
-    }
-
-    /**
      * Apply the shared index/data filters (status, payment status, date
      * range, supplier, location) to a Purchase query. Used for both the
      * DataTable rows and the summary cards so the cards always total
@@ -187,7 +178,7 @@ class PurchaseController extends Controller
                 $html = '<div class="d-flex gap-1 justify-content-center">';
                 $html .= '<a href="' . route('purchases.show', $p) . '" class="action-btn action-view" title="View"><i class="ti ti-eye"></i></a>';
                 $html .= '<a href="' . route('purchases.invoice', $p) . '" class="action-btn action-invoice" title="Invoice" target="_blank"><i class="ti ti-file-invoice"></i></a>';
-                if ($canEdit && ! $p->editBlockReason($this->purchaseEditDays())) {
+                if ($canEdit && ! $p->editBlockReason()) {
                     $html .= '<a href="' . route('purchases.edit', $p) . '" class="action-btn action-edit" title="Edit"><i class="ti ti-edit"></i></a>';
                 }
                 if ($canPost && $p->isDraft()) {
@@ -239,7 +230,7 @@ class PurchaseController extends Controller
 
         return view('purchases.show', [
             'purchase'        => $purchase,
-            'editBlockReason' => $purchase->editBlockReason($this->purchaseEditDays()),
+            'editBlockReason' => $purchase->editBlockReason(),
             'paymentMethods'  => PurchasePayment::METHODS,
         ]);
     }
@@ -268,12 +259,13 @@ class PurchaseController extends Controller
 
     public function edit(Purchase $purchase): View|RedirectResponse
     {
-        if ($reason = $purchase->editBlockReason($this->purchaseEditDays())) {
+        if ($reason = $purchase->editBlockReason()) {
             return redirect()->route('purchases.show', $purchase)->with('error', $reason);
         }
 
         return view('purchases.edit', [
             'purchase'   => $this->repo->find($purchase->id),
+            'lockedRows'  => $purchase->lockedRowReasons(),
             'suppliers'  => Supplier::active()->ordered()->get(['id', 'supplier_code', 'name', 'company_name', 'invoice_prefix', 'gst_number']),
             'locations'  => Location::active()->ordered()->get(['id', 'location_code', 'name', 'type']),
             'racks'      => Rack::active()->ordered()->get(['id', 'code', 'name']),
@@ -287,7 +279,7 @@ class PurchaseController extends Controller
 
     public function update(UpdatePurchaseRequest $request, Purchase $purchase): JsonResponse
     {
-        if ($reason = $purchase->editBlockReason($this->purchaseEditDays())) {
+        if ($reason = $purchase->editBlockReason()) {
             return response()->json(['message' => $reason], 422);
         }
 

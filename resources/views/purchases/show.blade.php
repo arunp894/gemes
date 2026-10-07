@@ -150,15 +150,6 @@
         </div>
     @endif
 
-    @permission('purchases.edit')
-        @if ($editBlockReason && ! $purchase->isCancelled())
-            <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
-                <i class="ti ti-lock fs-lg"></i>
-                <div><strong>Editing locked:</strong> {{ $editBlockReason }}</div>
-            </div>
-        @endif
-    @endpermission
-
     <div class="row g-3">
 
         {{-- ─── Left: invoice ─── --}}

@@ -140,10 +140,9 @@ class PurchaseService
      *
      *   - Draft:   lines/rows are diff-synced in place (see syncLines()).
      *   - Posted:  same diff-sync, but the inventory ledger must be kept
-     *              in sync too — see updatePostedLines(). Only reachable
-     *              when Purchase::editBlockReason() is null (no sales
-     *              against this purchase's stock yet, and within the
-     *              configurable edit window).
+     *              in sync too — see updatePostedLines(). Lines whose
+     *              stock was sold/moved are frozen (Purchase::
+     *              lockedLineReasons()); everything else stays editable.
      *   - Other (cancelled): lightweight note-only update, as a
      *              defensive fallback — the controller's editBlockReason()
      *              gate normally prevents reaching here at all. Payments
@@ -191,10 +190,9 @@ class PurchaseService
 
     /**
      * Edit a POSTED purchase's lines while keeping the stock ledger in
-     * sync. Only reachable when editBlockReason() is null, which already
-     * guarantees no sale has consumed any of this purchase's stock — so
-     * every currently-posted piece's on-hand balance equals exactly its
-     * original IN quantity (modulo transfers, checked below).
+     * sync. Lines with sold/moved stock are skipped entirely, so every
+     * piece that IS touched here still has its full original IN quantity
+     * on hand (re-checked below).
      *
      * Strategy (ledger is append-only, ON DELETE RESTRICT on
      * stock_movements.purchase_product_id, so old rows can't be hard
@@ -219,12 +217,26 @@ class PurchaseService
 
         $purchase->load('lines.rows');
 
+        // Rows whose stock was sold/moved are frozen: their ledger rows,
+        // fields and products are left exactly as they are, and the rest of
+        // the purchase (including the other rows of the same box line) is
+        // edited around them.
+        $lockedIds = array_keys($purchase->lockedRowReasons());
+
+        // Their stock sits at the current location, so it can't be moved
+        // out from under them by changing the purchase's location.
+        if ($lockedIds && isset($data['location_id']) && (int) $data['location_id'] !== $oldLocationId) {
+            throw new InvalidArgumentException(
+                'The location cannot be changed because some items from this purchase have already been sold or moved.'
+            );
+        }
+
         // 1. Pre-flight — none of this purchase's pieces may have moved
         //    away from the posting location (e.g. a stock transfer).
         foreach ($purchase->lines as $line) {
             foreach ($line->rows as $row) {
                 $qty = (int) $row->qty;
-                if ($qty <= 0) {
+                if ($qty <= 0 || in_array($row->id, $lockedIds, true)) {
                     continue;
                 }
 
@@ -244,7 +256,7 @@ class PurchaseService
         foreach ($purchase->lines as $line) {
             foreach ($line->rows as $row) {
                 $qty = (int) $row->qty;
-                if ($qty <= 0) {
+                if ($qty <= 0 || in_array($row->id, $lockedIds, true)) {
                     continue;
                 }
 
@@ -274,7 +286,7 @@ class PurchaseService
         $purchase->note          = $data['note']          ?? $purchase->note;
         $purchase->save();
 
-        $this->syncLines($purchase, $data['lines'] ?? []);
+        $this->syncLines($purchase, $data['lines'] ?? [], $lockedIds);
         $this->recalculate($purchase);
 
         // 4. Post fresh IN movements for the current rows at the
@@ -285,7 +297,7 @@ class PurchaseService
         foreach ($purchase->lines as $line) {
             foreach ($line->rows as $row) {
                 $qty = (int) $row->qty;
-                if ($qty <= 0) {
+                if ($qty <= 0 || in_array($row->id, $lockedIds, true)) {
                     continue;
                 }
 
@@ -456,7 +468,7 @@ class PurchaseService
      *   - Removed LINE (existing id, absent from payload): same, for
      *     every row under it, then the line itself.
      */
-    private function syncLines(Purchase $purchase, array $lines): void
+    private function syncLines(Purchase $purchase, array $lines, array $lockedRowIds = []): void
     {
         // Loaded once — feeds PurchaseProduct::generateLotCode() below.
         $supplier = $purchase->supplier;
@@ -467,6 +479,15 @@ class PurchaseService
         foreach ($lines as $lineData) {
             $lineId       = $lineData['id'] ?? null;
             $existingLine = $lineId ? $existingLines->get((int) $lineId) : null;
+
+            // A line whose every row is sold/moved is frozen outright —
+            // ignore whatever the form sent for it. (A partly-locked box
+            // line is still synced; only its locked rows are skipped below.)
+            if ($existingLine && $existingLine->rows->isNotEmpty()
+                && $existingLine->rows->every(fn ($r) => in_array($r->id, $lockedRowIds, true))) {
+                $seenLineIds[] = $existingLine->id;
+                continue;
+            }
 
             /** @var Category $category */
             $category = Category::findOrFail($lineData['category_id']);
@@ -546,6 +567,11 @@ class PurchaseService
                 $r     = $rowsPayload[$i] ?? [];
                 $rowId = $r['id'] ?? null;
                 $existingRow = $rowId ? $existingRows->get((int) $rowId) : null;
+
+                if ($existingRow && in_array($existingRow->id, $lockedRowIds, true)) {
+                    $seenRowIds[] = $existingRow->id;
+                    continue;
+                }
 
                 $qty         = max(0, (int) ($r['qty'] ?? 1));
                 $caratWeight = isset($r['carat_weight']) && $r['carat_weight'] !== ''
@@ -664,7 +690,7 @@ class PurchaseService
 
             if ($existingLine) {
                 foreach ($existingRows->keys()->diff($seenRowIds) as $rid) {
-                    $this->retireRow($existingRows->get($rid));
+                    $this->retireRow($existingRows->get($rid), $lockedRowIds);
                 }
             }
         }
@@ -672,7 +698,7 @@ class PurchaseService
         foreach ($existingLines->keys()->diff($seenLineIds) as $lid) {
             $line = $existingLines->get($lid);
             foreach ($line->rows as $row) {
-                $this->retireRow($row);
+                $this->retireRow($row, $lockedRowIds);
             }
             $line->delete();
         }
@@ -687,8 +713,14 @@ class PurchaseService
      * than silently orphan someone's work; they need to unlink or delete
      * it from the Products screen first.
      */
-    private function retireRow(PurchaseProduct $row): void
+    private function retireRow(PurchaseProduct $row, array $lockedRowIds = []): void
     {
+        if (in_array($row->id, $lockedRowIds, true)) {
+            throw new InvalidArgumentException(
+                "Cannot remove an item from \"{$row->line?->title}\": it has already been sold or moved."
+            );
+        }
+
         $product = $row->product_id ? Product::find($row->product_id) : null;
 
         if ($product && ! $this->productSafeToRetire($product)) {

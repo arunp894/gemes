@@ -67,7 +67,7 @@
 
                     {{-- ═══════ PARENT ROW (always rendered) ═══════ --}}
                     <tr :key="'l-' + li" class="line-parent"
-                        :class="{ 'line-highlight': line._highlight, 'line-has-error': hasLineError(li) }">
+                        :class="{ 'line-highlight': line._highlight, 'line-has-error': hasLineError(li), 'line-locked': line._locked, 'line-partial': line._anyLocked && !line._locked }">
 
                         <td class="text-muted small">
     <div class="d-flex align-items-center gap-1">
@@ -103,6 +103,8 @@
                                      :title="line.title + (categoryName(line.category_id) ? ' — ' + categoryName(line.category_id) : '')">
                                     <div class="fw-semibold text-truncate">@{{ line.title }}</div>
                                     <small class="text-muted text-truncate d-block">@{{ categoryName(line.category_id) }}</small>
+                                    <small v-if="line._locked" class="text-danger d-block"><i class="ti ti-lock"></i> @{{ line._locked }}</small>
+                                    <small v-else-if="line._anyLocked" class="text-danger d-block"><i class="ti ti-lock"></i> Some items are sold — those rows are locked.</small>
                                 </div>
                                 {{-- Single-row lines: the toggle edits row[0] directly
                                      (same "hoist row 0 into the parent row" pattern the
@@ -197,7 +199,7 @@
                             {{-- Tax % and Disc % inputs hidden --}}
                             <td class="text-end fw-semibold">@{{ formatMoney(rowNet(line.rows[0])) }}</td>
                             <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-soft-danger" @click="removeLine(li)" title="Remove line">
+                                <button v-if="!line._anyLocked" type="button" class="btn btn-sm btn-soft-danger" @click="removeLine(li)" title="Remove line">
                                     <i class="ti ti-x"></i>
                                 </button>
                             </td>
@@ -221,7 +223,7 @@
                                 </div>
                             </td>
                             <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-soft-danger" @click="removeLine(li)" title="Remove line">
+                                <button v-if="!line._anyLocked" type="button" class="btn btn-sm btn-soft-danger" @click="removeLine(li)" title="Remove line">
                                     <i class="ti ti-x"></i>
                                 </button>
                             </td>
@@ -234,13 +236,14 @@
                         <tr v-for="(row, ri) in line.rows"
                             :key="'l-' + li + '-r-' + ri"
                             class="line-child"
-                            :class="{ 'table-active': row._focused, 'line-has-error': rowError(li, ri, 'qty') || rowError(li, ri, 'carat_weight') || rowError(li, ri, 'price') }">
+                            :class="{ 'line-locked': row._locked, 'table-active': row._focused, 'line-has-error': rowError(li, ri, 'qty') || rowError(li, ri, 'carat_weight') || rowError(li, ri, 'price') }">
 
                             <td class="text-muted small bg-light bg-opacity-25"></td>
 
                             <td class="ps-4 small text-muted bg-light bg-opacity-25">
                                 <i class="ti ti-corner-down-right me-1"></i>
                                 Pcs #@{{ ri + 1 }}
+                                <i v-if="row._locked" class="ti ti-lock text-danger" :title="row._locked"></i>
                                 <span v-if="row._product" class="badge badge-soft-success ms-1" :title="row._product.title">
                                     @{{ row._product.sku }}
                                 </span>
