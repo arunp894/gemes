@@ -17,9 +17,13 @@
                     <button class="topnav-toggle-button px-2" data-bs-toggle="collapse" data-bs-target="#topnav-menu">
                         <i class="ti ti-menu-4"></i>
                     </button>
+
+                    @if (! empty($__breadcrumb))
+                        <div class="topbar-breadcrumb ms-2">{!! $__breadcrumb !!}</div>
+                    @endif
                 </div>
 
-                <div class="d-flex align-items-center gap-2">                   
+                <div class="d-flex align-items-center gap-2 ms-auto">
 
                     <div id="user-dropdown-detailed" class="topbar-item nav-user">
                         <div class="dropdown">

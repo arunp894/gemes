@@ -29,6 +29,13 @@
                             <span class="menu-text">Stock Activity</span>
                         </a>
                     </li>
+                    @permission('sales.view')
+                    <li class="side-nav-item {{ request()->routeIs('reports.sales') ? 'active' : '' }}">
+                        <a href="{{ route('reports.sales') }}" class="side-nav-link">
+                            <span class="menu-text">Sales Report</span>
+                        </a>
+                    </li>
+                    @endpermission
                 </ul>
             </div>
         </li>

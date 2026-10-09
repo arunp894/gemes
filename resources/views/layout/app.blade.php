@@ -1,3 +1,14 @@
+@php
+    // Lift the page's breadcrumb out of its content and show it in the top bar
+    // instead. Pages that hide the top bar keep their breadcrumb in place.
+    $__content = $__env->yieldContent('content');
+    $__breadcrumb = null;
+    if (! str_contains($__env->yieldPushContent('styles'), '.app-topbar { display: none')
+        && preg_match('#<ol class="breadcrumb[^"]*">.*?</ol>#s', $__content, $__m)) {
+        $__breadcrumb = $__m[0];
+        $__content = str_replace($__m[0], '', $__content);
+    }
+@endphp
 <!doctype html>
 <html lang="en" data-menu-color="gradient">
 
@@ -45,6 +56,9 @@
         /* Global DataTables layout: pagination on the left, "Showing x of y" info on the right */
         .card-footer [id$="PaginationSlot"] { order: 1; }
         .card-footer [id$="InfoSlot"] { order: 2; }
+        /* Breadcrumb now lives in the top bar; hide the emptied slot in the page title row. */
+        .page-title-head .text-end:not(:has(*)) { display: none; }
+        .topbar-breadcrumb .breadcrumb { margin: 0; padding: 0; font-size: .8125rem; flex-wrap: nowrap; white-space: nowrap; }
         
     </style>
 </head>
@@ -147,7 +161,7 @@
         <!-- ============================================================== -->
 
         <div class="content-page">
-            @yield('content')
+            {!! $__content !!}
             <!-- container -->
 
             <!-- Footer Start -->

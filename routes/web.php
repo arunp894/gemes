@@ -146,6 +146,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/today-performance', [TodayPerformanceController::class, 'index'])->name('reports.today-performance');
     Route::get('/reports/stock-activity', [StockActivityReportController::class, 'index'])
         ->middleware('permission:stock.view')->name('reports.stock-activity');
+    Route::get('/reports/sales', [\App\Http\Controllers\SalesReportController::class, 'index'])
+        ->middleware('permission:sales.view')->name('reports.sales');
+    Route::get('/reports/sales/export', [\App\Http\Controllers\SalesReportController::class, 'export'])
+        ->middleware('permission:sales.view')->name('reports.sales.export');
+    Route::get('/reports/sales/export', [\App\Http\Controllers\SalesReportController::class, 'export'])
+        ->middleware('permission:sales.view')->name('reports.sales.export');
 
     Route::middleware('role:admin')->prefix('settings')->name('settings.')->group(function () {
         Route::get('/',             [SettingController::class, 'index'])->name('index');
