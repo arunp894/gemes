@@ -112,6 +112,11 @@
                 <i class="ti ti-file-invoice me-1"></i> Invoice
             </a>
 
+            <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#purchaseEditHistoryModal">
+                <i class="ti ti-history me-1"></i> Edit History
+                @if ($editLogs->isNotEmpty())<span class="badge bg-primary ms-1">{{ $editLogs->count() }}</span>@endif
+            </button>
+
             @permission('purchases.edit')
                 @if (! $editBlockReason)
                     <a href="{{ route('purchases.edit', $purchase) }}" class="btn btn-primary btn-sm">
@@ -427,6 +432,8 @@
             </div>
         </div>
     </div>
+
+    @include('purchases._partials._edit_history_modal')
 
     {{-- ==================== Remove Payment Confirmation Modal ==================== --}}
     <div class="modal fade" id="removePaymentModal" tabindex="-1" aria-hidden="true">

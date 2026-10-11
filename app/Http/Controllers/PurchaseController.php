@@ -230,6 +230,8 @@ class PurchaseController extends Controller
 
         return view('purchases.show', [
             'purchase'        => $purchase,
+            'editLogs'        => $purchase->editLogs()->with('editor:id,name')->get(),
+            'locationNames'   => Location::pluck('name', 'id'),
             'editBlockReason' => $purchase->editBlockReason(),
             'paymentMethods'  => PurchasePayment::METHODS,
         ]);

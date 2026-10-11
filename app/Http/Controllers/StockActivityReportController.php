@@ -146,11 +146,12 @@ class StockActivityReportController extends Controller
             'Sales'       => [StockMovement::REASON_SALE],
             'Transfers'   => [StockMovement::REASON_TRANSFER_IN, StockMovement::REASON_TRANSFER_OUT, StockMovement::REASON_TRANSFER_CANCEL_OUT],
             'Returns'     => [StockMovement::REASON_SALE_RETURN, StockMovement::REASON_SALE_CANCEL],
-            'Adjustments' => [StockMovement::REASON_ADJUSTMENT_IN, StockMovement::REASON_ADJUSTMENT_OUT, StockMovement::REASON_OPENING, StockMovement::REASON_PURCHASE_CANCEL],
+            'Adjustments' => [StockMovement::REASON_ADJUSTMENT_IN, StockMovement::REASON_ADJUSTMENT_OUT, StockMovement::REASON_OPENING],
         ];
         // A sale edit re-books the whole sale (reversal IN + fresh OUT), so
         // the reversal is netted off Sales rather than counted as a Return.
-        $netOff = ['Sales' => [StockMovement::REASON_SALE_EDIT_REVERSE]];
+        // Likewise purchase_cancel (an edit's reversal / a cancelled purchase) is netted off Purchases.
+        $netOff = ['Sales' => [StockMovement::REASON_SALE_EDIT_REVERSE], 'Purchases' => [StockMovement::REASON_PURCHASE_CANCEL]];
         $movementTypeLabels = [];
         $movementTypeQty    = [];
         $movementTypeCarat  = [];
@@ -354,15 +355,17 @@ class StockActivityReportController extends Controller
      */
     private function topStonesByCarat(Carbon $start, Carbon $end, string $reason, int $limit = 6): \Illuminate\Support\Collection
     {
-        // Sales are netted against their edit reversals so an edited sale
-        // isn't counted twice (original OUT + re-booked OUT).
-        $isSale = $reason === 'sale';
+        // Sales are netted against their edit reversals so an edited sale isn't
+        // counted twice; purchases against purchase_cancel (an edit's reversal or a
+        // cancelled purchase), so a re-posted purchase isn't counted twice either.
+        $isSale     = $reason === 'sale';
+        $isPurchase = $reason === 'purchase';
 
         return DB::table('carat_movements')
             ->join('products', 'products.id', '=', 'carat_movements.product_id')
             ->join('categories', 'categories.id', '=', 'products.category_id')
             ->whereNull('carat_movements.deleted_at')
-            ->whereIn('carat_movements.reason', $isSale ? ['sale', 'sale_edit_reverse'] : [$reason])
+            ->whereIn('carat_movements.reason', $isSale ? ['sale', 'sale_edit_reverse'] : ($isPurchase ? ['purchase', 'purchase_cancel'] : [$reason]))
             ->whereBetween('carat_movements.movement_date', [$start->toDateString(), $end->toDateString()])
             ->groupBy('categories.id', 'categories.name')
             ->select([
@@ -370,7 +373,9 @@ class StockActivityReportController extends Controller
                 'categories.name as category_name',
                 DB::raw($isSale
                     ? "SUM(CASE WHEN carat_movements.reason = 'sale_edit_reverse' THEN -carat_movements.carat ELSE carat_movements.carat END) as carat"
-                    : 'SUM(carat_movements.carat) as carat'),
+                    : ($isPurchase
+                        ? "SUM(CASE WHEN carat_movements.reason = 'purchase_cancel' THEN -carat_movements.carat ELSE carat_movements.carat END) as carat"
+                        : 'SUM(carat_movements.carat) as carat')),
                 DB::raw('COUNT(DISTINCT carat_movements.purchase_product_id) as pieces'),
             ])
             ->orderByDesc('carat')

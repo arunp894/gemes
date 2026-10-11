@@ -235,18 +235,41 @@ class StockMovement extends Model
      * scoped to one location (where they're a real in/out).
      * $col is a trusted column name ('qty' or 'carat'), never user input.
      */
+    /**
+     * Received / Removed SQL for the stock reports (Stock page, Today Performance,
+     * Stock Activity — pieces AND carat, since both ledgers share these reasons).
+     *
+     * purchase_cancel is bookkeeping, never "stock removed": editing a posted
+     * purchase reverses and re-posts its rows, and cancelling a purchase takes
+     * back what it brought in. So it is NOT counted in Removed; instead it is
+     * subtracted from Received (an edit's reverse + re-post nets to the edited
+     * quantity, a cancelled purchase nets to zero).
+     *
+     * Removed is a whitelist of the OUT reasons that really mean stock left
+     * (sale, adjustment-out; + transfer-out when scoped to one location), so a
+     * new/unknown reason is never treated as stock-out. A sale edit's reversal IN
+     * is netted out of Removed so the sale counts once.
+     *
+     * Transfers only move stock between locations: counted only when scoped to a
+     * location ($includeTransfers). $col is a trusted column name, never input.
+     */
     public static function receivedSql(string $col = 'qty', bool $includeTransfers = false): string
     {
-        $skip = $includeTransfers ? '' : ",'transfer_in','transfer_cancel_out'";
+        $in = "'purchase','sale_return','sale_cancel','adjustment_in','opening'"
+            . ($includeTransfers ? ",'transfer_in','transfer_cancel_out'" : '');
 
-        return "SUM(CASE WHEN direction = 'in' AND reason NOT IN ('sale_edit_reverse'{$skip}) THEN {$col} ELSE 0 END)";
+        return "SUM(CASE WHEN direction = 'in' AND reason IN ({$in}) THEN {$col} "
+            . "WHEN direction = 'out' AND reason = 'purchase_cancel' THEN -{$col} ELSE 0 END)";
     }
 
     public static function removedSql(string $col = 'qty', bool $includeTransfers = false): string
     {
-        $skip = $includeTransfers ? "''" : "'transfer_out'";
+        $out = "'sale','adjustment_out'" . ($includeTransfers ? ",'transfer_out'" : '');
 
-        return "SUM(CASE WHEN direction = 'out' AND reason NOT IN ({$skip}) THEN {$col} "
+        return "SUM(CASE WHEN direction = 'out' AND reason IN ({$out}) THEN {$col} "
             . "WHEN direction = 'in' AND reason = 'sale_edit_reverse' THEN -{$col} ELSE 0 END)";
     }
+
+    /** `notes` prefix on the IN rows an edit of a posted purchase re-posts (bookkeeping, not a receipt). */
+    public const EDIT_REPOST_NOTE = 'Re-posted for edit of purchase';
 }

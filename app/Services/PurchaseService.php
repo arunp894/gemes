@@ -7,6 +7,7 @@ use App\Models\CaratMovement;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Purchase;
+use App\Models\PurchaseEditLog;
 use App\Models\PurchaseLine;
 use App\Models\PurchasePayment;
 use App\Models\PurchaseProduct;
@@ -137,7 +138,145 @@ class PurchaseService
     }
 
     /**
-     * Update an existing purchase. Behaviour depends on status:
+     * Update an existing purchase and record the edit in purchase_edit_logs
+     * (who / when / field-level diff of the header and of every changed row, plus
+     * any row whose ledger quantity disagreed with the purchase). The log is an
+     * audit trail only — it never touches stock. See applyUpdate() for the edit.
+     */
+    public function update(Purchase $purchase, array $data): Purchase
+    {
+        return DB::transaction(function () use ($purchase, $data) {
+            $before     = $this->editSnapshot($purchase);
+            $mismatches = $purchase->isPosted() ? $this->ledgerMismatches($purchase) : [];
+
+            $result = $this->applyUpdate($purchase, $data);
+
+            $after = $this->editSnapshot($purchase);
+            $diff  = $this->editDiff($before, $after);
+
+            // Net pieces per row (for the log's stock note) — informational only.
+            $stock = [];
+            foreach ($after['rows'] + $before['rows'] as $rowId => $_) {
+                $b = $before['rows'][$rowId]['qty'] ?? 0;
+                $a = $after['rows'][$rowId]['qty'] ?? 0;
+                if ($a !== $b) {
+                    $r = $after['rows'][$rowId] ?? $before['rows'][$rowId];
+                    $stock[] = ['lot' => $r['lot'], 'line' => $r['line_title'], 'from_qty' => $b, 'to_qty' => $a];
+                }
+            }
+
+            // A posted purchase is always logged (even a save with no field
+            // changes still re-posts its ledger rows); drafts only when changed.
+            if ($diff || $stock || $mismatches || $purchase->isPosted()) {
+                PurchaseEditLog::create([
+                    'purchase_id' => $purchase->id,
+                    'user_id'     => auth()->id(),
+                    'action'      => 'updated',
+                    'changes'     => $diff + ['stock' => $stock, 'ledger_mismatches' => $mismatches],
+                    'ip_address'  => request()?->ip(),
+                ]);
+            }
+
+            return $result;
+        });
+    }
+
+    /** Rows whose ledger on-hand differs from the quantity the purchase records (evidence for the log). */
+    private function ledgerMismatches(Purchase $purchase): array
+    {
+        $out = [];
+        $locationId = (int) $purchase->location_id;
+        foreach ($purchase->load('lines.rows')->lines as $line) {
+            foreach ($line->rows as $row) {
+                $onHand = (int) $this->stock->onHandForPiece($row->id, $locationId);
+                if ((int) $row->qty > 0 && $onHand !== (int) $row->qty) {
+                    $out[] = ['lot' => $row->lot_code, 'line' => $line->title,
+                        'recorded_qty' => (int) $row->qty, 'ledger_on_hand' => $onHand, 'location_id' => $locationId];
+                }
+            }
+        }
+
+        return $out;
+    }
+
+    /** @return array{header: array<string, mixed>, rows: array<int, array<string, mixed>>} */
+    private function editSnapshot(Purchase $purchase): array
+    {
+        $fresh = Purchase::with(['lines.rows'])->find($purchase->id);
+        $rows  = [];
+        foreach ($fresh->lines as $line) {
+            foreach ($line->rows as $r) {
+                $rows[$r->id] = [
+                    'line_id'         => $line->id,
+                    'line_title'      => $line->title,
+                    'lot'             => $r->lot_code,
+                    'qty'             => (int) $r->qty,
+                    'carat_weight'    => $r->carat_weight !== null ? round((float) $r->carat_weight, 3) : null,
+                    'price'           => round((float) $r->price, 2),
+                    'website_price'   => $r->website_price !== null ? round((float) $r->website_price, 2) : null,
+                    'website_enabled' => (bool) $r->website_enabled,
+                    'rack_id'         => $r->rack_id,
+                ];
+            }
+        }
+
+        return [
+            'header' => [
+                'purchase_date' => optional($fresh->purchase_date)->toDateString(),
+                'location_id'   => $fresh->location_id !== null ? (int) $fresh->location_id : null,
+                'tax_type'      => $fresh->tax_type,
+                'note'          => $fresh->note,
+            ],
+            'rows' => $rows,
+        ];
+    }
+
+    /** Field-level diff of two snapshots; [] when nothing changed. */
+    private function editDiff(array $before, array $after): array
+    {
+        $diff   = [];
+        $header = [];
+        foreach ($after['header'] as $field => $to) {
+            if (($before['header'][$field] ?? null) != $to) {
+                $header[$field] = ['from' => $before['header'][$field] ?? null, 'to' => $to];
+            }
+        }
+        if ($header) {
+            $diff['header'] = $header;
+        }
+
+        $tracked = array_flip(['qty', 'carat_weight', 'price', 'website_price', 'website_enabled', 'rack_id']);
+        $rows = [];
+        foreach ($after['rows'] + $before['rows'] as $rowId => $_) {
+            $b = $before['rows'][$rowId] ?? null;
+            $a = $after['rows'][$rowId] ?? null;
+            $base = ['lot' => ($a ?? $b)['lot'], 'line' => ($a ?? $b)['line_title']];
+
+            if ($b === null) {
+                $rows[] = $base + ['change' => 'added', 'fields' => array_intersect_key($a, $tracked)];
+            } elseif ($a === null) {
+                $rows[] = $base + ['change' => 'removed', 'fields' => array_intersect_key($b, $tracked)];
+            } else {
+                $fields = [];
+                foreach (array_keys($tracked) as $f) {
+                    if ($b[$f] != $a[$f]) {
+                        $fields[$f] = ['from' => $b[$f], 'to' => $a[$f]];
+                    }
+                }
+                if ($fields) {
+                    $rows[] = $base + ['change' => 'updated', 'fields' => $fields];
+                }
+            }
+        }
+        if ($rows) {
+            $diff['rows'] = $rows;
+        }
+
+        return $diff;
+    }
+
+    /**
+     * Applies the edit itself (logging lives in update()). Behaviour depends on status:
      *
      *   - Draft:   lines/rows are diff-synced in place (see syncLines()).
      *   - Posted:  same diff-sync, but the inventory ledger must be kept
@@ -150,7 +289,7 @@ class PurchaseService
      *              are never touched by this method; they're managed via
      *              addPayment()/removePayment() from the show page.
      */
-    public function update(Purchase $purchase, array $data): Purchase
+    private function applyUpdate(Purchase $purchase, array $data): Purchase
     {
         return DB::transaction(function () use ($purchase, $data) {
 
@@ -217,6 +356,7 @@ class PurchaseService
         }
 
         $purchase->load('lines.rows');
+        $oldDate = optional($purchase->purchase_date)->toDateString() ?? now()->toDateString();
 
         // Rows whose stock was sold/moved are frozen: their ledger rows,
         // fields and products are left exactly as they are, and the rest of
@@ -272,6 +412,7 @@ class PurchaseService
                     'source_id'           => $purchase->id,
                     'source_line_id'      => $line->id,
                     'rack_id'             => $row->rack_id,
+                    'movement_date'       => $oldDate,
                     'notes'               => 'Reversed for edit of purchase ' . $purchase->invoice_number,
                 ]);
 
@@ -289,6 +430,7 @@ class PurchaseService
                     'source_type'         => CaratMovement::SOURCE_PURCHASE,
                     'source_id'           => $purchase->id,
                     'source_line_id'      => $line->id,
+                    'movement_date'       => $oldDate,
                     'notes'               => 'Reversed for edit of purchase ' . $purchase->invoice_number,
                 ]);
             }
@@ -331,6 +473,7 @@ class PurchaseService
                     'source_line_id'      => $line->id,
                     'rack_id'             => $row->rack_id,
                     'movement_date'       => optional($purchase->purchase_date)->toDateString() ?? now()->toDateString(),
+                    'notes'               => 'Re-posted for edit of purchase ' . $purchase->invoice_number,
                 ]);
 
                 // Same as recordPurchasePosting(): seed the row's CT balance
@@ -346,6 +489,7 @@ class PurchaseService
                     'source_id'           => $purchase->id,
                     'source_line_id'      => $line->id,
                     'movement_date'       => optional($purchase->purchase_date)->toDateString() ?? now()->toDateString(),
+                    'notes'               => 'Re-posted for edit of purchase ' . $purchase->invoice_number,
                 ]);
             }
         }

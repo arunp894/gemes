@@ -690,8 +690,13 @@ class StockController extends Controller
         }
 
         match ($type) {
-            'in'         => $query->where('stock_movements.direction', StockMovement::DIRECTION_IN),
-            'out'        => $query->where('stock_movements.direction', StockMovement::DIRECTION_OUT),
+            // Stock In / Out tabs hide purchase-edit bookkeeping: the re-posted IN rows and
+            // every purchase_cancel OUT (shown under the Purchase tab, labelled as such).
+            'in'         => $query->where('stock_movements.direction', StockMovement::DIRECTION_IN)
+                ->where(fn ($q) => $q->whereNull('stock_movements.notes')
+                    ->orWhere('stock_movements.notes', 'not like', StockMovement::EDIT_REPOST_NOTE . '%')),
+            'out'        => $query->where('stock_movements.direction', StockMovement::DIRECTION_OUT)
+                ->where('stock_movements.reason', '!=', StockMovement::REASON_PURCHASE_CANCEL),
             'purchase'   => $query->whereIn('stock_movements.reason', [
                 StockMovement::REASON_PURCHASE, StockMovement::REASON_PURCHASE_CANCEL,
             ]),
@@ -727,7 +732,7 @@ class StockController extends Controller
                 . '</a>'
             )
             ->addColumn('movement_label', function ($row) {
-                [$label, $badge, $icon] = $this->movementTypeMeta($row->reason);
+                [$label, $badge, $icon] = $this->movementTypeMeta($row->reason, $row->notes ?? null);
 
                 return '<span class="badge ' . $badge . ' d-inline-flex align-items-center gap-1"><i class="ti ' . $icon . ' fs-xs"></i>' . $label . '</span>';
             })
@@ -805,11 +810,16 @@ class StockController extends Controller
      * plain-English category shown in the Movement Type column. Distinct
      * from direction (Stock In/Out), which gets its own pair of columns.
      */
-    private function movementTypeMeta(string $reason): array
+    private function movementTypeMeta(string $reason, ?string $notes = null): array
     {
+        // Rows written by editing a posted purchase are bookkeeping, not receipts/removals.
+        if (str_contains((string) $notes, 'for edit of purchase')) {
+            return ['Purchase Edit', 'badge-soft-info', 'ti-edit'];
+        }
+
         return match ($reason) {
             StockMovement::REASON_PURCHASE            => ['Received', 'badge-soft-success', 'ti-package-import'],
-            StockMovement::REASON_PURCHASE_CANCEL     => ['Removed', 'badge-soft-danger', 'ti-package-export'],
+            StockMovement::REASON_PURCHASE_CANCEL     => ['Purchase Reversed', 'badge-soft-warning', 'ti-package-export'],
             StockMovement::REASON_SALE                => ['Sale', 'badge-soft-purple', 'ti-shopping-cart'],
             StockMovement::REASON_SALE_RETURN         => ['Return', 'badge-soft-success', 'ti-arrow-back-up'],
             StockMovement::REASON_SALE_CANCEL         => ['Sale Cancelled', 'badge-soft-success', 'ti-rotate'],

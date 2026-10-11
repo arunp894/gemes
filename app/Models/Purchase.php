@@ -152,6 +152,11 @@ class Purchase extends Model
 
     /* ─── Relationships ────────────────────────────────────── */
 
+    public function editLogs(): HasMany
+    {
+        return $this->hasMany(PurchaseEditLog::class)->latest();
+    }
+
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
