@@ -96,7 +96,7 @@
         </div>
     </div>
     <div class="row g-3 mb-3">
-        <div class="col-12">
+        <div class="col-md-6">
             <div class="stock-kpi stock-kpi-wide">
                 <div class="stock-kpi-icon stock-kpi-icon-warning"><i class="ti ti-alert-triangle"></i></div>
                 <div class="flex-grow-1">
@@ -104,6 +104,17 @@
                     <div class="stock-kpi-label">Low Stock Items <span class="text-muted fw-normal">— {{ $lowStockThreshold }} units or fewer remaining</span></div>
                 </div>
                 <a href="#lowStockCard" class="stock-kpi-link">View Details</a>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="stock-kpi stock-kpi-wide">
+                <div class="stock-kpi-icon stock-kpi-icon-gold"><i class="ti ti-clock-hour-4"></i></div>
+                <div class="flex-grow-1">
+                    <div class="stock-kpi-value">{{ number_format($onRentQty) }} <span class="stock-kpi-unit">Pcs</span>
+                        @if ($onRentCt > 0)<span class="stock-kpi-unit">&middot; {{ rtrim(rtrim(number_format($onRentCt, 2), '0'), '.') }} Ct</span>@endif</div>
+                    <div class="stock-kpi-label">Currently On Rent <span class="text-muted fw-normal">&mdash; out with customers, not in on-hand</span></div>
+                </div>
+                @permission('rentals.view')<a href="{{ route('rentals.index') }}" class="stock-kpi-link">View Rentals</a>@endpermission
             </div>
         </div>
     </div>

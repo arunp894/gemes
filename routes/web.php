@@ -146,6 +146,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/today-performance', [TodayPerformanceController::class, 'index'])->name('reports.today-performance');
     Route::get('/reports/stock-activity', [StockActivityReportController::class, 'index'])
         ->middleware('permission:stock.view')->name('reports.stock-activity');
+    Route::get('/reports/rentals', [\App\Http\Controllers\RentalReportController::class, 'index'])
+        ->middleware('permission:rentals.view')->name('reports.rentals');
+    Route::get('/reports/rentals/export', [\App\Http\Controllers\RentalReportController::class, 'export'])
+        ->middleware('permission:rentals.view')->name('reports.rentals.export');
     Route::get('/reports/sales', [\App\Http\Controllers\SalesReportController::class, 'index'])
         ->middleware('permission:sales.view')->name('reports.sales');
     Route::get('/reports/sales/export', [\App\Http\Controllers\SalesReportController::class, 'export'])
@@ -448,7 +452,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/data', [CustomerController::class, 'data'])
             ->middleware('permission:customers.view')->name('data');
         Route::get('/search', [CustomerController::class, 'search'])
-            ->middleware('permission:customers.view,sales.create')->name('search');
+            ->middleware('permission:customers.view,sales.create,rentals.create')->name('search');
         Route::patch('/{customer}/toggle-status', [CustomerController::class, 'toggleStatus'])
             ->whereNumber('customer')->middleware('permission:customers.edit')->name('toggle-status');
     });
@@ -506,6 +510,34 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{sale}/payments/{payment}', [SaleController::class, 'removePayment'])
             ->whereNumber('sale')->whereNumber('payment')
             ->middleware('permission:sales.edit')->name('payments.destroy');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Stone Rent
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('rentals')->name('rentals.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\RentalController::class, 'index'])
+            ->middleware('permission:rentals.view')->name('index');
+        Route::get('/data', [\App\Http\Controllers\RentalController::class, 'data'])
+            ->middleware('permission:rentals.view')->name('data');
+        Route::get('/lookup-barcode', [SaleController::class, 'lookupByBarcode'])
+            ->middleware('permission:rentals.create')->name('lookup-barcode');
+        Route::get('/create', [\App\Http\Controllers\RentalController::class, 'create'])
+            ->middleware('permission:rentals.create')->name('create');
+        Route::post('/', [\App\Http\Controllers\RentalController::class, 'store'])
+            ->middleware('permission:rentals.create')->name('store');
+        Route::get('/{rental}', [\App\Http\Controllers\RentalController::class, 'show'])
+            ->whereNumber('rental')->middleware('permission:rentals.view')->name('show');
+        Route::get('/{rental}/print', [\App\Http\Controllers\RentalController::class, 'print'])
+            ->whereNumber('rental')->middleware('permission:rentals.view')->name('print');
+        Route::post('/{rental}/return', [\App\Http\Controllers\RentalController::class, 'returnLines'])
+            ->whereNumber('rental')->middleware('permission:rentals.return')->name('return');
+        Route::post('/{rental}/extend', [\App\Http\Controllers\RentalController::class, 'extend'])
+            ->whereNumber('rental')->middleware('permission:rentals.return')->name('extend');
+        Route::post('/{rental}/cancel', [\App\Http\Controllers\RentalController::class, 'cancel'])
+            ->whereNumber('rental')->middleware('permission:rentals.cancel')->name('cancel');
     });
 
     Route::resource('sales', SaleController::class)->whereNumber('sale')

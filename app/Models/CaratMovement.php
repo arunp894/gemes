@@ -50,6 +50,8 @@ class CaratMovement extends Model
     public const REASON_ADJUSTMENT_IN       = 'adjustment_in';
     public const REASON_ADJUSTMENT_OUT      = 'adjustment_out';
     public const REASON_OPENING             = 'opening';
+    public const REASON_RENT_OUT            = 'rent_out';
+    public const REASON_RENT_RETURN         = 'rent_return';
 
     public const REASONS = [
         self::REASON_PURCHASE            => 'Purchase',
@@ -64,6 +66,8 @@ class CaratMovement extends Model
         self::REASON_ADJUSTMENT_IN       => 'Adjustment (In)',
         self::REASON_ADJUSTMENT_OUT      => 'Adjustment (Out)',
         self::REASON_OPENING             => 'Opening Stock',
+        self::REASON_RENT_OUT            => 'Rent Out',
+        self::REASON_RENT_RETURN         => 'Rent Return',
     ];
 
     /* ─── Source types ────────────────────────────────────── */
@@ -72,6 +76,7 @@ class CaratMovement extends Model
     public const SOURCE_SALE              = 'sale';
     public const SOURCE_STOCK_TRANSFER    = 'stock_transfer';
     public const SOURCE_STOCK_ADJUSTMENT  = 'stock_adjustment';
+    public const SOURCE_RENTAL            = 'rental';
 
     protected $fillable = [
         'purchase_product_id',

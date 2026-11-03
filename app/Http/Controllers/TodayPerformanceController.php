@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Channel;
 use App\Models\Customer;
 use App\Models\Purchase;
+use App\Models\Rental;
 use App\Models\PurchasePayment;
 use App\Models\Sale;
 use App\Models\SaleLine;
@@ -56,6 +57,20 @@ class TodayPerformanceController extends Controller
                 ->first();
             $stockInQty  = (int) $movementTotals->in_qty;
             $stockOutQty = (int) $movementTotals->out_qty;
+        }
+
+        // Stone Rent: rentals started today (income = rent fee), and what is still out / overdue right now.
+        $canRentals = $user->hasPermission('rentals.view') && \Illuminate\Support\Facades\Schema::hasTable('rentals');
+        $rentToday  = (object) ['count' => 0, 'income' => 0, 'active' => 0, 'overdue' => 0];
+        if ($canRentals) {
+            $started = Rental::where('status', '!=', Rental::STATUS_CANCELLED)->whereDate('start_at', Rental::wallNow()->toDateString())
+                ->selectRaw('COUNT(*) as c, COALESCE(SUM(rent_total),0) as income')->first();
+            $rentToday = (object) [
+                'count'   => (int) $started->c,
+                'income'  => (float) $started->income,
+                'active'  => Rental::where('status', Rental::STATUS_ACTIVE)->count(),
+                'overdue' => Rental::overdue()->count(),
+            ];
         }
 
         $newCustomersToday = 0;
@@ -209,7 +224,7 @@ class TodayPerformanceController extends Controller
 
         return view('reports.today-performance', compact(
             'canSales', 'canPurchases', 'canStock', 'canCustomers', 'canStockAudits',
-            'salesToday', 'purchasesToday', 'stockInQty', 'stockOutQty', 'newCustomersToday',
+            'canRentals', 'rentToday', 'salesToday', 'purchasesToday', 'stockInQty', 'stockOutQty', 'newCustomersToday',
             'hours', 'salesByHour', 'purchasesByHour',
             'payoutToday', 'supplierPaymentsToday', 'websitePaymentsToday',
             'topProductsToday', 'activity',

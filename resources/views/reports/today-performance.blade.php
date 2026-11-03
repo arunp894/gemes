@@ -81,6 +81,27 @@
         </div>
         @endpermission
 
+        @if ($canRentals)
+        <div class="col-6 col-xl-3">
+            <div class="tp-card tp-card-purple">
+                <div class="tp-card-icon"><i class="ti ti-clock-hour-4"></i></div>
+                <div class="tp-card-value">₹{{ number_format($rentToday->income) }}</div>
+                <div class="tp-card-label">Rent Today</div>
+                <div class="tp-card-sub">{{ $rentToday->count }} rental{{ $rentToday->count == 1 ? '' : 's' }} started &middot; {{ $rentToday->active }} out now</div>
+            </div>
+        </div>
+        <div class="col-6 col-xl-3">
+            <a href="{{ route('rentals.index') }}" class="text-decoration-none d-block">
+            <div class="tp-card {{ $rentToday->overdue ? 'tp-card-danger' : 'tp-card-success' }}">
+                <div class="tp-card-icon"><i class="ti ti-alert-triangle"></i></div>
+                <div class="tp-card-value">{{ $rentToday->overdue }}</div>
+                <div class="tp-card-label">Rentals Overdue</div>
+                <div class="tp-card-sub">{{ $rentToday->overdue ? 'stones not returned by the due date' : 'nothing overdue' }}</div>
+            </div>
+            </a>
+        </div>
+        @endif
+
         @permission('sales.view')
         <div class="col-6 col-xl-3">
             <div class="tp-card tp-card-teal">
@@ -306,6 +327,7 @@
     .tp-card-info    .tp-card-icon { background: #ecfeff; color: var(--tp-info); }
     .tp-card-purple  .tp-card-icon { background: #f5f3ff; color: var(--tp-purple); }
     .tp-card-teal    .tp-card-icon { background: #f0fdfa; color: var(--tp-teal); }
+    .tp-card-danger  .tp-card-icon { background: #fef2f2; color: #dc2626; }
     .text-purple { color: var(--tp-purple) !important; }
     .tp-card-value { font-size: 1.5rem; font-weight: 800; color: var(--tp-text); line-height: 1.15; }
     .tp-card-label { font-size: 0.8125rem; font-weight: 600; color: var(--tp-text); margin-top: 4px; }

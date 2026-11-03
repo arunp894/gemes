@@ -29,6 +29,13 @@
                             <span class="menu-text">Stock Activity</span>
                         </a>
                     </li>
+                    @permission('rentals.view')
+                    <li class="side-nav-item {{ request()->routeIs('reports.rentals*') ? 'active' : '' }}">
+                        <a href="{{ route('reports.rentals') }}" class="side-nav-link">
+                            <span class="menu-text">Rent Report</span>
+                        </a>
+                    </li>
+                    @endpermission
                     @permission('sales.view')
                     <li class="side-nav-item {{ request()->routeIs('reports.sales') ? 'active' : '' }}">
                         <a href="{{ route('reports.sales') }}" class="side-nav-link">
@@ -185,11 +192,11 @@
     SALES MENU
 ========================= --}}
 
-        @if (auth()->check() && auth()->user()->hasAnyPermission(['sales.view', 'sales.create', 'sales.import', 'customers.view']))
-        <li class="side-nav-item {{ request()->routeIs('sales.*') || request()->routeIs('customers.*') ? 'menuitem-active' : '' }}">
+        @if (auth()->check() && auth()->user()->hasAnyPermission(['sales.view', 'sales.create', 'sales.import', 'customers.view', 'rentals.view']))
+        <li class="side-nav-item {{ request()->routeIs('sales.*') || request()->routeIs('rentals.*') || request()->routeIs('customers.*') ? 'menuitem-active' : '' }}">
 
             <a data-bs-toggle="collapse" href="#salesMenu"
-                aria-expanded="{{ request()->routeIs('sales.*') || request()->routeIs('customers.*') ? 'true' : 'false' }}"
+                aria-expanded="{{ request()->routeIs('sales.*') || request()->routeIs('rentals.*') || request()->routeIs('customers.*') ? 'true' : 'false' }}"
                 aria-controls="salesMenu" class="side-nav-link">
 
                 <span class="menu-icon">
@@ -202,7 +209,7 @@
                 <span class="menu-arrow"></span>
             </a>
 
-            <div class="collapse {{ request()->routeIs('sales.*') || request()->routeIs('customers.*') ? 'show' : '' }}"
+            <div class="collapse {{ request()->routeIs('sales.*') || request()->routeIs('rentals.*') || request()->routeIs('customers.*') ? 'show' : '' }}"
                 id="salesMenu">
 
                 <ul class="sub-menu">
@@ -221,6 +228,19 @@
                     <li class="side-nav-item {{ request()->routeIs('sales.index') || request()->routeIs('sales.show') || request()->routeIs('sales.edit') ? 'active' : '' }}">
                         <a href="{{ route('sales.index') }}" class="side-nav-link">
                             <span class="menu-text">Invoices</span>
+                        </a>
+                    </li>
+                    @endpermission
+
+                    @permission('rentals.view')
+                    <li class="side-nav-item {{ request()->routeIs('rentals.*') ? 'active' : '' }}">
+                        <a href="{{ route('rentals.index') }}" class="side-nav-link">
+                            <span class="menu-text">
+                                <i class="ti ti-clock-hour-4 fs-sm text-primary me-1"></i> Stone Rent
+                                @if (\Illuminate\Support\Facades\Schema::hasTable('rentals') && ($overdueRentals = \App\Models\Rental::overdue()->count()) > 0)
+                                    <span class="badge bg-danger ms-1">{{ $overdueRentals }}</span>
+                                @endif
+                            </span>
                         </a>
                     </li>
                     @endpermission

@@ -7,6 +7,8 @@ use App\Models\Location;
 use App\Models\Product;
 use App\Models\Purchase;
 use App\Models\PurchaseProduct;
+use App\Models\Rental;
+use App\Models\RentalLine;
 use App\Models\Sale;
 use App\Models\SaleLine;
 use App\Models\StockMovement;
@@ -1373,6 +1375,120 @@ class StockService
                 $lineIds, $reason,
                 'Reversal of original OUT CT movement'
             );
+        });
+    }
+
+    /* Domain integration - Stone Rental */
+
+    /**
+     * Take a rental's stones out of stock (reason rent_out, pieces + CT).
+     * Every line names its exact piece (lot code); throws if the pool can't cover them,
+     * so the caller's transaction rolls back and nothing is half-booked.
+     */
+    public function recordRentalOut(Rental $rental): void
+    {
+        $rental->load('lines');
+
+        $qtyByPiece = $caratByPiece = [];
+        foreach ($rental->lines as $line) {
+            $pp = (int) $line->purchase_product_id;
+            $qtyByPiece[$pp]   = ($qtyByPiece[$pp] ?? 0) + (int) $line->qty;
+            $caratByPiece[$pp] = ($caratByPiece[$pp] ?? 0) + (float) $line->carat_weight;
+        }
+        $errors = [];
+        foreach ($qtyByPiece as $pp => $need) {
+            $have = $this->onHandForPieceGlobal($pp);
+            if ($have < $need) {
+                $errors[] = "Piece #{$pp}: need {$need}, on hand {$have}.";
+            }
+            $haveCt = $this->remainingCaratForPieceGlobal($pp);
+            if ($caratByPiece[$pp] > 0 && $haveCt + 0.0005 < $caratByPiece[$pp]) {
+                $errors[] = "Piece #{$pp}: need {$caratByPiece[$pp]} ct, remaining {$haveCt} ct.";
+            }
+        }
+        if ($errors) {
+            throw new RuntimeException('Cannot rent out: ' . implode(' ', $errors));
+        }
+
+        $date = optional($rental->start_at)->toDateString() ?? now()->toDateString();
+        foreach ($rental->lines as $line) {
+            $remaining   = (int) $line->qty;
+            $caratLeft   = $line->carat_weight !== null ? (float) $line->carat_weight : 0.0;
+            foreach ($this->onHandForPieceByLocation((int) $line->purchase_product_id) as $locId => $bal) {
+                if ($remaining <= 0) break;
+                $take = min((int) $bal, $remaining);
+                if ($take <= 0) continue;
+
+                $this->record([
+                    'purchase_product_id' => $line->purchase_product_id,
+                    'product_id'          => $line->product_id,
+                    'location_id'         => (int) $locId,
+                    'direction'           => StockMovement::DIRECTION_OUT,
+                    'qty'                 => $take,
+                    'reason'              => StockMovement::REASON_RENT_OUT,
+                    'source_type'         => StockMovement::SOURCE_RENTAL,
+                    'source_id'           => $rental->id,
+                    'source_line_id'      => $line->id,
+                    'movement_date'       => $date,
+                    'notes'               => 'Rented out on ' . $rental->rent_number,
+                ]);
+
+                $ct = $take >= $remaining ? $caratLeft : round((float) $line->carat_weight * $take / (int) $line->qty, 3);
+                $caratLeft -= $ct;
+                $this->recordCarat([
+                    'purchase_product_id' => $line->purchase_product_id,
+                    'product_id'          => $line->product_id,
+                    'location_id'         => (int) $locId,
+                    'direction'           => CaratMovement::DIRECTION_OUT,
+                    'carat'               => $ct,
+                    'reason'              => CaratMovement::REASON_RENT_OUT,
+                    'source_type'         => CaratMovement::SOURCE_RENTAL,
+                    'source_id'           => $rental->id,
+                    'source_line_id'      => $line->id,
+                    'movement_date'       => $date,
+                    'notes'               => 'Rented out on ' . $rental->rent_number,
+                ]);
+                $remaining -= $take;
+            }
+            if ($remaining > 0) {
+                throw new RuntimeException("Stock booking underflow for rental line #{$line->id}.");
+            }
+        }
+    }
+
+    /**
+     * Put one rental line's stones back (rent_return IN, same location they left from).
+     * With $lost the stones are then written off (adjustment_out), so the loss shows
+     * in Stock Removed while on-hand stays unchanged.
+     */
+    public function returnRentalLine(Rental $rental, RentalLine $line, bool $lost = false, ?string $note = null): void
+    {
+        $note = $note ?: ($lost ? 'Lost on rental ' : 'Returned from rental ') . $rental->rent_number;
+
+        DB::transaction(function () use ($rental, $line, $lost, $note) {
+            $stockOut = StockMovement::where('source_type', StockMovement::SOURCE_RENTAL)->where('source_id', $rental->id)
+                ->where('source_line_id', $line->id)->where('reason', StockMovement::REASON_RENT_OUT)->get();
+            $caratOut = CaratMovement::where('source_type', CaratMovement::SOURCE_RENTAL)->where('source_id', $rental->id)
+                ->where('source_line_id', $line->id)->where('reason', CaratMovement::REASON_RENT_OUT)->get();
+
+            foreach ($stockOut as $o) {
+                $base = ['purchase_product_id' => $o->purchase_product_id, 'product_id' => $o->product_id, 'location_id' => $o->location_id,
+                         'qty' => $o->qty, 'source_type' => StockMovement::SOURCE_RENTAL, 'source_id' => $rental->id,
+                         'source_line_id' => $line->id, 'notes' => $note];
+                $this->record($base + ['direction' => StockMovement::DIRECTION_IN, 'reason' => StockMovement::REASON_RENT_RETURN]);
+                if ($lost) {
+                    $this->record($base + ['direction' => StockMovement::DIRECTION_OUT, 'reason' => StockMovement::REASON_ADJUSTMENT_OUT]);
+                }
+            }
+            foreach ($caratOut as $o) {
+                $base = ['purchase_product_id' => $o->purchase_product_id, 'product_id' => $o->product_id, 'location_id' => $o->location_id,
+                         'carat' => (float) $o->carat, 'source_type' => CaratMovement::SOURCE_RENTAL, 'source_id' => $rental->id,
+                         'source_line_id' => $line->id, 'notes' => $note];
+                $this->recordCarat($base + ['direction' => CaratMovement::DIRECTION_IN, 'reason' => CaratMovement::REASON_RENT_RETURN]);
+                if ($lost) {
+                    $this->recordCarat($base + ['direction' => CaratMovement::DIRECTION_OUT, 'reason' => CaratMovement::REASON_ADJUSTMENT_OUT]);
+                }
+            }
         });
     }
 

@@ -119,6 +119,12 @@ class PermissionSeeder extends Seeder
             ['slug' => 'sales.post',               'name' => 'Post / Complete Sales',    'module' => 'sales'],
             ['slug' => 'sales.import',             'name' => 'Import Sales (Bulk Upload)', 'module' => 'sales'],
 
+            // ----- Stone Rent module -----
+            ['slug' => 'rentals.view',             'name' => 'View Stone Rentals',       'module' => 'rentals'],
+            ['slug' => 'rentals.create',           'name' => 'Create Stone Rentals',     'module' => 'rentals'],
+            ['slug' => 'rentals.return',           'name' => 'Return / Extend Rentals',  'module' => 'rentals'],
+            ['slug' => 'rentals.cancel',           'name' => 'Cancel Stone Rentals',     'module' => 'rentals'],
+
             // ----- Stock (read-only inventory reports) -----
             ['slug' => 'stock.view',               'name' => 'View Stock Reports',       'module' => 'stock'],
             ['slug' => 'stock.adjust',             'name' => 'Adjust Stock Manually',    'module' => 'stock'],

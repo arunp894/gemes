@@ -67,6 +67,9 @@ return [
 
     'timezone' => 'UTC',
 
+    // Wall-clock zone the staff type rental From/To times in (used to decide when a rental is overdue).
+    'business_timezone' => env('BUSINESS_TIMEZONE', 'Asia/Kolkata'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration

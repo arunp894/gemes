@@ -241,8 +241,19 @@ class StockController extends Controller
             // before it ever reaches @json() in the view.
             ->map(fn ($row) => tap($row, fn ($r) => $r->on_hand = (int) $r->on_hand));
 
+        // Stones currently out on rent (not in on-hand: they left via rent_out and are not back yet).
+        $onRent = \Illuminate\Support\Facades\Schema::hasTable('rental_lines')
+            ? DB::table('rental_lines')
+                ->join('rentals', 'rentals.id', '=', 'rental_lines.rental_id')
+                ->where('rentals.status', 'active')->where('rental_lines.status', 'out')
+                ->whereNull('rental_lines.deleted_at')->whereNull('rentals.deleted_at')
+                ->selectRaw('COALESCE(SUM(rental_lines.qty),0) as qty, COALESCE(SUM(rental_lines.carat_weight),0) as ct')->first()
+            : null;
+
         return [
             'totalCurrentStock'   => $totalCurrentStock,
+            'onRentQty'           => (int) ($onRent->qty ?? 0),
+            'onRentCt'            => (float) ($onRent->ct ?? 0),
             'totalCurrentStockCt' => $totalCurrentStockCt,
             'totalStockValue'     => $totalStockValue,
             'todayReceivedQty'    => (int) ($todayQty->received ?? 0),
@@ -646,6 +657,11 @@ class StockController extends Controller
                 $j->on('stock_transfers.id', '=', 'stock_movements.source_id')
                     ->where('stock_movements.source_type', '=', StockMovement::SOURCE_STOCK_TRANSFER);
             })
+            ->leftJoin('rentals', function ($j) {
+                $j->on('rentals.id', '=', 'stock_movements.source_id')
+                    ->where('stock_movements.source_type', '=', StockMovement::SOURCE_RENTAL);
+            })
+            ->leftJoin('customers as rent_customers', 'rent_customers.id', '=', 'rentals.customer_id')
             ->leftJoin('locations as from_loc', 'from_loc.id', '=', 'stock_transfers.from_location_id')
             ->leftJoin('locations as to_loc', 'to_loc.id', '=', 'stock_transfers.to_location_id')
             ->leftJoin('users as creators', 'creators.id', '=', 'stock_movements.created_by')
@@ -670,7 +686,8 @@ class StockController extends Controller
                 'customers.name as customer_name',
                 'from_loc.name as from_location_name',
                 'to_loc.name as to_location_name',
-                DB::raw('COALESCE(purchases.invoice_number, sales.sale_number, stock_transfers.transfer_number) as reference_number'),
+                DB::raw('COALESCE(purchases.invoice_number, sales.sale_number, stock_transfers.transfer_number, rentals.rent_number) as reference_number'),
+                'rent_customers.name as rental_customer_name',
             ]);
 
         if ($locationId) {
@@ -743,6 +760,9 @@ class StockController extends Controller
                 if ($row->source_type === StockMovement::SOURCE_SALE) {
                     return e($row->customer_name ?? 'Walk-in Customer');
                 }
+                if ($row->source_type === StockMovement::SOURCE_RENTAL) {
+                    return e($row->rental_customer_name ?? '—');
+                }
                 if ($row->source_type === StockMovement::SOURCE_STOCK_TRANSFER) {
                     return e($row->from_location_name ?? '—') . ' <i class="ti ti-arrow-right fs-xs text-muted"></i> ' . e($row->to_location_name ?? '—');
                 }
@@ -757,12 +777,14 @@ class StockController extends Controller
                         StockMovement::SOURCE_PURCHASE       => route('purchases.show', $row->source_id),
                         StockMovement::SOURCE_SALE           => route('sales.show', $row->source_id),
                         StockMovement::SOURCE_STOCK_TRANSFER => route('stock-transfers.show', $row->source_id),
+                        StockMovement::SOURCE_RENTAL         => route('rentals.show', $row->source_id),
                         default                               => null,
                     };
                     $icon = match ($row->source_type) {
                         StockMovement::SOURCE_PURCHASE       => 'ti-shopping-cart',
                         StockMovement::SOURCE_SALE           => 'ti-receipt',
                         StockMovement::SOURCE_STOCK_TRANSFER => 'ti-transfer',
+                        StockMovement::SOURCE_RENTAL         => 'ti-clock-hour-4',
                         default                               => 'ti-file',
                     };
                     if ($url) {
@@ -830,6 +852,8 @@ class StockController extends Controller
             StockMovement::REASON_ADJUSTMENT_IN,
             StockMovement::REASON_ADJUSTMENT_OUT      => ['Adjustment', 'badge-soft-warning', 'ti-adjustments'],
             StockMovement::REASON_OPENING             => ['Opening Stock', 'badge-soft-secondary', 'ti-flag'],
+            StockMovement::REASON_RENT_OUT            => ['Rent Out', 'badge-soft-purple', 'ti-clock-hour-4'],
+            StockMovement::REASON_RENT_RETURN         => ['Rent Return', 'badge-soft-success', 'ti-arrow-back-up'],
             default                                    => [ucfirst(str_replace('_', ' ', $reason)), 'badge-soft-secondary', 'ti-dots'],
         };
     }
