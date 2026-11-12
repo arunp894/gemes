@@ -241,7 +241,7 @@ class StockController extends Controller
             // before it ever reaches @json() in the view.
             ->map(fn ($row) => tap($row, fn ($r) => $r->on_hand = (int) $r->on_hand));
 
-        // Stones currently out on rent (not in on-hand: they left via rent_out and are not back yet).
+        // Stones currently out on memo (not in on-hand: they left via rent_out and are not back yet).
         $onRent = \Illuminate\Support\Facades\Schema::hasTable('rental_lines')
             ? DB::table('rental_lines')
                 ->join('rentals', 'rentals.id', '=', 'rental_lines.rental_id')
@@ -852,8 +852,8 @@ class StockController extends Controller
             StockMovement::REASON_ADJUSTMENT_IN,
             StockMovement::REASON_ADJUSTMENT_OUT      => ['Adjustment', 'badge-soft-warning', 'ti-adjustments'],
             StockMovement::REASON_OPENING             => ['Opening Stock', 'badge-soft-secondary', 'ti-flag'],
-            StockMovement::REASON_RENT_OUT            => ['Rent Out', 'badge-soft-purple', 'ti-clock-hour-4'],
-            StockMovement::REASON_RENT_RETURN         => ['Rent Return', 'badge-soft-success', 'ti-arrow-back-up'],
+            StockMovement::REASON_RENT_OUT            => ['Memo Out', 'badge-soft-purple', 'ti-clock-hour-4'],
+            StockMovement::REASON_RENT_RETURN         => ['Memo Return', 'badge-soft-success', 'ti-arrow-back-up'],
             default                                    => [ucfirst(str_replace('_', ' ', $reason)), 'badge-soft-secondary', 'ti-dots'],
         };
     }

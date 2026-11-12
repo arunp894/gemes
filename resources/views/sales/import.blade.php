@@ -54,7 +54,7 @@
                     <div class="alert alert-info border-0 d-flex gap-2 align-items-start mb-4">
                         <i class="ti ti-info-circle fs-lg mt-1 flex-shrink-0"></i>
                         <div class="small">
-                            Use the <strong>sample template</strong> to format your file.
+                            Use the <strong>sample template</strong> to format your file — it has dropdowns for channel, location and payment method, a <em>Lists</em> sheet, and sample rows filled with your current data.
                             Each row is one product line. Repeat order-level fields on every line of the same order.
                             <br>The importer groups lines by <code>external_ref</code> (eBay Sales Record #) or by date + customer email.
                         </div>
@@ -129,13 +129,64 @@
                         <tbody>
                             <tr><td><code>sale_date</code></td><td>YYYY-MM-DD</td></tr>
                             <tr><td><code>customer_name</code></td><td>Full name</td></tr>
-                            <tr><td><code>channel_code</code></td><td>ebay / pos / website</td></tr>
-                            <tr><td><code>location_code</code></td><td>e.g. LOC-0001</td></tr>
+                            <tr><td><code>channel_code</code></td><td>See <strong>Channels</strong> below</td></tr>
+                            <tr><td><code>location_code</code></td><td>See <strong>Locations</strong> below</td></tr>
                             <tr><td><code>sku</code></td><td>Must match Paces product SKU</td></tr>
                             <tr><td><code>qty</code></td><td>≥ 1</td></tr>
-                            <tr><td><code>unit_price_inr</code></td><td>Selling price in INR</td></tr>
+                            <tr><td><code>unit_price_inr</code></td><td>INR — per unit, or <strong>per CT</strong> when CT is filled</td></tr>
+                            <tr><td><code>carat_weight</code></td><td>CT sold — <strong>required for gemstones</strong> (col Q)</td></tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            {{-- Live lookup values: always what is in the database right now --}}
+            <div class="card border-light mt-3">
+                <div class="card-header border-light">
+                    <h6 class="card-title mb-0"><i class="ti ti-building-store me-2"></i>Channels <span class="text-muted fw-normal small">(channel_code)</span></h6>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0 small">
+                        <tbody>
+                            @forelse($channels as $ch)
+                                <tr><td style="width:40%"><code>{{ $ch->code }}</code></td><td>{{ $ch->name }}</td></tr>
+                            @empty
+                                <tr><td class="text-muted">No active channels.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card border-light mt-3">
+                <div class="card-header border-light">
+                    <h6 class="card-title mb-0"><i class="ti ti-map-pin me-2"></i>Locations <span class="text-muted fw-normal small">(location_code)</span></h6>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0 small">
+                        <tbody>
+                            @forelse($locations as $loc)
+                                <tr>
+                                    <td style="width:40%"><code>{{ $loc->location_code }}</code></td>
+                                    <td>{{ $loc->name }}@if($loc->is_default) <span class="badge badge-soft-primary fs-xxs">default</span>@endif</td>
+                                </tr>
+                            @empty
+                                <tr><td class="text-muted">No active locations.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card border-light mt-3">
+                <div class="card-header border-light">
+                    <h6 class="card-title mb-0"><i class="ti ti-credit-card me-2"></i>Payment methods <span class="text-muted fw-normal small">(optional)</span></h6>
+                </div>
+                <div class="card-body small">
+                    @foreach($paymentMethods as $code => $label)
+                        <code>{{ $code }}</code>@if(! $loop->last), @endif
+                    @endforeach
+                    <div class="text-muted mt-1">Blank = <code>bank_transfer</code></div>
                 </div>
             </div>
         </div>
@@ -201,7 +252,7 @@
                             <th>Location</th>
                             <th>Ext. Ref</th>
                             <th class="text-center">Lines</th>
-                            <th>Products (SKU × qty @ price)</th>
+                            <th>Products (SKU × qty · CT @ price)</th>
                             <th class="text-end">Shipping</th>
                             <th>Payment</th>
                             <th class="text-center">Status</th>
@@ -222,7 +273,7 @@
                             <td class="text-center">@{{ preview.groups[key].line_count }}</td>
                             <td>
                                 <div v-for="line in preview.groups[key].lines" class="small">
-                                    <code>@{{ line.sku }}</code> × @{{ line.qty }} @ ₹@{{ line.price }}
+                                    <code>@{{ line.sku }}</code> × @{{ line.qty }}<span v-if="line.ct"> · @{{ line.ct }} ct</span> @ ₹@{{ line.price }}<span v-if="line.ct">/ct</span>
                                 </div>
                             </td>
                             <td class="text-end">₹@{{ preview.groups[key].shipping || 0 }}</td>

@@ -15,7 +15,7 @@ use Illuminate\View\View;
 use Throwable;
 use Yajra\DataTables\Facades\DataTables;
 
-/** Stone Rent: list (with an Overdue tab), create, return, cancel, extend, print. */
+/** Stone Memo: list (with an Overdue tab), create, return, cancel, extend, print. */
 class RentalController extends Controller
 {
     public function __construct(private RentalService $service, private SettingService $settings) {}
@@ -103,7 +103,7 @@ class RentalController extends Controller
             'lines.*.purchase_product_id'    => ['required', 'integer', 'exists:purchase_products,id'],
             'lines.*.qty'                    => ['required', 'integer', 'min:1'],
             'lines.*.carat_weight'           => ['nullable', 'numeric', 'min:0'],
-            'lines.*.rent_amount'            => ['nullable', 'numeric', 'min:0'],
+            'lines.*.rent_rate'              => ['nullable', 'numeric', 'min:0'],
             'lines.*.deposit_amount'         => ['nullable', 'numeric', 'min:0'],
         ]);
 
@@ -114,7 +114,7 @@ class RentalController extends Controller
             return response()->json(['ok' => false, 'message' => $e->getMessage()], 422);
         }
 
-        return response()->json(['ok' => true, 'message' => 'Rental saved.', 'redirect' => route('rentals.show', $rental)], 201);
+        return response()->json(['ok' => true, 'message' => 'Memo saved.', 'redirect' => route('rentals.show', $rental)], 201);
     }
 
     public function show(Rental $rental): View
@@ -157,7 +157,7 @@ class RentalController extends Controller
 
     public function cancel(Request $request, Rental $rental): JsonResponse
     {
-        return $this->run(fn () => $this->service->cancel($rental, $request->input('payment_method', 'cash')), 'Rental cancelled.');
+        return $this->run(fn () => $this->service->cancel($rental, $request->input('payment_method', 'cash')), 'Memo cancelled.');
     }
 
     public function extend(Request $request, Rental $rental): JsonResponse

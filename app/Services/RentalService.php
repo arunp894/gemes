@@ -48,12 +48,18 @@ class RentalService
                 if (! $product) {
                     throw new InvalidArgumentException("Piece {$pp->lot_code} has no product.");
                 }
+                // Same rule as the sales terminal: a weighed stone is CT x rate (its CT is already the
+                // line total), a stone with no carat is pcs x rate.
+                $qty  = max(1, (int) $l['qty']);
+                $ct   = ! empty($l['carat_weight']) ? (float) $l['carat_weight'] : null;
+                $rate = (float) ($l['rent_rate'] ?? 0);
                 $rental->lines()->create([
                     'product_id'          => $product->id,
                     'purchase_product_id' => $pp->id,
-                    'qty'                 => max(1, (int) $l['qty']),
-                    'carat_weight'        => ! empty($l['carat_weight']) ? (float) $l['carat_weight'] : null,
-                    'rent_amount'         => (float) ($l['rent_amount'] ?? 0),
+                    'qty'                 => $qty,
+                    'carat_weight'        => $ct,
+                    'rent_rate'           => $rate,
+                    'rent_amount'         => round($ct !== null ? $ct * $rate : $qty * $rate, 2),
                     'deposit_amount'      => (float) ($l['deposit_amount'] ?? 0),
                     'status'              => RentalLine::STATUS_OUT,
                 ]);
@@ -84,7 +90,7 @@ class RentalService
     public function returnLines(Rental $rental, array $returnIds, array $lostIds, float $deduction, float $refund, string $method, ?string $note = null): Rental
     {
         if (! $rental->isActive()) {
-            throw new InvalidArgumentException('Only an active rental can be returned.');
+            throw new InvalidArgumentException('Only an active memo can be returned.');
         }
         $ids = array_values(array_unique(array_merge($returnIds, $lostIds)));
         if (! $ids) {
@@ -135,16 +141,16 @@ class RentalService
     public function cancel(Rental $rental, string $method = 'cash'): Rental
     {
         if (! $rental->isActive() || $rental->lines()->where('status', '!=', RentalLine::STATUS_OUT)->exists()) {
-            throw new InvalidArgumentException('Only an active rental with no returned stones can be cancelled.');
+            throw new InvalidArgumentException('Only an active memo with no returned stones can be cancelled.');
         }
 
         return DB::transaction(function () use ($rental, $method) {
             foreach ($rental->lines as $line) {
-                $this->stock->returnRentalLine($rental, $line, false, 'Rental cancelled ' . $rental->rent_number);
+                $this->stock->returnRentalLine($rental, $line, false, 'Memo cancelled ' . $rental->rent_number);
                 $line->update(['status' => RentalLine::STATUS_RETURNED, 'returned_at' => Rental::wallNow()]);
             }
             $back = round((float) $rental->rent_paid + (float) $rental->deposit_paid - (float) $rental->deposit_refunded, 2);
-            $this->pay($rental, RentalPayment::TYPE_REFUND, $back, $method, 'Rental cancelled');
+            $this->pay($rental, RentalPayment::TYPE_REFUND, $back, $method, 'Memo cancelled');
             $rental->update(['status' => Rental::STATUS_CANCELLED, 'returned_at' => Rental::wallNow()]);
             $this->log($rental, 'cancelled', 'Refunded ' . $back);
 

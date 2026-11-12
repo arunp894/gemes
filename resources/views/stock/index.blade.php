@@ -112,9 +112,9 @@
                 <div class="flex-grow-1">
                     <div class="stock-kpi-value">{{ number_format($onRentQty) }} <span class="stock-kpi-unit">Pcs</span>
                         @if ($onRentCt > 0)<span class="stock-kpi-unit">&middot; {{ rtrim(rtrim(number_format($onRentCt, 2), '0'), '.') }} Ct</span>@endif</div>
-                    <div class="stock-kpi-label">Currently On Rent <span class="text-muted fw-normal">&mdash; out with customers, not in on-hand</span></div>
+                    <div class="stock-kpi-label">Currently On Memo <span class="text-muted fw-normal">&mdash; out with customers, not in on-hand</span></div>
                 </div>
-                @permission('rentals.view')<a href="{{ route('rentals.index') }}" class="stock-kpi-link">View Rentals</a>@endpermission
+                @permission('rentals.view')<a href="{{ route('rentals.index') }}" class="stock-kpi-link">View Memos</a>@endpermission
             </div>
         </div>
     </div>

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Channel;
+use App\Models\Location;
+use App\Models\SalePayment;
 use App\Services\SaleImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +17,7 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Color;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Font;
+use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Throwable;
 
@@ -25,7 +29,27 @@ class SaleImportController extends Controller
 
     public function showUploadForm(): View
     {
-        return view('sales.import');
+        return view('sales.import', $this->referenceData());
+    }
+
+    /**
+     * Live lookup values the importer accepts. Shared by the upload screen
+     * and the downloadable template so both always show what is in the DB
+     * right now (new channels / locations appear without a code change).
+     *
+     * @return array{channels: \Illuminate\Support\Collection, locations: \Illuminate\Support\Collection, paymentMethods: array}
+     */
+    private function referenceData(): array
+    {
+        return [
+            'channels'       => Channel::where('status', Channel::STATUS_ACTIVE)
+                                    ->orderBy('display_order')->orderBy('name')
+                                    ->get(['code', 'name']),
+            'locations'      => Location::where('status', Location::STATUS_ACTIVE)
+                                    ->orderByDesc('is_default')->orderBy('location_code')
+                                    ->get(['location_code', 'name', 'type', 'is_default']),
+            'paymentMethods' => SalePayment::METHODS,
+        ];
     }
 
     /* ─── Preview (dry-run, no DB writes) ─────────────────────────── */
@@ -100,19 +124,113 @@ class SaleImportController extends Controller
     {
         $spreadsheet = new Spreadsheet();
 
-        $this->buildImportSheet($spreadsheet->getActiveSheet());
-        $spreadsheet->getActiveSheet()->setTitle('Import Template');
+        $ref = $this->referenceData();
+
+        // Grab the import sheet now: createSheet() makes the new sheet active.
+        $importSheet = $spreadsheet->getActiveSheet();
+        $importSheet->setTitle('Import Template');
 
         $instructionSheet = $spreadsheet->createSheet();
         $instructionSheet->setTitle('Instructions');
-        $this->buildInstructionSheet($instructionSheet);
+        $this->buildInstructionSheet($instructionSheet, $ref);
+
+        $listSheet = $spreadsheet->createSheet();
+        $listSheet->setTitle('Lists');
+        $listRanges = $this->buildListsSheet($listSheet, $ref);
+
+        $this->buildImportSheet($importSheet, $ref, $listRanges);
 
         $spreadsheet->setActiveSheetIndex(0);
         return $spreadsheet;
     }
 
-    private function buildImportSheet(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $ws): void
+    /**
+     * Reference sheet with every valid channel / location / payment method.
+     * Returns the cell ranges the dropdowns on the import sheet point at.
+     */
+    private function buildListsSheet(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $ws, array $ref): array
     {
+        $hdr = [
+            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'name' => 'Arial', 'size' => 10],
+            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1A3C5E']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+        ];
+
+        $ws->fromArray(['channel_code', 'Channel'], null, 'A1');
+        $r = 2;
+        foreach ($ref['channels'] as $c) {
+            $ws->setCellValue("A{$r}", $c->code);
+            $ws->setCellValue("B{$r}", $c->name);
+            $r++;
+        }
+        $chEnd = max(2, $r - 1);
+
+        $ws->fromArray(['location_code', 'Location', 'Type'], null, 'D1');
+        $r = 2;
+        foreach ($ref['locations'] as $l) {
+            $ws->setCellValue("D{$r}", $l->location_code);
+            $ws->setCellValue("E{$r}", $l->name . ($l->is_default ? ' (default)' : ''));
+            $ws->setCellValue("F{$r}", ucfirst((string) $l->type));
+            $r++;
+        }
+        $locEnd = max(2, $r - 1);
+
+        $ws->fromArray(['payment_method', 'Meaning'], null, 'H1');
+        $r = 2;
+        foreach ($ref['paymentMethods'] as $code => $label) {
+            $ws->setCellValue("H{$r}", $code);
+            $ws->setCellValue("I{$r}", $label);
+            $r++;
+        }
+        $payEnd = max(2, $r - 1);
+
+        foreach (['A1:B1', 'D1:F1', 'H1:I1'] as $range) {
+            $ws->getStyle($range)->applyFromArray($hdr);
+        }
+        foreach (['A' => 16, 'B' => 18, 'D' => 16, 'E' => 24, 'F' => 14, 'H' => 18, 'I' => 18] as $col => $w) {
+            $ws->getColumnDimension($col)->setWidth($w);
+        }
+
+        return [
+            'channel'  => "Lists!\$A\$2:\$A\${$chEnd}",
+            'location' => "Lists!\$D\$2:\$D\${$locEnd}",
+            'payment'  => "Lists!\$H\$2:\$H\${$payEnd}",
+        ];
+    }
+
+    private function addDropdown(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $ws, string $range, string $formula, string $title): void
+    {
+        $dv = new DataValidation();
+        $dv->setType(DataValidation::TYPE_LIST)
+           ->setErrorStyle(DataValidation::STYLE_STOP)
+           ->setAllowBlank(true)
+           ->setShowDropDown(true)
+           ->setShowErrorMessage(true)
+           ->setErrorTitle('Invalid ' . $title)
+           ->setError("Pick a {$title} from the dropdown (see the Lists sheet).")
+           ->setShowInputMessage(true)
+           ->setPromptTitle($title)
+           ->setPrompt('Choose from the dropdown list.')
+           ->setFormula1($formula);
+        $ws->setDataValidation($range, $dv);
+    }
+
+    private function buildImportSheet(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $ws, array $ref, array $lists): void
+    {
+        $chCodes  = $ref['channels']->pluck('code')->all();
+        $locCodes = $ref['locations']->pluck('location_code')->all();
+        $payCodes = array_keys($ref['paymentMethods']);
+
+        // Example values come from live data so the sample imports cleanly.
+        $ch1  = in_array('ebay', $chCodes, true) ? 'ebay' : ($chCodes[0] ?? 'ebay');
+        $ch2  = in_array('pos',  $chCodes, true) ? 'pos'  : ($chCodes[0] ?? 'pos');
+        $loc1 = $ref['locations']->firstWhere('is_default', true)?->location_code ?? ($locCodes[0] ?? 'LOC-0001');
+        $loc2 = $locCodes[1] ?? $loc1;
+        // Sample dates follow today so they never look stale.
+        $d1 = now()->subDays(2)->toDateString();
+        $d2 = now()->subDay()->toDateString();
+        $d3 = now()->toDateString();
+
         // ── Colour constants ──
         $navyHex  = '1A3C5E';
         $blueHex  = '2C6FAC';
@@ -126,19 +244,20 @@ class SaleImportController extends Controller
             ['sale_date',         14, true,  '2024-06-15',          'Date of sale (YYYY-MM-DD)'],
             ['customer_name',     22, true,  'John Smith',           'Full name of customer'],
             ['customer_email',    26, false, 'john@example.com',     'Email – used to match existing customer'],
-            ['channel_code',      16, true,  'ebay',                 'ebay / pos / website / catawiki'],
-            ['location_code',     16, true,  'LOC-0001',             'Your Paces location code'],
+            ['channel_code',      16, true,  $ch1,                   'Pick from dropdown: ' . implode(' / ', $chCodes)],
+            ['location_code',     16, true,  $loc1,                  'Pick from dropdown: ' . implode(' / ', $locCodes)],
             ['external_ref',      18, false, '15487',               'eBay Sales Record # or platform ref'],
             ['external_order_id', 18, false, '28-12345-67890',       'Platform order ID (if any)'],
             ['shipping_charge',   18, false, '6.99',                 'Total shipping for order (INR)'],
             ['note',              28, false, 'Shipped via DHL',      'Order-level notes'],
-            ['payment_method',    18, false, 'bank_transfer',        'cash / card / upi / bank_transfer / cheque'],
+            ['payment_method',    18, false, 'bank_transfer',        'Pick from dropdown: ' . implode(' / ', $payCodes)],
             ['sku',               18, true,  '18924-WES',            'Product SKU (Custom Label on eBay)'],
             ['qty',                8, true,  '1',                    'Quantity sold'],
-            ['unit_price_inr',    18, true,  '287.68',               'Selling price per unit in INR'],
+            ['unit_price_inr',    18, true,  '98.00',                'INR. If CT (col Q) is filled this is the RATE PER CT; otherwise price per unit'],
             ['tax_percent',       14, false, '0',                    'Tax % on this line (default 0)'],
             ['discount_percent',  18, false, '0',                    'Discount % on this line (default 0)'],
             ['line_note',         28, false, 'IGI certified',        'Notes for this product line'],
+            ['carat_weight',      16, false, '2.09',                 'CT sold on this line (total, not per piece). REQUIRED for gemstones; blank for non-weighed items'],
         ];
 
         $totalCols = count($cols);
@@ -201,10 +320,10 @@ class SaleImportController extends Controller
 
         // ── Rows 5-8: example data ──
         $examples = [
-            ['2024-06-15', 'John Smith',    'john@example.com',  'ebay', 'LOC-0001', '15487', '28-12345', '223.68', 'Via DHL',  'bank_transfer', '18924-WES', '1', '287.68', '0', '0', ''],
-            ['2024-06-15', 'John Smith',    'john@example.com',  'ebay', 'LOC-0001', '15487', '28-12345', '',       '',         '',              '27399-ROS', '1', '2335.68','0', '0', 'IGI certified'],
-            ['2024-06-16', 'Priya Sharma',  'priya@example.com', 'pos',  'LOC-0001', '',      '',         '0',      '',         'cash',          'GEM-00142', '2', '4500.00','0', '5', 'Bulk discount'],
-            ['2024-06-17', 'Walk-in',       '',                  'pos',  'LOC-0001', '',      '',         '0',      '',         'cash',          'TAN-00089', '1', '8900.00','3', '0', ''],
+            [$d1, 'John Smith',    'john@example.com',  $ch1, $loc1, '15487', '28-12345', '223.68', 'Via DHL',  'bank_transfer', '18924-WES', '1', '98.00',  '0', '0', '',              '2.09'],
+            [$d1, 'John Smith',    'john@example.com',  $ch1, $loc1, '15487', '28-12345', '',       '',         '',              '27399-ROS', '1', '2335.68','0', '0', 'IGI certified', ''],
+            [$d2, 'Priya Sharma',  'priya@example.com', $ch2, $loc2, '',      '',         '0',      '',         'cash',          'GEM-00142', '2', '120.00', '0', '5', 'Bulk discount', '6.50'],
+            [$d3, 'Walk-in',       '',                  $ch2, $loc2, '',      '',         '0',      '',         'cash',          'TAN-00089', '1', '8900.00','3', '0', '',              ''],
         ];
 
         foreach ($examples as $ri => $vals) {
@@ -223,11 +342,16 @@ class SaleImportController extends Controller
             $ws->getRowDimension($row)->setRowHeight(18);
         }
 
+        // ── Dropdowns on the lookup columns (rows 5-1004) ──
+        $this->addDropdown($ws, 'D5:D1004', $lists['channel'],  'channel_code');
+        $this->addDropdown($ws, 'E5:E1004', $lists['location'], 'location_code');
+        $this->addDropdown($ws, 'J5:J1004', $lists['payment'],  'payment_method');
+
         $ws->freezePane('A5');
         $ws->setAutoFilter("A3:{$lastCol}3");
     }
 
-    private function buildInstructionSheet(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $ws): void
+    private function buildInstructionSheet(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $ws, array $ref): void
     {
         $ws->getColumnDimension('A')->setWidth(5);
         $ws->getColumnDimension('B')->setWidth(22);
@@ -237,40 +361,46 @@ class SaleImportController extends Controller
         $blueHex = '2C6FAC';
         $ambrHex = 'B45309';
 
+        $chText  = $ref['channels']->map(fn ($c) => "{$c->code} ({$c->name})")->implode(', ');
+        $locText = $ref['locations']->map(fn ($l) => "{$l->location_code} ({$l->name})")->implode(', ');
+        $payText = implode(', ', array_keys($ref['paymentMethods']));
+
         $rows = [
             // [type, col_b, col_c, bg]
             ['hdr',  'How to use this template',        '',                                                                              $navyHex],
             ['body', 'Step 1', 'Fill the "Import Template" sheet. Keep header rows 1–4. Start data from row 5.',                         null],
             ['body', 'Step 2', 'Each row = one product line. Repeat order fields (date, customer, channel…) on every line of the same order.', null],
             ['body', 'Step 3', 'Lines are grouped by external_ref (or by date + email when external_ref is blank).',                     null],
-            ['body', 'Step 4', 'Upload the file at  Sales → Import  in the Paces admin.',                                               null],
+            ['body', 'Step 4', 'Upload the file at  Sales → Import  in the Paces admin. The "Lists" sheet shows every valid channel, location and payment method.',                                               null],
             ['body', 'Step 5', 'Review the preview table, check errors, then click Confirm Import.',                                     null],
             ['gap',  '',       '',                                                                                                        null],
             ['hdr',  'Order-level fields (repeat on every line of the same order)', '',                                                  $blueHex],
             ['body', 'sale_date',         'Required. Date the sale occurred. Format: YYYY-MM-DD.',                                       null],
             ['body', 'customer_name',     'Required. Will match an existing customer or create a walk-in.',                              null],
             ['body', 'customer_email',    'Optional but recommended. Primary match key for customers.',                                  null],
-            ['body', 'channel_code',      'Required. Must match a Paces channel code (ebay, pos, website, catawiki).',                   null],
-            ['body', 'location_code',     'Required. Must match a Paces location code (e.g. LOC-0001).',                                null],
+            ['body', 'channel_code',      'Required. Pick from the dropdown. Valid today: ' . $chText . '.',                   null],
+            ['body', 'location_code',     'Required. Pick from the dropdown. Valid today: ' . $locText . '.',null],
             ['body', 'external_ref',      'Optional. eBay Sales Record # or other platform reference. Used for duplicate detection.',    null],
             ['body', 'external_order_id', 'Optional. eBay Order ID.',                                                                   null],
             ['body', 'shipping_charge',   'Optional. Total shipping for the order in INR. Put only on the FIRST line.',                  null],
             ['body', 'note',              'Optional. Order-level note.',                                                                 null],
-            ['body', 'payment_method',    'Optional. Defaults to bank_transfer. Values: cash, card, upi, bank_transfer, cheque.',        null],
+            ['body', 'payment_method',    'Optional. Defaults to bank_transfer. Values: ' . $payText . '.',null],
             ['gap',  '',       '',                                                                                                        null],
             ['hdr',  'Line-level fields (one per product)',  '',                                                                         $blueHex],
             ['body', 'sku',               'Required. Must exactly match your product SKU in Paces.',                                     null],
             ['body', 'qty',               'Required. Quantity sold. Must be ≥ 1.',                                                       null],
-            ['body', 'unit_price_inr',    'Required. Selling price per unit in INR.',                                                    null],
+            ['body', 'unit_price_inr',    'Required. INR. If carat_weight is filled this is the RATE PER CT (line total = CT × rate, same as the Sales Terminal). If carat_weight is blank it is the price per unit (total = qty × price).', null],
             ['body', 'tax_percent',       'Optional. Tax % on this line. Default 0.',                                                    null],
             ['body', 'discount_percent',  'Optional. Discount % on this line. Default 0.',                                              null],
             ['body', 'line_note',         'Optional. Notes for this specific product line.',                                             null],
+            ['body', 'carat_weight (CT)', 'Column Q. Required for gemstones (weighed products): the total CT sold on this line, not per piece, up to the remaining CT. Leave blank for non-weighed items. Without it the CT ledger would not be reduced.', null],
             ['gap',  '',       '',                                                                                                        null],
             ['hdr',  'Important notes',  '',                                                                                             $ambrHex],
             ['body', 'Stock check',      'Import posts each sale and deducts stock. If a SKU has insufficient stock the entire order is rejected.', null],
             ['body', 'Duplicate check',  'Rows with an external_ref already in Paces for that channel are SKIPPED automatically.',       null],
             ['body', 'Customer lookup',  'Match order: exact email → exact name → create new walk-in customer.',                         null],
             ['body', 'Currency',         'All prices must be in INR. If your eBay export shows USD, use the SOLD FOR  (INR) column.',    null],
+            ['body', 'CT example',       'Qty 1, carat_weight 2.09, unit_price_inr 98.00  →  line total ₹204.82 (2.09 ct × ₹98/ct).',      null],
             ['body', 'Multi-line orders','All rows sharing the same external_ref are imported as ONE sale with multiple lines.',          null],
         ];
 

@@ -86,8 +86,8 @@
             <div class="tp-card tp-card-purple">
                 <div class="tp-card-icon"><i class="ti ti-clock-hour-4"></i></div>
                 <div class="tp-card-value">₹{{ number_format($rentToday->income) }}</div>
-                <div class="tp-card-label">Rent Today</div>
-                <div class="tp-card-sub">{{ $rentToday->count }} rental{{ $rentToday->count == 1 ? '' : 's' }} started &middot; {{ $rentToday->active }} out now</div>
+                <div class="tp-card-label">Memo Today</div>
+                <div class="tp-card-sub">{{ $rentToday->count }} memo{{ $rentToday->count == 1 ? '' : 's' }} started &middot; {{ $rentToday->active }} out now</div>
             </div>
         </div>
         <div class="col-6 col-xl-3">
@@ -95,7 +95,7 @@
             <div class="tp-card {{ $rentToday->overdue ? 'tp-card-danger' : 'tp-card-success' }}">
                 <div class="tp-card-icon"><i class="ti ti-alert-triangle"></i></div>
                 <div class="tp-card-value">{{ $rentToday->overdue }}</div>
-                <div class="tp-card-label">Rentals Overdue</div>
+                <div class="tp-card-label">Memos Overdue</div>
                 <div class="tp-card-sub">{{ $rentToday->overdue ? 'stones not returned by the due date' : 'nothing overdue' }}</div>
             </div>
             </a>

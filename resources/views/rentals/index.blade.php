@@ -1,22 +1,22 @@
 @extends('layout.app')
 
-@section('title', 'Stone Rent')
+@section('title', 'Stone Memo')
 
 @section('content')
 <div class="container-fluid rentals-page">
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
-            <h4 class="page-main-title m-0">Stone Rent</h4>
+            <h4 class="page-main-title m-0">Stone Memo</h4>
         </div>
         <div class="text-end d-flex align-items-center gap-3">
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="#">Sales</a></li>
-                <li class="breadcrumb-item active">Stone Rent</li>
+                <li class="breadcrumb-item active">Stone Memo</li>
             </ol>
             @permission('rentals.create')
-                <a href="{{ route('rentals.create') }}" class="btn btn-primary btn-sm"><i class="ti ti-plus me-1"></i> New Rental</a>
+                <a href="{{ route('rentals.create') }}" class="btn btn-primary btn-sm"><i class="ti ti-plus me-1"></i> New Memo</a>
             @endpermission
         </div>
     </div>
@@ -29,7 +29,7 @@
     @if ($stats['overdue'] > 0)
         <div class="alert alert-danger d-flex align-items-center justify-content-between" role="alert">
             <div><i class="ti ti-alert-triangle me-2"></i>
-                <strong>{{ $stats['overdue'] }}</strong> {{ \Illuminate\Support\Str::plural('rental', $stats['overdue']) }} overdue &mdash; stones not returned by the due date.</div>
+                <strong>{{ $stats['overdue'] }}</strong> {{ \Illuminate\Support\Str::plural('memo', $stats['overdue']) }} overdue &mdash; stones not returned by the due date.</div>
             <button type="button" class="btn btn-sm btn-danger js-tab" data-tab="overdue">View overdue</button>
         </div>
     @endif
@@ -59,8 +59,8 @@
             <table id="rentalsTable" class="table table-hover align-middle w-100">
                 <thead>
                     <tr>
-                        <th>#</th><th>Rent No</th><th>Customer</th><th>Location</th><th>From</th><th>To</th>
-                        <th>Stones</th><th class="text-end">Rent</th><th class="text-end">Deposit Held</th><th>Status</th><th></th>
+                        <th>#</th><th>Memo No</th><th>Customer</th><th>Location</th><th>From</th><th>To</th>
+                        <th>Stones</th><th class="text-end">Memo</th><th class="text-end">Deposit Held</th><th>Status</th><th></th>
                     </tr>
                 </thead>
             </table>

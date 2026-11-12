@@ -1,6 +1,6 @@
 @extends('layout.app')
 
-@section('title', 'Rent Report')
+@section('title', 'Memo Report')
 
 @section('content')
 @php
@@ -12,14 +12,14 @@
 
     <div class="page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
-            <h4 class="page-main-title m-0">Rent Report</h4>
-            <small class="text-muted">Stone rentals by customer &middot; rent income is kept separate from sales</small>
+            <h4 class="page-main-title m-0">Memo Report</h4>
+            <small class="text-muted">Stone memos by customer &middot; memo income is kept separate from sales</small>
         </div>
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
                 <li class="breadcrumb-item"><a href="#">Reports</a></li>
-                <li class="breadcrumb-item active">Rent Report</li>
+                <li class="breadcrumb-item active">Memo Report</li>
             </ol>
         </div>
     </div>
@@ -67,10 +67,10 @@
 
     <div class="row g-3 mb-3">
         @foreach ([
-            ['Rent Income', $m($totals['rent']), 'text-dark'],
+            ['Memo Income', $m($totals['rent']), 'text-dark'],
             ['Deposit Held', $m($totals['held']), 'text-dark'],
-            ['Rentals / Stones', number_format($totals['rentals']) . ' / ' . number_format($totals['stones']), 'text-dark'],
-            ['Overdue Rentals', number_format($totals['overdue']), $totals['overdue'] ? 'text-danger' : 'text-dark'],
+            ['Memos / Stones', number_format($totals['rentals']) . ' / ' . number_format($totals['stones']), 'text-dark'],
+            ['Overdue Memos', number_format($totals['overdue']), $totals['overdue'] ? 'text-danger' : 'text-dark'],
         ] as [$label, $value, $cls])
             <div class="col-6 col-xl-3">
                 <div class="card mb-0"><div class="card-body py-3">
@@ -82,7 +82,7 @@
     </div>
 
     @if ($truncated)
-        <div class="alert alert-warning py-2">Showing the first {{ number_format($rowLimit) }} rentals &mdash; narrow the date range to see the rest.</div>
+        <div class="alert alert-warning py-2">Showing the first {{ number_format($rowLimit) }} memos &mdash; narrow the date range to see the rest.</div>
     @endif
 
     {{-- Customer-wise --}}
@@ -91,8 +91,8 @@
         <div class="table-responsive">
             <table class="table table-sm table-hover align-middle mb-0">
                 <thead class="bg-light bg-opacity-25 text-uppercase fs-xxs">
-                    <tr><th>Customer</th><th class="text-end">Rentals</th><th class="text-end">Stones</th><th class="text-end">Pcs</th><th class="text-end">CT</th>
-                        <th class="text-end">Rent Income</th><th class="text-end">Deposit Collected</th><th class="text-end">Refunded</th>
+                    <tr><th>Customer</th><th class="text-end">Memos</th><th class="text-end">Stones</th><th class="text-end">Pcs</th><th class="text-end">CT</th>
+                        <th class="text-end">Memo Income</th><th class="text-end">Deposit Collected</th><th class="text-end">Refunded</th>
                         <th class="text-end">Kept</th><th class="text-end">Deposit Held</th><th class="text-end">Overdue</th></tr>
                 </thead>
                 <tbody>
@@ -106,7 +106,7 @@
                             <td class="text-end">@if ($c->overdue)<span class="badge badge-soft-danger">{{ $c->overdue }} &middot; {{ $c->max_days }}d</span>@else<span class="text-muted">&mdash;</span>@endif</td>
                         </tr>
                     @empty
-                        <tr><td colspan="11" class="text-center text-muted py-5">No rentals match these filters.</td></tr>
+                        <tr><td colspan="11" class="text-center text-muted py-5">No memos match these filters.</td></tr>
                     @endforelse
                 </tbody>
                 @if ($byCustomer->isNotEmpty())
@@ -123,12 +123,12 @@
 
     {{-- Every rental --}}
     <div class="card">
-        <div class="card-header"><h5 class="card-title mb-0">Rentals</h5></div>
+        <div class="card-header"><h5 class="card-title mb-0">Memos</h5></div>
         <div class="table-responsive">
             <table class="table table-sm table-hover align-middle mb-0">
                 <thead class="bg-light bg-opacity-25 text-uppercase fs-xxs">
-                    <tr><th>Rent No</th><th>Customer</th><th>Lots</th><th>From</th><th>To</th><th class="text-end">Pcs</th><th class="text-end">CT</th>
-                        <th class="text-end">Rent</th><th class="text-end">Deposit Held</th><th>Status</th></tr>
+                    <tr><th>Memo No</th><th>Customer</th><th>Lots</th><th>From</th><th>To</th><th class="text-end">Pcs</th><th class="text-end">CT</th>
+                        <th class="text-end">Memo</th><th class="text-end">Deposit Held</th><th>Status</th></tr>
                 </thead>
                 <tbody>
                     @forelse ($rentals as $r)
@@ -145,7 +145,7 @@
                             <td><span class="badge {{ $r->statusBadgeClass() }}">{{ $r->statusLabel() }}</span></td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" class="text-center text-muted py-4">No rentals.</td></tr>
+                        <tr><td colspan="10" class="text-center text-muted py-4">No memos.</td></tr>
                     @endforelse
                 </tbody>
             </table>

@@ -66,8 +66,8 @@ class CaratMovement extends Model
         self::REASON_ADJUSTMENT_IN       => 'Adjustment (In)',
         self::REASON_ADJUSTMENT_OUT      => 'Adjustment (Out)',
         self::REASON_OPENING             => 'Opening Stock',
-        self::REASON_RENT_OUT            => 'Rent Out',
-        self::REASON_RENT_RETURN         => 'Rent Return',
+        self::REASON_RENT_OUT            => 'Memo Out',
+        self::REASON_RENT_RETURN         => 'Memo Return',
     ];
 
     /* ─── Source types ────────────────────────────────────── */

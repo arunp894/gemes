@@ -32,7 +32,7 @@
                     @permission('rentals.view')
                     <li class="side-nav-item {{ request()->routeIs('reports.rentals*') ? 'active' : '' }}">
                         <a href="{{ route('reports.rentals') }}" class="side-nav-link">
-                            <span class="menu-text">Rent Report</span>
+                            <span class="menu-text">Memo Report</span>
                         </a>
                     </li>
                     @endpermission
@@ -236,7 +236,7 @@
                     <li class="side-nav-item {{ request()->routeIs('rentals.*') ? 'active' : '' }}">
                         <a href="{{ route('rentals.index') }}" class="side-nav-link">
                             <span class="menu-text">
-                                <i class="ti ti-clock-hour-4 fs-sm text-primary me-1"></i> Stone Rent
+                                <i class="ti ti-clock-hour-4 fs-sm text-primary me-1"></i> Stone Memo
                                 @if (\Illuminate\Support\Facades\Schema::hasTable('rentals') && ($overdueRentals = \App\Models\Rental::overdue()->count()) > 0)
                                     <span class="badge bg-danger ms-1">{{ $overdueRentals }}</span>
                                 @endif

@@ -21,7 +21,7 @@ class Rental extends Model
     public const STATUS_RETURNED  = 'returned';
     public const STATUS_CANCELLED = 'cancelled';
 
-    public const NUMBER_PREFIX = 'RNT';
+    public const NUMBER_PREFIX = 'MEMO';
 
     protected $fillable = [
         'rent_number', 'customer_id', 'location_id', 'start_at', 'due_at', 'returned_at', 'status',
@@ -56,7 +56,7 @@ class Rental extends Model
         });
     }
 
-    /** RNT-YYYYMM-####; call inside the creating transaction. */
+    /** MEMO-YYYYMM-####; call inside the creating transaction. */
     public static function generateNumber(Carbon $date): string
     {
         $stub = self::NUMBER_PREFIX . '-' . $date->format('Ym') . '-';

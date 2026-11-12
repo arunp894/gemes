@@ -37,6 +37,11 @@ use Throwable;
  *   N  tax_percent         optional – defaults to 0
  *   O  discount_percent    optional – defaults to 0
  *   P  line_note           optional
+ *   Q  carat_weight (CT)   required for weighed gemstones, blank otherwise.
+ *                          Total CT sold on this line (not per piece).
+ *                          When filled, column M is the RATE PER CT and the
+ *                          line total is CT x rate -- identical to the Sales
+ *                          Terminal. When blank, total is qty x column M.
  *
  * ── Grouping ─────────────────────────────────────────────────────────
  *   Rows become a single Sale when they share:
@@ -74,8 +79,12 @@ class SaleImportService
     private const COL_TAX        = 13;
     private const COL_DISCOUNT   = 14;
     private const COL_LINE_NOTE  = 15;
+    private const COL_CT         = 16;
 
-    public function __construct(private SaleService $saleService) {}
+    public function __construct(
+        private SaleService  $saleService,
+        private StockService $stock,
+    ) {}
 
     /* ─────────────────────────────────────────────────────────────────
      |  PUBLIC: parse – dry-run, returns preview. Nothing persisted.
@@ -206,7 +215,7 @@ class SaleImportService
 
         foreach ($sheet->getRowIterator(5) as $row) {
             $cells = [];
-            foreach ($row->getCellIterator('A', 'P') as $cell) {
+            foreach ($row->getCellIterator('A', 'Q') as $cell) {
                 $cells[] = trim((string) ($cell->getFormattedValue() ?? ''));
             }
             if (array_filter($cells) === []) {
@@ -233,7 +242,7 @@ class SaleImportService
             if (array_filter($cells) === []) {
                 continue;
             }
-            while (count($cells) < 16) {
+            while (count($cells) < 17) {
                 $cells[] = '';
             }
             $rows[] = $cells;
@@ -319,7 +328,7 @@ class SaleImportService
         } else {
             $channel = Channel::where('code', $channelCode)->first();
             if (! $channel) {
-                $errors[] = "Row {$first['_row_index']}: channel_code \"{$channelCode}\" not found in Paces.";
+                $errors[] = "Row {$first['_row_index']}: channel_code \"{$channelCode}\" not found in Paces. Valid: " . Channel::where('status', Channel::STATUS_ACTIVE)->orderBy('display_order')->pluck('code')->implode(', ') . '.';
             }
         }
 
@@ -330,7 +339,7 @@ class SaleImportService
         } else {
             $location = Location::where('location_code', $locationCode)->first();
             if (! $location) {
-                $errors[] = "Row {$first['_row_index']}: location_code \"{$locationCode}\" not found in Paces.";
+                $errors[] = "Row {$first['_row_index']}: location_code \"{$locationCode}\" not found in Paces. Valid: " . Location::where('status', Location::STATUS_ACTIVE)->orderBy('location_code')->pluck('location_code')->implode(', ') . '.';
             }
         }
 
@@ -359,6 +368,7 @@ class SaleImportService
             $taxPct   = (float) ($row[self::COL_TAX]      ?? 0);
             $discPct  = (float) ($row[self::COL_DISCOUNT] ?? 0);
             $lineNote = trim($row[self::COL_LINE_NOTE]  ?? '');
+            $ctRaw    = str_replace(',', '', trim($row[self::COL_CT] ?? ''));
 
             if ($sku === '') {
                 $errors[] = "Row {$rowNum}: sku is required.";
@@ -381,16 +391,63 @@ class SaleImportService
                 continue;
             }
 
+            // ── CT (carat) — mirrors the Sales Terminal ──────────────────
+            // A "weighed" product is one whose purchase piece carries a
+            // carat_weight. Its CT is its own ledger, independent of qty,
+            // so the seller must say how much CT this line consumes.
+            // Without it the stock OUT books qty only and the CT ledger
+            // (and sale_lines.carat_weight) silently never moves.
+            $weighed = $product->purchaseProduct?->carat_weight !== null;
+            $ct      = null;
+
+            if ($ctRaw !== '') {
+                if (! is_numeric($ctRaw) || (float) $ctRaw <= 0) {
+                    $errors[] = "Row {$rowNum}: carat_weight \"{$ctRaw}\" must be a number greater than 0.";
+                    continue;
+                }
+                if (! $weighed) {
+                    $errors[] = "Row {$rowNum}: SKU \"{$sku}\" is not a weighed (CT) product — leave carat_weight blank.";
+                    continue;
+                }
+                $ct = round((float) $ctRaw, 3);
+            } elseif ($weighed) {
+                $left = $this->stock->remainingCaratForProductGlobal($product->id);
+                $errors[] = "Row {$rowNum}: carat_weight (CT) is required for SKU \"{$sku}\" (remaining {$left} ct).";
+                continue;
+            }
+
+            // Weighed line: unit_price_inr is a per-ct rate and the line
+            // total is CT x rate. SaleService totals qty x unit_price, so
+            // send the per-piece equivalent (6dp, same as the terminal).
+            $unitPrice = $ct !== null ? round($ct * $price / $qty, 6) : $price;
+
             $lines[] = [
                 'product_id'          => $product->id,
                 'purchase_product_id' => null,  // FIFO allocation in StockService
                 'barcode'             => null,
                 'qty'                 => $qty,
-                'unit_price'          => $price,
+                'carat_weight'        => $ct,
+                'unit_price'          => $unitPrice,
                 'tax_percent'         => $taxPct,
                 'discount_percent'    => $discPct,
                 'notes'               => $lineNote ?: null,
             ];
+        }
+
+        // Aggregate CT per product across the order so two lines on the
+        // same SKU can't together overdraw what the first one alone passed.
+        $ctByProduct = [];
+        foreach ($lines as $l) {
+            if ($l['carat_weight'] !== null) {
+                $ctByProduct[$l['product_id']] = ($ctByProduct[$l['product_id']] ?? 0) + $l['carat_weight'];
+            }
+        }
+        foreach ($ctByProduct as $productId => $needed) {
+            $left = $this->stock->remainingCaratForProductGlobal((int) $productId);
+            if ($left + 0.0005 < $needed) {
+                $sku = Product::whereKey($productId)->value('sku');
+                $errors[] = "SKU \"{$sku}\": insufficient CT — order needs {$needed} ct, remaining {$left} ct.";
+            }
         }
 
         if (empty($lines) && empty($errors)) {
@@ -447,6 +504,7 @@ class SaleImportService
                 'sku'   => $r[self::COL_SKU]   ?? '',
                 'qty'   => $r[self::COL_QTY]   ?? '',
                 'price' => $r[self::COL_PRICE]  ?? '',
+                'ct'    => $r[self::COL_CT]     ?? '',
             ], $rows),
             'has_errors'     => ! empty($errors),
         ];

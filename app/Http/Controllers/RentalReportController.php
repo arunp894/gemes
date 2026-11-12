@@ -15,8 +15,8 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Rent report: customer-wise summary plus one row per rental, kept apart from the
- * Sales Report. Rent income counts every rental that was not cancelled.
+ * Memo report: customer-wise summary plus one row per rental, kept apart from the
+ * Sales Report. Memo income counts every rental that was not cancelled.
  */
 class RentalReportController extends Controller
 {
@@ -37,8 +37,8 @@ class RentalReportController extends Controller
 
         $book = new Spreadsheet();
         $sum  = $book->getActiveSheet()->setTitle('By Customer');
-        $sum->fromArray(['Customer', 'Rentals', 'Stones', 'Pcs', 'CT', 'Rent Income', 'Deposit Collected', 'Deposit Refunded', 'Kept (late/damage/lost)',
-                         'Deposit Held', 'Overdue Rentals', 'Max Days Overdue'], null, 'A1');
+        $sum->fromArray(['Customer', 'Memos', 'Stones', 'Pcs', 'CT', 'Memo Income', 'Deposit Collected', 'Deposit Refunded', 'Kept (late/damage/lost)',
+                         'Deposit Held', 'Overdue Memos', 'Max Days Overdue'], null, 'A1');
         $row = 2;
         foreach ($r['byCustomer'] as $c) {
             $sum->fromArray([$c->name, $c->rentals, $c->stones, $c->pcs, round($c->carat, 3), round($c->rent, 2), round($c->deposit_paid, 2),
@@ -50,8 +50,8 @@ class RentalReportController extends Controller
                          round($t['refunded'], 2), round($t['kept'], 2), round($t['held'], 2), $t['overdue'], ''], null, "A{$row}");
         $sum->getStyle("A{$row}:L{$row}")->getFont()->setBold(true);
 
-        $det = $book->createSheet()->setTitle('Rentals');
-        $det->fromArray(['Rent No', 'Customer', 'Location', 'From', 'To', 'Closed', 'Status', 'Stones', 'Pcs', 'CT', 'Rent Fee',
+        $det = $book->createSheet()->setTitle('Memos');
+        $det->fromArray(['Memo No', 'Customer', 'Location', 'From', 'To', 'Closed', 'Status', 'Stones', 'Pcs', 'CT', 'Memo Fee',
                          'Deposit Collected', 'Deposit Refunded', 'Kept', 'Deposit Held', 'Days Overdue', 'Lots'], null, 'A1');
         $row = 2;
         foreach ($r['rentals'] as $x) {
@@ -77,7 +77,7 @@ class RentalReportController extends Controller
         return response()->streamDownload(function () use ($tmp) {
             readfile($tmp);
             @unlink($tmp);
-        }, "rent-report_{$r['from']}_{$r['to']}.xlsx", ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+        }, "memo-report_{$r['from']}_{$r['to']}.xlsx", ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
     }
 
     private function report(Request $request): array

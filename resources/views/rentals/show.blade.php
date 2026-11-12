@@ -15,7 +15,7 @@
         <div class="text-end">
             <ol class="breadcrumb m-0 py-0">
                 <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-                <li class="breadcrumb-item"><a href="{{ route('rentals.index') }}">Stone Rent</a></li>
+                <li class="breadcrumb-item"><a href="{{ route('rentals.index') }}">Stone Memo</a></li>
                 <li class="breadcrumb-item active">{{ $rental->rent_number }}</li>
             </ol>
         </div>
@@ -29,7 +29,7 @@
             {{ $outLines->count() }} stone(s) still out.</div>
     @endif
     @if ($rental->isReturned() && $rental->depositHeld() > 0.004)
-        <div class="alert alert-warning">Deposit of <strong>{{ $money($rental->depositHeld()) }}</strong> is still held for this closed rental.</div>
+        <div class="alert alert-warning">Deposit of <strong>{{ $money($rental->depositHeld()) }}</strong> is still held for this closed memo.</div>
     @endif
 
     <div class="card">
@@ -81,7 +81,7 @@
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
                         <thead><tr><th>Lot</th><th>Stone</th><th class="text-end">Pcs</th><th class="text-end">CT</th>
-                            <th class="text-end">Rent</th><th class="text-end">Deposit</th><th>Status</th></tr></thead>
+                            <th class="text-end">Rate / CT</th><th class="text-end">Memo Total</th><th class="text-end">Deposit</th><th>Status</th></tr></thead>
                         <tbody>
                             @foreach ($rental->lines as $l)
                                 <tr>
@@ -89,6 +89,7 @@
                                     <td>{{ $l->product?->title }}</td>
                                     <td class="text-end">{{ $l->qty }}</td>
                                     <td class="text-end">{{ $l->carat_weight !== null ? rtrim(rtrim(number_format((float) $l->carat_weight, 3), '0'), '.') : '—' }}</td>
+                                    <td class="text-end">{{ (float) $l->rent_rate > 0 ? $money($l->rent_rate) : '—' }}</td>
                                     <td class="text-end">{{ $money($l->rent_amount) }}</td>
                                     <td class="text-end">{{ $money($l->deposit_amount) }}</td>
                                     <td><span class="badge {{ $lineBadge[$l->status] ?? 'badge-soft-secondary' }}">{{ ucfirst($l->status) }}</span>
@@ -119,7 +120,7 @@
             <div class="card">
                 <div class="card-header"><h5 class="card-title mb-0">Money</h5></div>
                 <div class="card-body">
-                    <div class="d-flex justify-content-between"><span>Rent fee</span><strong>{{ $money($rental->rent_total) }}</strong></div>
+                    <div class="d-flex justify-content-between"><span>Memo fee</span><strong>{{ $money($rental->rent_total) }}</strong></div>
                     <div class="d-flex justify-content-between text-muted"><span>&nbsp;&nbsp;collected</span><span>{{ $money($rental->rent_paid) }}</span></div>
                     <hr class="my-2">
                     <div class="d-flex justify-content-between"><span>Deposit (refundable)</span><strong>{{ $money($rental->deposit_total) }}</strong></div>
@@ -245,7 +246,7 @@ $(function () {
     });
 
     $('#cancelRentalBtn').on('click', function () {
-        if (!confirm('Cancel this rental? Stones go back to stock and everything collected is refunded.')) return;
+        if (!confirm('Cancel this memo? Stones go back to stock and everything collected is refunded.')) return;
         post('{{ route('rentals.cancel', $rental) }}', {}, () => {});
     });
 });

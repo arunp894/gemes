@@ -1378,10 +1378,10 @@ class StockService
         });
     }
 
-    /* Domain integration - Stone Rental */
+    /* Domain integration - Stone Memo */
 
     /**
-     * Take a rental's stones out of stock (reason rent_out, pieces + CT).
+     * Take a rental's stones out of stock (reason memo_out, pieces + CT).
      * Every line names its exact piece (lot code); throws if the pool can't cover them,
      * so the caller's transaction rolls back and nothing is half-booked.
      */
@@ -1407,7 +1407,7 @@ class StockService
             }
         }
         if ($errors) {
-            throw new RuntimeException('Cannot rent out: ' . implode(' ', $errors));
+            throw new RuntimeException('Cannot give on memo: ' . implode(' ', $errors));
         }
 
         $date = optional($rental->start_at)->toDateString() ?? now()->toDateString();
@@ -1430,7 +1430,7 @@ class StockService
                     'source_id'           => $rental->id,
                     'source_line_id'      => $line->id,
                     'movement_date'       => $date,
-                    'notes'               => 'Rented out on ' . $rental->rent_number,
+                    'notes'               => 'Given on memo ' . $rental->rent_number,
                 ]);
 
                 $ct = $take >= $remaining ? $caratLeft : round((float) $line->carat_weight * $take / (int) $line->qty, 3);
@@ -1446,7 +1446,7 @@ class StockService
                     'source_id'           => $rental->id,
                     'source_line_id'      => $line->id,
                     'movement_date'       => $date,
-                    'notes'               => 'Rented out on ' . $rental->rent_number,
+                    'notes'               => 'Given on memo ' . $rental->rent_number,
                 ]);
                 $remaining -= $take;
             }
@@ -1463,7 +1463,7 @@ class StockService
      */
     public function returnRentalLine(Rental $rental, RentalLine $line, bool $lost = false, ?string $note = null): void
     {
-        $note = $note ?: ($lost ? 'Lost on rental ' : 'Returned from rental ') . $rental->rent_number;
+        $note = $note ?: ($lost ? 'Lost on memoal ' : 'Returned from memo ') . $rental->rent_number;
 
         DB::transaction(function () use ($rental, $line, $lost, $note) {
             $stockOut = StockMovement::where('source_type', StockMovement::SOURCE_RENTAL)->where('source_id', $rental->id)
